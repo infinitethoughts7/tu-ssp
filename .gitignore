@@ -11,7 +11,7 @@ venv/
 env/
 ENV/
 .venv/
-.tu-venv/
+.tu-venv/ 
 
 # VSCode / PyCharm settings
 .vscode/
