@@ -1,0 +1,56 @@
+# === Python/Django ===
+*.pyc
+*.pyo
+__pycache__/
+db.sqlite3
+.env
+*.env
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+.tu-venv/
+
+# VSCode / PyCharm settings
+.vscode/
+.idea/
+
+# Django specific
+/static/
+media/
+*.log
+*.pot
+*.py[cod]
+*.sqlite3
+*.db
+
+# Coverage
+htmlcov/
+.coverage
+.tox/
+.nox/
+
+# Debug Toolbar cache
+.debug/
+
+# === React/Node/Frontend ===
+frontend/node_modules/
+frontend/.next/
+frontend/.turbo/
+frontend/.env*
+frontend/.DS_Store
+frontend/dist/
+frontend/build/
+
+# === OS Specific ===
+.DS_Store
+Thumbs.db
+
+# === Migrations (optional) ===
+**/migrations/
+!**/migrations/__init__.py
+
+# === Git Files ===
+*.orig
