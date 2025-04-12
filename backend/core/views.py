@@ -1,0 +1,121 @@
+from django.shortcuts import render
+from rest_framework import generics, permissions
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+from .models import StudentProfile, StaffProfile, User
+from .serializers import (
+    StudentLoginSerializer,
+    StaffLoginSerializer,
+    StudentProfileSerializer,
+    StaffProfileSerializer
+)
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Create your views here.
+
+class StudentLoginView(APIView):
+    permission_classes = [AllowAny]
+    def post(self, request):
+        print("StaffLoginView POST method was called")
+        logger.info("StaffLoginView POST method was called")
+        serializer = StudentLoginSerializer(data=request.data)
+        if serializer.is_valid():
+            user = authenticate(
+                request,
+                username=serializer.validated_data['roll_number'],
+                password=serializer.validated_data['password']
+            )
+            
+            if user and user.is_student:
+                refresh = RefreshToken.for_user(user)
+                return Response({
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token),
+                })
+            return Response(
+                {'error': 'Invalid credentials or not a student'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class StaffLoginView(APIView):
+    permission_classes = [AllowAny]
+    def post(self, request):
+        serializer = StaffLoginSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            password = serializer.validated_data['password']
+            
+            # Debug: Check if user exists
+            try:
+                user = User.objects.filter(email=email).first()
+                if user:
+                    logger.info(f"Found user with email {email}, is_staff={user.is_staff}")
+                else:
+                    logger.info(f"No user found with email {email}")
+            except Exception as e:
+                logger.error(f"Error checking user existence: {e}")
+
+            # Use email as username for staff authentication
+            user = authenticate(
+                request,
+                username=email,  # Use email as username
+                password=password
+            )
+            
+            # Debug: Log authentication result
+            logger.info(f"Authentication result for {email}: {'Success' if user else 'Failed'}")
+            if user:
+                logger.info(f"User is_staff: {user.is_staff}")
+            
+            if user and user.is_staff:
+                refresh = RefreshToken.for_user(user)
+                return Response({
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token)
+                })
+            
+            error_message = 'Invalid email or password for staff login'
+            if user and not user.is_staff:
+                error_message = 'This account is not a staff account'
+            
+            return Response(
+                {'error': error_message},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        # Log validation errors
+        logger.error(f"Validation errors: {serializer.errors}")
+        return Response(
+            {'error': 'Please provide a valid email and password'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+class UserProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if hasattr(user, 'student_profile'):
+            serializer = StudentProfileSerializer(user.student_profile)
+            return Response({
+                'type': 'student',
+                'profile': serializer.data
+            })
+        elif hasattr(user, 'staff_profile'):
+            serializer = StaffProfileSerializer(user.staff_profile)
+            return Response({
+                'type': 'staff',
+                'profile': serializer.data
+            })
+        return Response(
+            {'error': 'Profile not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
