@@ -5,7 +5,6 @@ import StudentLoginPage from "../pages/StudentLoginPage";
 import StaffLoginPage from "../pages/StaffLoginPage";
 import StudentDashboard from "../pages/StudentDashboard";
 import StaffDashboard from "../pages/StaffDashboard";
-
 const router = createBrowserRouter([
   {
     path: "/",

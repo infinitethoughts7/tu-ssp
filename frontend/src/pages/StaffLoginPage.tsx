@@ -8,15 +8,13 @@ const StaffLoginPage = () => {
   const { login, error: authError, isLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(""); 
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
-
     try {
-      await login({ email: email.toLowerCase().trim(), password });
-      navigate("/staff-dashboard");
+     await login({ email: email.toLowerCase().trim(), password }); // 🔥 dynamic redirection based on department
     } catch {
       if (authError) {
         setError(authError);
@@ -25,7 +23,7 @@ const StaffLoginPage = () => {
       }
     }
   };
-
+  
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-md p-8 w-full max-w-md">

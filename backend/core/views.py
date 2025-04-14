@@ -77,9 +77,15 @@ class StaffLoginView(APIView):
             
             if user and user.is_staff:
                 refresh = RefreshToken.for_user(user)
+                # Get staff profile and department
+                staff_profile = StaffProfile.objects.get(user=user)
+                department = staff_profile.department.department
+                
                 return Response({
                     'refresh': str(refresh),
-                    'access': str(refresh.access_token)
+                    'access': str(refresh.access_token),
+                    'department': department,
+                    'redirect_to': f'/dashboard/{department}/'
                 })
             
             error_message = 'Invalid email or password for staff login'

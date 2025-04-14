@@ -1,70 +1,59 @@
 import { useNavigate } from "react-router-dom";
-import { UserRound, Building, GraduationCap, Users } from "lucide-react";
+import { User2, Building2, GraduationCap, UsersRound } from "lucide-react";
 
 const HomePage = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen w-full relative overflow-hidden">
-      {/* 🎓 Background image */}
+    <div className="min-h-screen w-full relative">
+      {/* 📸 Background Image */}
       <div className="absolute inset-0 -z-10">
         <img
-          src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?q=80&w=2000&auto=format&fit=crop"
-          alt="Graduation Celebration"
-          className="w-full h-full object-cover"
+          src="/src/assets/images/backgroundImage.png"
+          alt="Graduation Background"
+          className="w-full h-full object-cover opacity-80"
         />
-        <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]"></div>
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       </div>
 
-      {/* 🔝 Content positioned near top */}
-      <div className="relative z-10 w-full max-w-md mx-auto px-4 pt-12 flex flex-col items-center">
-        {/* University Icon */}
-        <div className="flex justify-center mb-4">
-          <div className="bg-white/20 backdrop-blur-md p-4 rounded-full border border-white/30 shadow-lg">
-            <GraduationCap size={42} className="text-white" />
-          </div>
+      {/* 🏛️ Top Content */}
+      <div className="flex flex-col items-center justify-center px-4 pt-24 sm:pt-32 text-center text-white">
+        <div className="bg-white/20 p-4 rounded-full backdrop-blur-sm border border-white/30 mb-4">
+          <GraduationCap size={42} strokeWidth={2.5} className="text-white" />
         </div>
 
-        {/* Title - One line only */}
-        <h1 className="text-4xl sm:text-5xl font-bold text-white text-center whitespace-nowrap">
+        <h1 className="text-3xl sm:text-4xl font-bold drop-shadow-md">
           Telangana University
         </h1>
-        <p className="text-2xl text-white/90 text-center mb-10">
+        <p className="text-lg sm:text-2xl text-white/90 mb-10 mt-2 drop-shadow-sm">
           Student Service Portal
         </p>
 
         {/* 🧊 Glass Card */}
-        <div className="bg-white/10 backdrop-blur-md p-8 rounded-3xl shadow-2xl border border-white/20 w-full">
-          {/* Icon */}
-          <div className="flex justify-center mb-8">
-            <div className="bg-white/30 backdrop-blur-md p-4 rounded-full shadow-md">
-              <Users size={36} className="text-gray-800" />
-            </div>
+        <div className="bg-white/10 border border-white/30 rounded-2xl p-8 w-full max-w-md backdrop-blur-lg shadow-lg">
+          <div className="flex justify-center mb-6">
+            <UsersRound size={40} strokeWidth={2.5} className="text-white" />
           </div>
 
-          {/* Heading */}
-          <h2 className="text-2xl font-bold text-center text-white mb-10 leading-snug">
-            Welcome to
-            <br />
-            the Student Portal
+          <h2 className="text-xl sm:text-2xl font-semibold text-white mb-8">
+            Welcome to the Student Portal
           </h2>
 
-          {/* Buttons */}
-          <div className="flex flex-col space-y-5">
+          <div className="space-y-4">
             <button
               onClick={() => navigate("/student-login")}
-              className="bg-gray-800/90 hover:bg-gray-700 text-white py-3 px-6 rounded-lg shadow-md flex items-center transition duration-200"
+              className="flex items-center justify-center space-x-3 bg-white/90 hover:bg-white text-gray-900 font-semibold py-3 rounded-xl w-full transition"
             >
-              <UserRound size={20} className="text-white mr-3" />
-              <span className="text-lg">Student Login</span>
+              <User2 size={22} strokeWidth={2.5} />
+              <span>Student Login</span>
             </button>
 
             <button
               onClick={() => navigate("/staff-login")}
-              className="bg-gray-800/90 hover:bg-gray-700 text-white py-3 px-6 rounded-lg shadow-md flex items-center transition duration-200"
+              className="flex items-center justify-center space-x-3 bg-white/90 hover:bg-white text-gray-900 font-semibold py-3 rounded-xl w-full transition"
             >
-              <Building size={20} className="text-white mr-3" />
-              <span className="text-lg">Staff Login</span>
+              <Building2 size={22} strokeWidth={2.5} />
+              <span>Staff Login</span>
             </button>
           </div>
         </div>
@@ -73,4 +62,4 @@ const HomePage = () => {
   );
 };
 
-export default HomePage; 
+export default HomePage;

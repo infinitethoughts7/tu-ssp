@@ -41,7 +41,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("userData");
     delete axios.defaults.headers.common["Authorization"];
-    navigate("/");
+    navigate("/student-login");
   }, [navigate]);
 
   useEffect(() => {
@@ -93,19 +93,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
         credentials
       );
 
-      const { access, refresh } = response.data;
+      const { access, refresh, redirect_to } = response.data;
       setAccessToken(access);
       setRefreshToken(refresh);
       localStorage.setItem("accessToken", access);
       localStorage.setItem("refreshToken", refresh);
+      if (redirect_to) {
+        navigate(redirect_to);
+      }
 
       // Fetch user profile
-      const profileResponse = await axios.get(`${API_BASE_URL}/profile/`, {
-        headers: { Authorization: `Bearer ${access}` },
-      });
-
-      setUser(profileResponse.data);
-      localStorage.setItem("userData", JSON.stringify(profileResponse.data));
     } catch (error) {
       setError("Login failed. Please check your credentials.");
       throw error;
