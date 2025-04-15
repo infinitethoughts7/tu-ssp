@@ -1,8 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { useNavigate } from "react-router-dom";
-import { AuthProviderProps, API_BASE_URL, User } from "./auth.types";
+import { AuthProviderProps, User } from "./auth.types";
 import { AuthContext } from "./auth.context";
+import { API_BASE_URL } from "../services/api";
+
+interface ErrorResponse {
+  error: string;
+}
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const navigate = useNavigate();
@@ -93,18 +98,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
         credentials
       );
 
-      const { access, refresh, redirect_to } = response.data;
+      if (!response.data.access || !response.data.refresh) {
+        throw new Error("Invalid response from server");
+      }
+
+      const { access, refresh } = response.data;
       setAccessToken(access);
       setRefreshToken(refresh);
       localStorage.setItem("accessToken", access);
       localStorage.setItem("refreshToken", refresh);
-      if (redirect_to) {
-        navigate(redirect_to);
-      }
+
+      // Set the Authorization header for future requests
+      axios.defaults.headers.common["Authorization"] = `Bearer ${access}`;
 
       // Fetch user profile
+      const profileResponse = await axios.get(`${API_BASE_URL}/profile/`);
+      const userData = profileResponse.data.profile;
+      setUser(userData);
+      localStorage.setItem("userData", JSON.stringify(userData));
+
+      if (response.data.redirect_to) {
+        navigate(response.data.redirect_to);
+      } else {
+        navigate("/student-dashboard");
+      }
     } catch (error) {
-      setError("Login failed. Please check your credentials.");
+      const axiosError = error as AxiosError<ErrorResponse>;
+      const errorMessage =
+        axiosError.response?.data?.error ||
+        "Login failed. Please check your credentials.";
+      setError(errorMessage);
       throw error;
     } finally {
       setIsLoading(false);

@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building, Mail, Lock } from "lucide-react";
+import { Building, Mail, Lock, Loader2 } from "lucide-react";
 import { useAuth } from "../context/useAuth";
 
 const StaffLoginPage = () => {
@@ -8,22 +8,32 @@ const StaffLoginPage = () => {
   const { login, error: authError, isLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(""); 
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (authError) {
+      setError(authError);
+    }
+  }, [authError]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
+
+    if (!email || !password) {
+      setError("Please enter both email and password");
+      return;
+    }
+
     try {
-     await login({ email: email.toLowerCase().trim(), password }); // 🔥 dynamic redirection based on department
+      await login({ email: email.toLowerCase().trim(), password });
     } catch {
-      if (authError) {
-        setError(authError);
-      } else {
+      if (!authError) {
         setError("An error occurred. Please try again.");
       }
     }
   };
-  
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-md p-8 w-full max-w-md">
@@ -61,6 +71,7 @@ const StaffLoginPage = () => {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-800 focus:border-gray-800"
                 placeholder="Enter your email"
                 required
+                disabled={isLoading}
               />
             </div>
           </div>
@@ -80,6 +91,7 @@ const StaffLoginPage = () => {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-800 focus:border-gray-800"
                 placeholder="Enter your password"
                 required
+                disabled={isLoading}
               />
             </div>
           </div>
@@ -90,13 +102,21 @@ const StaffLoginPage = () => {
             className={`w-full py-2 px-4 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors duration-200
                      ${isLoading ? "opacity-70 cursor-not-allowed" : ""}`}
           >
-            {isLoading ? "Logging in..." : "Login"}
+            {isLoading ? (
+              <div className="flex items-center justify-center">
+                <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                Logging in...
+              </div>
+            ) : (
+              "Login"
+            )}
           </button>
         </form>
 
         <button
           onClick={() => navigate("/")}
           className="mt-6 w-full text-center text-sm text-gray-600 hover:text-gray-800"
+          disabled={isLoading}
         >
           Back to Home
         </button>

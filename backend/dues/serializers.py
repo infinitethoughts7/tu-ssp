@@ -2,10 +2,11 @@ from rest_framework import serializers
 from .models import Dues
 from core.models import StudentProfile, Department
 from core.serializers import StudentProfileSerializer, DepartmentSerializer
-
+from rest_framework.permissions import IsAuthenticated
 class DuesSerializer(serializers.ModelSerializer):
     student_details = StudentProfileSerializer(source='student', read_only=True)
     department_details = DepartmentSerializer(source='department', read_only=True)
+    permission_classes = [IsAuthenticated]
 
     class Meta:
         model = Dues

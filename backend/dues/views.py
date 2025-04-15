@@ -38,6 +38,14 @@ class DuesViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(student__user=self.request.user)
             
         return queryset
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        user = request.user
+
+        # 🔒 Restrict staff to only update dues in their own department
+        if hasattr(user, 'staff_profile'):
+            if instance.student.department != user.staff_profile.department:
+                return Response({"detail": "You do not have permission to update this due."}, status=403)
 
     @action(detail=True, methods=['post'])
     def mark_as_paid(self, request, pk=None):

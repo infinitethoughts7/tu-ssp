@@ -1,11 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/useAuth";
-
 const StudentLoginPage = () => {
   const navigate = useNavigate();
-  const { login, error: authError, isLoading } = useAuth();
+  const { login, error: authError, isLoading, accessToken } = useAuth();
   const [rollNumber, setRollNumber] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -16,17 +15,31 @@ const StudentLoginPage = () => {
     setError("");
 
     try {
-      await login({ roll_number: rollNumber, password });
-      navigate("/student-dashboard");
-    } catch {
-      if (authError) {
-        setError(authError);
-      } else {
-        setError("An error occurred. Please try again.");
-      }
+      await login({
+        roll_number: rollNumber,
+        password,
+      });
+      // Successful login will set accessToken in auth context
+      // Navigation happens in the useEffect below
+    } catch  {
+      // Handle error directly from the exception
+      setError("An error occurred. Please try again.");
     }
   };
 
+  // Sync with authError from context
+  useEffect(() => {
+    if (authError) {
+      setError(authError);
+    }
+  }, [authError]);
+
+  // Handle navigation after successful login
+  useEffect(() => {
+    if (accessToken) {
+      navigate("/student-dashboard");
+    }
+  }, [accessToken, navigate]);
   return (
     <div className="flex h-screen w-full">
       {/* Left Side - Login Form (Dark) */}
@@ -44,7 +57,7 @@ const StudentLoginPage = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Username/Roll Number input */}
             <div className="space-y-1">
-              <label className="text-sm text-gray-400">Username</label>
+              <label className="text-sm text-gray-400">Roll Number</label>
               <input
                 type="text"
                 pattern="[0-9]*"
@@ -53,6 +66,7 @@ const StudentLoginPage = () => {
                 onChange={(e) => setRollNumber(e.target.value)}
                 className="w-full bg-transparent text-white border-b border-gray-700 pb-2 focus:outline-none focus:border-purple-500 transition-colors"
                 placeholder="Enter your roll number"
+                autoSave="on"
                 required
               />
             </div>
@@ -80,14 +94,14 @@ const StudentLoginPage = () => {
             </div>
 
             {/* Forgot password */}
-            <div className="text-right">
+            {/* <div className="text-right">
               <a
                 href="#"
                 className="text-sm text-gray-400 hover:text-purple-400"
               >
                 Forgot Password?
               </a>
-            </div>
+            </div> */}
 
             {/* Login button */}
             <button
@@ -99,20 +113,6 @@ const StudentLoginPage = () => {
             </button>
           </form>
 
-          {/* Sign up link */}
-          <div className="flex justify-between items-center mt-8">
-            <span className="text-gray-400 text-sm">
-              Don't have an account?
-            </span>
-            <a
-              href="#"
-              className="text-sm text-gray-200 bg-gray-800 py-2 px-4 rounded-md hover:bg-gray-700 transition-colors"
-            >
-              Sign up
-            </a>
-          </div>
-
-          {/* Back to home */}
           <button
             onClick={() => navigate("/")}
             className="mt-6 w-full text-center text-sm text-gray-500 hover:text-gray-300"
@@ -121,7 +121,7 @@ const StudentLoginPage = () => {
           </button>
         </div>
       </div>
- 
+
       {/* Right Side - Purple background with illustration */}
       <div className="hidden md:block md:w-1/2 bg-purple-600 flex-col items-center justify-center p-12 relative overflow-hidden">
         {/* Background shapes */}

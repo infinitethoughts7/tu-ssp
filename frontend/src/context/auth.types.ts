@@ -1,7 +1,5 @@
 import { ReactNode } from "react";
 
-export const API_BASE_URL = "http://localhost:8000/api";
-
 export interface User {
   id: number;
   email?: string;
