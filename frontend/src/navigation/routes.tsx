@@ -5,6 +5,7 @@ import StudentLoginPage from "../pages/StudentLoginPage";
 import StaffLoginPage from "../pages/StaffLoginPage";
 import StudentDashboard from "../pages/StudentDashboard";
 import StaffDashboard from "../pages/StaffDashboard";
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -39,7 +40,7 @@ const router = createBrowserRouter([
     ),
   },
   {
-    path: "/staff-dashboard",
+    path: "/dashboard/:department",
     element: (
       <AuthProvider>
         <StaffDashboard />

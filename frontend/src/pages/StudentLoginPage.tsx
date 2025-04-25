@@ -4,7 +4,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/useAuth";
 const StudentLoginPage = () => {
   const navigate = useNavigate();
-  const { login, error: authError, isLoading, accessToken } = useAuth();
+  const { login, error: authError, isLoading } = useAuth();
   const [rollNumber, setRollNumber] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -19,9 +19,11 @@ const StudentLoginPage = () => {
         roll_number: rollNumber,
         password,
       });
+      // console.log("accessToken", accessToken);
+      navigate("/student-dashboard"); 
       // Successful login will set accessToken in auth context
       // Navigation happens in the useEffect below
-    } catch  {
+    } catch {
       // Handle error directly from the exception
       setError("An error occurred. Please try again.");
     }
@@ -35,11 +37,12 @@ const StudentLoginPage = () => {
   }, [authError]);
 
   // Handle navigation after successful login
-  useEffect(() => {
-    if (accessToken) {
-      navigate("/student-dashboard");
-    }
-  }, [accessToken, navigate]);
+  // useEffect(() => {
+  //   if (accessToken) {
+  //     navigate("/student-dashboard");
+  //   }
+  // }, [accessToken, navigate]);
+
   return (
     <div className="flex h-screen w-full">
       {/* Left Side - Login Form (Dark) */}
@@ -59,6 +62,8 @@ const StudentLoginPage = () => {
             <div className="space-y-1">
               <label className="text-sm text-gray-400">Roll Number</label>
               <input
+                id="rollNumber"
+                name="rollNumber"
                 type="text"
                 pattern="[0-9]*"
                 inputMode="numeric"
@@ -66,7 +71,7 @@ const StudentLoginPage = () => {
                 onChange={(e) => setRollNumber(e.target.value)}
                 className="w-full bg-transparent text-white border-b border-gray-700 pb-2 focus:outline-none focus:border-purple-500 transition-colors"
                 placeholder="Enter your roll number"
-                autoSave="on"
+                autoComplete="roll-number"
                 required
               />
             </div>
@@ -76,11 +81,14 @@ const StudentLoginPage = () => {
               <label className="text-sm text-gray-400">Password</label>
               <div className="relative">
                 <input
+                  id="password"
+                  name="password"
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-transparent text-white border-b border-gray-700 pb-2 focus:outline-none focus:border-purple-500 transition-colors"
                   placeholder="Enter your password"
+                  autoComplete="current-password"
                   required
                 />
                 <button

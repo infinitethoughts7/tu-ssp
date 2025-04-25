@@ -38,15 +38,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [refreshToken]);
 
   const logout = useCallback(() => {
+    const userType = localStorage.getItem("userType") || "student";
+
     setUser(null);
     setAccessToken(null);
     setRefreshToken(null);
     setError(null);
+
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("userData");
+    localStorage.removeItem("userType");
+    localStorage.removeItem("department");
+
     delete axios.defaults.headers.common["Authorization"];
-    navigate("/student-login");
+    navigate(userType === "staff" ? "/staff-login" : "/student-login");
   }, [navigate]);
 
   useEffect(() => {
@@ -93,20 +99,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const endpoint = credentials.email
         ? "/auth/staff/login/"
         : "/auth/student/login/";
+
+      console.log("Attempting login with credentials:", {
+        ...credentials,
+        password: "***",
+      });
+      console.log("API Endpoint:", `${API_BASE_URL}${endpoint}`);
+
       const response = await axios.post(
         `${API_BASE_URL}${endpoint}`,
         credentials
       );
 
+      console.log("Full Login Response:", response);
+      console.log("Response Data:", response.data);
+
       if (!response.data.access || !response.data.refresh) {
+        console.error("Missing tokens in response:", response.data);
         throw new Error("Invalid response from server");
       }
 
-      const { access, refresh } = response.data;
+      const { access, refresh, department, redirect_to } = response.data;
+
+      console.log("Extracted data:", { department, redirect_to });
+
       setAccessToken(access);
       setRefreshToken(refresh);
       localStorage.setItem("accessToken", access);
       localStorage.setItem("refreshToken", refresh);
+      localStorage.setItem("department", department || "");
+      localStorage.setItem("userType", credentials.email ? "staff" : "student");
 
       // Set the Authorization header for future requests
       axios.defaults.headers.common["Authorization"] = `Bearer ${access}`;
@@ -117,12 +139,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(userData);
       localStorage.setItem("userData", JSON.stringify(userData));
 
-      if (response.data.redirect_to) {
-        navigate(response.data.redirect_to);
+      // Handle navigation
+      if (credentials.email) {
+        // For staff login, use redirect_to if provided, otherwise use department
+        if (redirect_to) {
+          // Remove trailing slash if present
+          const cleanPath = redirect_to.replace(/\/$/, "");
+          console.log("Navigating to clean path:", cleanPath);
+          navigate(cleanPath);
+        } else if (department) {
+          navigate(`/dashboard/${department}`);
+        } else {
+          navigate("/staff-dashboard");
+        }
       } else {
         navigate("/student-dashboard");
       }
     } catch (error) {
+      console.error("Login Error Details:", error);
+      if (axios.isAxiosError(error)) {
+        console.error("Axios Error Response:", error.response?.data);
+        console.error("Axios Error Status:", error.response?.status);
+      }
       const axiosError = error as AxiosError<ErrorResponse>;
       const errorMessage =
         axiosError.response?.data?.error ||
