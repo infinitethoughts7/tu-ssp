@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import TemplateView
+from django.conf import settings
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -30,3 +31,9 @@ urlpatterns = [
     # path('dashboard/sports/', TemplateView.as_view(template_name='dashboard/sports.html'), name='sports_dashboard'),
     # path('dashboard/lab/', TemplateView.as_view(template_name='dashboard/lab.html'), name='lab_dashboard'),
 ]
+
+if settings.DEBUG:
+    import debug_toolbar
+    urlpatterns += [
+        path('__debug__/', include(debug_toolbar.urls)),
+    ]
