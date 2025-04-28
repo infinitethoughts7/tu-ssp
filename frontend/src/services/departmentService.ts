@@ -11,7 +11,7 @@ export interface StaffProfile {
 }
 
 export interface AddDueData {
-  student_roll_number: string;
+  student: string;
   amount: string;
   due_date: string;
   description: string;
@@ -97,7 +97,9 @@ export const getStaffProfile = async (): Promise<StaffProfile> => {
   }
 };
 
-export const searchStudentsByRollNumber = async (query: string) => {
+export const searchStudentsByRollNumber = async (
+  query: string
+): Promise<any[]> => {
   try {
     const response = await axios.get(
       `${API_BASE_URL}/students/search/?q=${query}`,

@@ -120,3 +120,24 @@ class DuesViewSet(viewsets.ModelViewSet):
         except StudentProfile.DoesNotExist:
             return Response({'error': 'Student not found'}, status=404) 
         
+    def create(self, request, *args, **kwargs):
+        logger.info("=== Creating new due ===")
+        logger.info(f"Request data: {request.data}")
+        logger.info(f"User: {request.user}")
+        logger.info(f"Is authenticated: {request.user.is_authenticated}")
+        
+        try:
+            serializer = self.get_serializer(data=request.data)
+            if serializer.is_valid():
+                logger.info("Serializer is valid")
+                self.perform_create(serializer)
+                headers = self.get_success_headers(serializer.data)
+                return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            else:
+                logger.error("Serializer validation errors:")
+                logger.error(serializer.errors)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Error creating due: {str(e)}")
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST) 
+        

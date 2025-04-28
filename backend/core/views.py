@@ -16,6 +16,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 import logging
 from rest_framework.decorators import api_view, permission_classes
+from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 
@@ -156,3 +157,33 @@ def staff_profile(request):
     except Exception as e:
         print("Error in staff_profile view:", str(e))
         return Response({'error': str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def search_students(request):
+    query = request.GET.get('q', '')
+    if not query:
+        return Response({'error': 'Search query is required'}, status=400)
+    
+    try:
+        # Search by roll number or name
+        students = StudentProfile.objects.filter(
+            Q(roll_number__icontains=query) |
+            Q(user__first_name__icontains=query) |
+            Q(user__last_name__icontains=query)
+        )[:5]  # Limit to 5 results
+        
+        results = []
+        for student in students:
+            results.append({
+                'roll_number': student.roll_number,
+                'name': f"{student.user.first_name} {student.user.last_name}",
+                'course': student.course,
+                'caste': student.caste,
+                'phone_number': student.phone_number
+            })
+        
+        return Response(results)
+    except Exception as e:
+        logger.error(f"Error searching students: {str(e)}")
+        return Response({'error': 'Error searching students'}, status=500)

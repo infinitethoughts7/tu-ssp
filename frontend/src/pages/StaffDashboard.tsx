@@ -7,6 +7,7 @@ import {
   addDepartmentDue,
   getStaffProfile,
   StaffProfile,
+  searchStudentsByRollNumber,
 } from "../services/departmentService";
 import {
   Loader2,
@@ -59,6 +60,33 @@ const COURSE_OPTIONS = [
   "B.Ed",
 ];
 
+interface StudentDetails {
+  roll_number: string;
+  name: string;
+  course: string;
+  caste: string;
+  phone_number: string;
+}
+
+interface StudentSuggestion {
+  roll_number: string;
+  name: string;
+  course: string;
+  caste: string;
+  phone_number: string;
+}
+
+interface StudentResponse {
+  roll_number: string;
+  user: {
+    first_name: string;
+    last_name: string;
+  };
+  course: string;
+  caste: string;
+  phone_number: string;
+}
+
 const StaffDashboard = () => {
   const { logout, accessToken } = useAuth();
   const navigate = useNavigate();
@@ -78,9 +106,19 @@ const StaffDashboard = () => {
     due_date: "",
     description: "",
   });
+  const [studentDetails, setStudentDetails] = useState<StudentDetails | null>(
+    null
+  );
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [students, setStudents] = useState<any[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [staffProfile, setStaffProfile] = useState<StaffProfile | null>(null);
+  const [studentSuggestions, setStudentSuggestions] = useState<
+    StudentSuggestion[]
+  >([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedCaste, setSelectedCaste] = useState<string>("");
 
   useEffect(() => {
     console.log("StaffDashboard - Checking auth state:", {
@@ -258,6 +296,120 @@ const StaffDashboard = () => {
     } else {
       setSortField(field);
       setSortDirection("asc");
+    }
+  };
+
+  // Function to handle roll number search with suggestions
+  const handleRollNumberSearch = async (value: string) => {
+    if (value.length < 3) {
+      setStudentSuggestions([]);
+      return;
+    }
+
+    setIsSearching(true);
+    setSearchError(null);
+    try {
+      const results = await searchStudentsByRollNumber(value);
+      setStudentSuggestions(
+        results.map((student) => ({
+          roll_number: student.roll_number,
+          name: student.name,
+          course: student.course,
+          caste: student.caste,
+          phone_number: student.phone_number,
+        }))
+      );
+    } catch (error) {
+      console.error("Error searching student:", error);
+      setSearchError("Error searching for student");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Function to handle suggestion selection
+  const handleSuggestionSelect = async (suggestion: StudentSuggestion) => {
+    setNewDue({ ...newDue, student_roll_number: suggestion.roll_number });
+    setShowSuggestions(false);
+
+    try {
+      const response = await searchStudentsByRollNumber(suggestion.roll_number);
+      if (response && response.length > 0) {
+        const student = response[0];
+        setStudentDetails({
+          roll_number: student.roll_number,
+          name: `${student.user.first_name} ${student.user.last_name}`,
+          course: student.course,
+          caste: student.caste,
+          phone_number: student.phone_number,
+        });
+        setSelectedCaste(student.caste);
+      }
+    } catch (error) {
+      console.error("Error fetching student details:", error);
+      setError("Error fetching student details");
+    }
+  };
+
+  // Function to handle adding new due
+  const handleAddDue = async () => {
+    if (!studentDetails) {
+      setError("Please select a student first");
+      return;
+    }
+
+    try {
+      const department = localStorage.getItem("department");
+      if (!department) {
+        setError("Department not found");
+        return;
+      }
+
+      // Convert amount to decimal string
+      const amount = parseFloat(newDue.amount).toFixed(2);
+
+      const dueData = {
+        student: studentDetails.roll_number,
+        amount: amount,
+        due_date: newDue.due_date,
+        description: newDue.description,
+        department: department,
+      };
+
+      console.log("Sending due data:", JSON.stringify(dueData, null, 2));
+      console.log("Student details:", JSON.stringify(studentDetails, null, 2));
+      console.log("Department:", department);
+
+      const response = await addDepartmentDue(dueData);
+      console.log("Response from backend:", response);
+
+      setShowAddDueModal(false);
+      setNewDue({
+        student_roll_number: "",
+        amount: "",
+        due_date: "",
+        description: "",
+      });
+      setStudentDetails(null);
+
+      // Refresh the dues list
+      const updatedDues = await getDepartmentDues(department);
+      setDepartmentDues(updatedDues);
+    } catch (error: any) {
+      console.error("Error adding due:", error);
+      if (axios.isAxiosError(error)) {
+        console.error("Error details:", {
+          status: error.response?.status,
+          data: error.response?.data,
+          headers: error.response?.headers,
+          config: error.config,
+        });
+        setError(
+          `Failed to add due: ${error.response?.data?.error || error.message}`
+        );
+      } else {
+        setError("Failed to add due. Please try again.");
+      }
     }
   };
 
@@ -523,6 +675,204 @@ const StaffDashboard = () => {
             </div>
           )}
         </div>
+
+        {/* Add Due Modal */}
+        {showAddDueModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Add New Due</h2>
+                <button
+                  onClick={() => {
+                    setShowAddDueModal(false);
+                    setStudentDetails(null);
+                    setNewDue({
+                      student_roll_number: "",
+                      amount: "",
+                      due_date: "",
+                      description: "",
+                    });
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Roll Number Search with Autocomplete */}
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Roll Number
+                  </label>
+                  <div className="relative w-full">
+                    <input
+                      type="text"
+                      value={newDue.student_roll_number}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setNewDue((prev) => ({
+                          ...prev,
+                          student_roll_number: value,
+                        }));
+                        handleRollNumberSearch(value);
+                      }}
+                      onFocus={() => setShowSuggestions(true)}
+                      className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter roll number"
+                    />
+                    {isSearching && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Suggestions Dropdown */}
+                  {showSuggestions && studentSuggestions.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg">
+                      {studentSuggestions.map((student) => (
+                        <div
+                          key={student.roll_number}
+                          className="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                          onClick={() => {
+                            setNewDue((prev) => ({
+                              ...prev,
+                              student_roll_number: student.roll_number,
+                            }));
+                            setStudentDetails({
+                              roll_number: student.roll_number,
+                              name: student.name,
+                              course: student.course,
+                              caste: student.caste,
+                              phone_number: student.phone_number,
+                            });
+                            setShowSuggestions(false);
+                          }}
+                        >
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium">
+                              {student.roll_number}
+                            </span>
+                            <span className="text-gray-600">
+                              {student.name}
+                            </span>
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {student.course} • {student.caste}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {searchError && (
+                    <p className="mt-1 text-sm text-red-600">{searchError}</p>
+                  )}
+                </div>
+
+                {/* Student Details (Auto-filled) */}
+                {studentDetails && (
+                  <div className="bg-gray-50 p-4 rounded-md">
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">
+                      Student Details
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-500">Name</p>
+                        <p className="font-medium">{studentDetails.name}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Course</p>
+                        <p className="font-medium">{studentDetails.course}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Caste</p>
+                        <p className="font-medium">{studentDetails.caste}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Phone</p>
+                        <p className="font-medium">
+                          {studentDetails.phone_number}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Due Details */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Amount
+                    </label>
+                    <input
+                      type="number"
+                      value={newDue.amount}
+                      onChange={(e) =>
+                        setNewDue({ ...newDue, amount: e.target.value })
+                      }
+                      className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter amount"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Due Date
+                    </label>
+                    <input
+                      type="date"
+                      value={newDue.due_date}
+                      onChange={(e) =>
+                        setNewDue({ ...newDue, due_date: e.target.value })
+                      }
+                      className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    value={newDue.description}
+                    onChange={(e) =>
+                      setNewDue({ ...newDue, description: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter description"
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowAddDueModal(false);
+                    setStudentDetails(null);
+                    setNewDue({
+                      student_roll_number: "",
+                      amount: "",
+                      due_date: "",
+                      description: "",
+                    });
+                  }}
+                  className="px-4 py-2 border rounded-md hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddDue}
+                  disabled={!studentDetails}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300"
+                >
+                  Add Due
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
