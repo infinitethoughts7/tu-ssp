@@ -15,6 +15,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 import logging
+from rest_framework.decorators import api_view, permission_classes
 
 logger = logging.getLogger(__name__)
 
@@ -125,3 +126,33 @@ class UserProfileView(APIView):
             {'error': 'Profile not found'},
             status=status.HTTP_404_NOT_FOUND
         )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def staff_profile(request):
+    print("Staff profile request received")
+    print("User:", request.user)
+    print("Is authenticated:", request.user.is_authenticated)
+    print("Has staff_profile:", hasattr(request.user, 'staff_profile'))
+    
+    if not hasattr(request.user, 'staff_profile'):
+        print("User is not a staff member")
+        return Response({'error': 'User is not a staff member'}, status=403)
+    
+    try:
+        staff_profile = request.user.staff_profile
+        print("Staff profile found:", staff_profile)
+        print("Department:", staff_profile.department)
+        
+        response_data = {
+            'name': request.user.get_full_name(),
+            'designation': staff_profile.designation,
+            'department': staff_profile.department.department,
+            'phone_number': staff_profile.phone_number,
+            'email': request.user.email
+        }
+        print("Response data:", response_data)
+        return Response(response_data)
+    except Exception as e:
+        print("Error in staff_profile view:", str(e))
+        return Response({'error': str(e)}, status=500)

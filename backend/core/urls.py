@@ -14,5 +14,6 @@ urlpatterns = [
     # - For students: roll number, course, personal details
     # - For staff: department, designation, personal details
     path('profile/', views.UserProfileView.as_view(), name='user-profile'),
- 
+    
+    path('staff/profile/', views.staff_profile, name='staff-profile'),
 ] 

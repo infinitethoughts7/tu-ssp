@@ -12,10 +12,10 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class DuesViewSet(viewsets.ModelViewSet):
+class DuesViewSet(viewsets.ModelViewSet): 
     queryset = Dues.objects.all()
     serializer_class = DuesSerializer
-    permission_classes = [IsAuthenticated, IsStaffOfDepartment]
+    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = DuesFilter
     search_fields = ['student__user__first_name', 'student__user__last_name', 'description']

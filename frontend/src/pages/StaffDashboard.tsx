@@ -4,6 +4,9 @@ import { useAuth } from "../context/useAuth";
 import {
   getDepartmentDues,
   markDueAsPaid,
+  addDepartmentDue,
+  getStaffProfile,
+  StaffProfile,
 } from "../services/departmentService";
 import {
   Loader2,
@@ -15,9 +18,16 @@ import {
   Beaker,
   Search,
   ArrowUpDown,
+  Plus,
+  X,
+  User,
+  Phone,
+  Mail,
+  Briefcase,
 } from "lucide-react";
 import { format } from "date-fns";
 import { DepartmentDue } from "../types/department";
+import axios from "axios";
 
 const StaffDashboard = () => {
   const { logout, accessToken } = useAuth();
@@ -30,6 +40,16 @@ const StaffDashboard = () => {
   const [filterPaid, setFilterPaid] = useState<boolean | null>(null);
   const [sortField, setSortField] = useState<keyof DepartmentDue>("due_date");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [showAddDueModal, setShowAddDueModal] = useState(false);
+  const [newDue, setNewDue] = useState({
+    student_roll_number: "",
+    amount: "",
+    due_date: "",
+    description: "",
+  });
+  const [students, setStudents] = useState<any[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+  const [staffProfile, setStaffProfile] = useState<StaffProfile | null>(null);
 
   useEffect(() => {
     console.log("StaffDashboard - Checking auth state:", {
@@ -83,6 +103,44 @@ const StaffDashboard = () => {
     fetchDepartmentDues();
   }, [accessToken]);
 
+  useEffect(() => {
+    const fetchStaffProfile = async () => {
+      try {
+        console.log("Starting to fetch staff profile...");
+        const profile = await getStaffProfile();
+        console.log("Staff profile fetched successfully:", profile);
+        setStaffProfile(profile);
+        setError(null);
+      } catch (error) {
+        console.error("Error in fetchStaffProfile:", error);
+        if (axios.isAxiosError(error)) {
+          if (error.response?.status === 403) {
+            setError("You do not have permission to view this profile");
+          } else if (error.response?.status === 401) {
+            setError("Please log in again");
+            logout();
+          } else {
+            setError(
+              `Failed to load staff profile: ${
+                error.response?.data?.error || error.message
+              }`
+            );
+          }
+        } else {
+          setError("An unexpected error occurred while loading the profile");
+        }
+      }
+    };
+
+    if (accessToken) {
+      console.log("Access token exists, fetching profile");
+      fetchStaffProfile();
+    } else {
+      console.log("No access token, skipping profile fetch");
+      setError("Please log in to view your profile");
+    }
+  }, [accessToken, logout]);
+
   const handleMarkAsPaid = async (dueId: number) => {
     try {
       await markDueAsPaid(dueId);
@@ -120,17 +178,17 @@ const StaffDashboard = () => {
     const department = localStorage.getItem("department")?.toLowerCase();
     switch (department) {
       case "library":
-        return "Library Dues";
+        return "Students Library Dues";
       case "hostel":
-        return "Hostel Dues";
+        return "Students Hostel Dues";
       case "accounts":
-        return "Accounts Dues";
+        return "Students Accounts Dues";
       case "sports":
-        return "Sports Dues";
+        return "Students Sports Dues";
       case "lab":
-        return "Lab Dues";
+        return "Students Lab Dues";
       default:
-        return "Department Dues";
+        return "Students Department Dues";
     }
   };
 
@@ -180,11 +238,26 @@ const StaffDashboard = () => {
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center space-x-3">
             {getDepartmentIcon()}
-            <h1 className="text-2xl font-bold text-gray-900">
-              {getDepartmentTitle()}
-            </h1>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {getDepartmentTitle()}
+              </h1>
+              {staffProfile && (
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <Briefcase className="h-4 w-4" />
+                  <span>{staffProfile.designation}</span>
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex items-center space-x-4">
+            <button
+              onClick={() => setShowAddDueModal(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center space-x-2"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Add Due</span>
+            </button>
             <button
               onClick={logout}
               className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
@@ -198,6 +271,58 @@ const StaffDashboard = () => {
           <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-md flex items-center">
             <AlertCircle className="h-5 w-5 mr-2" />
             {error}
+          </div>
+        )}
+
+        {staffProfile ? (
+          <div className="bg-white rounded-lg shadow p-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="flex items-center space-x-3">
+                <div className="bg-blue-100 p-3 rounded-full">
+                  <User className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Name</p>
+                  <p className="font-medium">{staffProfile.name}</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className="bg-green-100 p-3 rounded-full">
+                  <Mail className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Email</p>
+                  <p className="font-medium">{staffProfile.email}</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className="bg-purple-100 p-3 rounded-full">
+                  <Phone className="h-6 w-6 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Phone</p>
+                  <p className="font-medium">{staffProfile.phone_number}</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className="bg-yellow-100 p-3 rounded-full">
+                  <Briefcase className="h-6 w-6 text-yellow-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Department</p>
+                  <p className="font-medium">{staffProfile.department}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow p-6 mb-6">
+            <div className="flex justify-center items-center">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              <span className="ml-2 text-gray-600">
+                Loading staff profile...
+              </span>
+            </div>
           </div>
         )}
 
