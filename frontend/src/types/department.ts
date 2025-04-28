@@ -1,5 +1,3 @@
-
-
 export interface DepartmentDue {
   id: number;
   student: number;
@@ -10,6 +8,8 @@ export interface DepartmentDue {
       roll_number: string;
       is_student: boolean;
       is_staff: boolean;
+      first_name: string;
+      last_name: string;
     };
     roll_number: string;
     course: string;

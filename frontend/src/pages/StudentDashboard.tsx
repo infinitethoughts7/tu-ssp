@@ -11,6 +11,11 @@ import {
   Download,
   FileText,
   GraduationCap,
+  ChevronDown,
+  ChevronRight,
+  Upload,
+  X,
+  Receipt,
 } from "lucide-react";
 
 // Types
@@ -39,14 +44,131 @@ type StudentDetails = {
   image?: string;
 };
 
+type DepartmentSummary = {
+  department: string;
+  totalAmount: number;
+  unpaidAmount: number;
+  dues: Due[];
+  isExpanded: boolean;
+  receipt?: string; // URL to the uploaded receipt
+};
+
+type ReceiptModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  department: string;
+  onUpload: (file: File) => void;
+};
+
+// Helper function to capitalize first letter
+const capitalizeFirstLetter = (string: string) => {
+  return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
+};
+
+const ReceiptModal: React.FC<ReceiptModalProps> = ({
+  isOpen,
+  onClose,
+  department,
+  onUpload,
+}) => {
+  const [file, setFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  if (!isOpen) return null;
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!file) return;
+    setIsUploading(true);
+    try {
+      await onUpload(file);
+      setFile(null);
+      onClose();
+    } catch (error) {
+      console.error("Error uploading receipt:", error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl p-6 w-full max-w-md">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">
+            Upload Payment Receipt
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <X size={20} />
+          </button>
+        </div>
+        <div className="mb-4">
+          <p className="text-sm text-gray-600 mb-2">
+            Department: <span className="font-medium">{department}</span>
+          </p>
+          <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center">
+            <input
+              type="file"
+              accept="image/*,.pdf"
+              onChange={handleFileChange}
+              className="hidden"
+              id="receipt-upload"
+            />
+            <label
+              htmlFor="receipt-upload"
+              className="cursor-pointer flex flex-col items-center gap-2"
+            >
+              <Upload size={24} className="text-gray-400" />
+              <span className="text-sm text-gray-600">
+                {file ? file.name : "Click to upload receipt"}
+              </span>
+              <span className="text-xs text-gray-500">
+                Supported formats: JPG, PNG, PDF
+              </span>
+            </label>
+          </div>
+        </div>
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleUpload}
+            disabled={!file || isUploading}
+            className="px-4 py-2 text-sm font-medium text-white bg-gray-800 hover:bg-gray-900 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isUploading ? "Uploading..." : "Upload Receipt"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const StudentDashboard: React.FC = () => {
   const [dues, setDues] = useState<Due[]>([]);
   const { logout, accessToken, user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | "paid" | "unpaid">("all");
-  const [deptFilter, setDeptFilter] = useState<string>("all");
+  const [departmentSummaries, setDepartmentSummaries] = useState<
+    DepartmentSummary[]
+  >([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(
+    null
+  );
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
 
   // Mock student data (in a real app, this would come from API)
   const studentDetails: StudentDetails = {
@@ -78,33 +200,50 @@ const StudentDashboard: React.FC = () => {
     getDues();
   }, [accessToken]);
 
-  // Get unique departments for filter
-  const departments = [
-    "all",
-    ...new Set(dues.map((due) => due.department_details.department)),
-  ];
+  useEffect(() => {
+    // Group dues by department and calculate summaries
+    const groupedDues = dues.reduce((acc, due) => {
+      const dept = capitalizeFirstLetter(due.department_details.department);
+      if (!acc[dept]) {
+        acc[dept] = {
+          department: dept,
+          totalAmount: 0,
+          unpaidAmount: 0,
+          dues: [],
+          isExpanded: false,
+          receipt: undefined,
+        };
+      }
+      const amount = parseFloat(due.amount);
+      acc[dept].totalAmount += amount;
+      if (!due.is_paid) {
+        acc[dept].unpaidAmount += amount;
+      }
+      acc[dept].dues.push(due);
+      return acc;
+    }, {} as Record<string, DepartmentSummary>);
 
-  // Filter dues based on department, payment status, and search term
-  const filteredDues = dues.filter((due) => {
-    const matchesFilter =
-      filter === "all" || (filter === "paid" ? due.is_paid : !due.is_paid);
+    setDepartmentSummaries(Object.values(groupedDues));
+  }, [dues]);
 
-    const matchesDept =
-      deptFilter === "all" || due.department_details.department === deptFilter;
+  const toggleDepartment = (department: string) => {
+    setDepartmentSummaries((prev) =>
+      prev.map((summary) =>
+        summary.department === department
+          ? { ...summary, isExpanded: !summary.isExpanded }
+          : summary
+      )
+    );
+  };
 
-    const matchesSearch =
-      searchTerm === "" ||
-      due.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      due.department_details.department
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
-
-    return matchesFilter && matchesDept && matchesSearch;
-  });
-
-  const totalUnpaidAmount = dues
-    .filter((due) => !due.is_paid)
-    .reduce((sum, due) => sum + parseFloat(due.amount), 0);
+  const handleReceiptUpload = async (file: File) => {
+    if (!selectedDepartment) return;
+    // Here you would typically upload the file to your backend
+    // and update the payment status for all dues in that department
+    console.log("Uploading receipt for department:", selectedDepartment);
+    console.log("File:", file);
+    // Add your API call here to upload the receipt and update all dues in the department
+  };
 
   if (loading) {
     return (
@@ -136,37 +275,43 @@ const StudentDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       {/* University Header */}
-      <div className="bg-gray-800 text-white p-4 shadow-md">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <GraduationCap size={36} className="text-white" />
-            <div>
-              <h1 className="text-2xl font-bold">Telangana University</h1>
-              <p className="text-gray-300 text-sm">Excellence in Education</p>
+      <div className="bg-white border-b border-gray-200">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              <div className="bg-gray-800 p-2 rounded-lg">
+                <GraduationCap size={32} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Telangana University
+                </h1>
+                <p className="text-sm text-gray-500">Excellence in Education</p>
+              </div>
             </div>
+            <button
+              onClick={logout}
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              Logout
+            </button>
           </div>
-          <button
-            onClick={logout}
-            className="bg-white text-gray-800 px-4 py-2 rounded-md hover:bg-gray-100 font-medium transition"
-          >
-            Logout
-          </button>
         </div>
       </div>
 
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto px-6 py-8">
         {/* Student Profile Card */}
-        <div className="bg-white rounded-lg shadow p-6 mb-8 border border-gray-200">
-          <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
-            <div className="flex-shrink-0 bg-gray-100 p-4 rounded-full text-gray-800">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
+          <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
+            <div className="flex-shrink-0 bg-gray-50 p-4 rounded-xl text-gray-600">
               <UserRound size={48} />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-grow">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-grow">
               <div>
-                <h2 className="text-xl font-bold text-gray-800">
+                <h2 className="text-xl font-semibold text-gray-900">
                   {studentDetails.name}
                 </h2>
                 <p className="text-gray-600 font-medium">
@@ -174,32 +319,31 @@ const StudentDashboard: React.FC = () => {
                 </p>
               </div>
 
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <BookOpen size={16} className="text-gray-600" />
-                  <span className="text-gray-700">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-gray-600">
+                  <BookOpen size={16} />
+                  <span>
                     {studentDetails.course} - {studentDetails.branch}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Calendar size={16} className="text-gray-600" />
-                  <span className="text-gray-700">
-                    Year {studentDetails.year}
-                  </span>
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Calendar size={16} />
+                  <span>Year {studentDetails.year}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <FileText size={16} className="text-gray-600" />
-                  <span className="text-gray-700">
-                    Category: {studentDetails.category}
-                  </span>
+                <div className="flex items-center gap-2 text-gray-600">
+                  <FileText size={16} />
+                  <span>Category: {studentDetails.category}</span>
                 </div>
               </div>
 
               <div className="flex items-center justify-end">
-                <div className="bg-red-50 text-red-700 px-6 py-3 rounded-md font-medium flex items-center gap-2 border border-red-200">
+                <div className="bg-red-50 text-red-700 px-6 py-3 rounded-lg font-medium flex items-center gap-2 border border-red-100">
                   <span className="text-sm">Total Unpaid:</span>
                   <span className="text-lg">
-                    ₹{totalUnpaidAmount.toFixed(2)}
+                    ₹
+                    {departmentSummaries
+                      .reduce((sum, dept) => sum + dept.unpaidAmount, 0)
+                      .toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -207,251 +351,176 @@ const StudentDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Filters & Table */}
-        <div className="bg-white rounded-lg shadow p-6 mb-8 border border-gray-200">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-            <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-              <Building2 size={20} />
-              Dues Management
-            </h2>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 text-sm"
-                />
-                <Search
-                  size={16}
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                />
+        {/* Department Dues Section */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+            <div className="flex items-center gap-3">
+              <div className="bg-gray-50 p-2 rounded-lg">
+                <Building2 size={20} className="text-gray-600" />
               </div>
+              <h2 className="text-xl font-semibold text-gray-900">
+                Department Dues
+              </h2>
+            </div>
 
-              <div className="relative group">
-                <button className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition">
-                  <Filter size={16} />
-                  <span>Filters</span>
-                </button>
-                <div className="absolute right-0 z-10 mt-2 bg-white shadow-lg rounded-md p-4 border border-gray-200 hidden group-hover:block w-48">
-                  <div className="mb-3">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Status
-                    </label>
-                    <div className="space-y-1">
-                      <button
-                        onClick={() => setFilter("all")}
-                        className={`w-full text-left px-3 py-1 rounded-md text-sm ${
-                          filter === "all"
-                            ? "bg-gray-200 text-gray-800"
-                            : "hover:bg-gray-100"
-                        }`}
-                      >
-                        All
-                      </button>
-                      <button
-                        onClick={() => setFilter("paid")}
-                        className={`w-full text-left px-3 py-1 rounded-md text-sm ${
-                          filter === "paid"
-                            ? "bg-green-100 text-green-700"
-                            : "hover:bg-gray-100"
-                        }`}
-                      >
-                        Paid
-                      </button>
-                      <button
-                        onClick={() => setFilter("unpaid")}
-                        className={`w-full text-left px-3 py-1 rounded-md text-sm ${
-                          filter === "unpaid"
-                            ? "bg-red-100 text-red-700"
-                            : "hover:bg-gray-100"
-                        }`}
-                      >
-                        Unpaid
-                      </button>
+            <div className="relative w-full md:w-64">
+              <input
+                type="text"
+                placeholder="Search departments..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-sm bg-gray-50"
+              />
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              />
+            </div>
+          </div>
+
+          {/* Department Cards */}
+          <div className="space-y-4">
+            {departmentSummaries
+              .filter(
+                (summary) =>
+                  searchTerm === "" ||
+                  summary.department
+                    .toLowerCase()
+                    .includes(searchTerm.toLowerCase())
+              )
+              .map((summary) => (
+                <div
+                  key={summary.department}
+                  className="border border-gray-100 rounded-lg overflow-hidden hover:border-gray-200 transition-colors"
+                >
+                  {/* Department Header */}
+                  <div
+                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => toggleDepartment(summary.department)}
+                  >
+                    <div className="flex items-center gap-3 mb-3 sm:mb-0">
+                      {summary.isExpanded ? (
+                        <ChevronDown size={20} className="text-gray-500" />
+                      ) : (
+                        <ChevronRight size={20} className="text-gray-500" />
+                      )}
+                      <h3 className="text-lg font-medium text-gray-900">
+                        {summary.department}
+                      </h3>
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Department
-                    </label>
-                    <div className="max-h-40 overflow-y-auto space-y-1">
-                      {departments.map((dept) => (
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 w-full sm:w-auto">
+                      <div className="text-right w-full sm:w-auto">
+                        <p className="text-sm text-gray-500">Total Amount</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          ₹{summary.totalAmount.toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="text-right w-full sm:w-auto">
+                        <p className="text-sm text-gray-500">Unpaid</p>
+                        <p className="text-lg font-semibold text-red-600">
+                          ₹{summary.unpaidAmount.toFixed(2)}
+                        </p>
+                      </div>
+                      {summary.unpaidAmount > 0 && (
                         <button
-                          key={dept}
-                          onClick={() => setDeptFilter(dept)}
-                          className={`w-full text-left px-3 py-1 rounded-md text-sm ${
-                            deptFilter === dept
-                              ? "bg-gray-200 text-gray-800"
-                              : "hover:bg-gray-100"
-                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedDepartment(summary.department);
+                            setShowReceiptModal(true);
+                          }}
+                          className="mt-2 sm:mt-0 w-full sm:w-auto text-gray-700 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
                         >
-                          {dept === "all"
-                            ? "All Departments"
-                            : dept.charAt(0).toUpperCase() + dept.slice(1)}
+                          <Upload size={16} />
+                          Upload Receipt
                         </button>
-                      ))}
+                      )}
+                      {summary.receipt && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Open receipt in new tab or modal
+                            window.open(summary.receipt, "_blank");
+                          }}
+                          className="mt-2 sm:mt-0 w-full sm:w-auto text-gray-700 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                        >
+                          <Receipt size={16} />
+                          View Receipt
+                        </button>
+                      )}
                     </div>
                   </div>
+
+                  {/* Department Details */}
+                  {summary.isExpanded && (
+                    <div className="border-t border-gray-100">
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Description
+                              </th>
+                              <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Amount
+                              </th>
+                              <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Due Date
+                              </th>
+                              <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Status
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {summary.dues.map((due) => (
+                              <tr
+                                key={due.id}
+                                className="hover:bg-gray-50 transition-colors"
+                              >
+                                <td className="px-4 sm:px-6 py-4 text-sm text-gray-900">
+                                  {due.description}
+                                </td>
+                                <td className="px-4 sm:px-6 py-4 text-sm text-gray-900">
+                                  ₹{due.amount}
+                                </td>
+                                <td className="px-4 sm:px-6 py-4 text-sm text-gray-900">
+                                  {new Date(due.due_date).toLocaleDateString()}
+                                </td>
+                                <td className="px-4 sm:px-6 py-4 text-sm">
+                                  <span
+                                    className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${
+                                      due.is_paid
+                                        ? "bg-green-100 text-green-800"
+                                        : "bg-red-100 text-red-800"
+                                    }`}
+                                  >
+                                    {due.is_paid ? "Paid" : "Unpaid"}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-
-              <label className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition cursor-pointer">
-                <Download size={16} />
-                <span>Import</span>
-                <input
-                  type="file"
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files.length > 0) {
-                      // Handle file import logic here
-                      alert(
-                        `File "${e.target.files[0].name}" selected for import`
-                      );
-                    }
-                  }}
-                />
-              </label>
-            </div>
-          </div>
-
-          {/* Table View */}
-          <div className="overflow-x-auto">
-            <table className="min-w-full border-collapse">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800 border-b border-gray-300">
-                    Description
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800 border-b border-gray-300">
-                    Department
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800 border-b border-gray-300">
-                    Amount
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800 border-b border-gray-300">
-                    Due Date
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800 border-b border-gray-300">
-                    Dept Head
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800 border-b border-gray-300">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800 border-b border-gray-300">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredDues.length > 0 ? (
-                  filteredDues.map((due) => (
-                    <tr key={due.id} className="hover:bg-gray-50 transition">
-                      <td className="px-4 py-3 text-sm text-gray-800">
-                        {due.description}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-800">
-                        {due.department_details.department
-                          .charAt(0)
-                          .toUpperCase() +
-                          due.department_details.department.slice(1)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-800 font-medium">
-                        ₹{due.amount}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-800">
-                        {new Date(due.due_date).toLocaleDateString()}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-800">
-                        {due.department_details.designation}
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                            due.is_paid
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {due.is_paid ? "Paid" : "Unpaid"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        {!due.is_paid && (
-                          <button className="text-gray-800 hover:text-black bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-xs font-medium">
-                            Pay Now
-                          </button>
-                        )}
-                        {due.is_paid && (
-                          <button className="text-gray-800 hover:text-black bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-xs font-medium">
-                            View Receipt
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="px-4 py-8 text-center text-gray-500"
-                    >
-                      No dues found matching your filters
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+              ))}
           </div>
         </div>
 
-        {/* Quick Stats Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow border-l-4 border-gray-800">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm text-gray-500 mb-1">Total Dues</p>
-                <p className="text-2xl font-bold text-gray-800">
-                  {dues.length}
-                </p>
-              </div>
-              <div className="p-3 bg-gray-100 rounded-lg text-gray-800">
-                <FileText size={24} />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow border-l-4 border-green-600">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm text-gray-500 mb-1">Paid Dues</p>
-                <p className="text-2xl font-bold text-gray-800">
-                  {dues.filter((due) => due.is_paid).length}
-                </p>
-              </div>
-              <div className="p-3 bg-green-50 rounded-lg text-green-600">
-                <FileText size={24} />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow border-l-4 border-red-600">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm text-gray-500 mb-1">Pending Dues</p>
-                <p className="text-2xl font-bold text-gray-800">
-                  {dues.filter((due) => !due.is_paid).length}
-                </p>
-              </div>
-              <div className="p-3 bg-red-50 rounded-lg text-red-600">
-                <FileText size={24} />
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Receipt Upload Modal */}
+        <ReceiptModal
+          isOpen={showReceiptModal}
+          onClose={() => {
+            setShowReceiptModal(false);
+            setSelectedDepartment(null);
+          }}
+          department={
+            selectedDepartment ? capitalizeFirstLetter(selectedDepartment) : ""
+          }
+          onUpload={handleReceiptUpload}
+        />
 
         {/* Footer */}
         <div className="text-center text-gray-500 text-sm py-4">

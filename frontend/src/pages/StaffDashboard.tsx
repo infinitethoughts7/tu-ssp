@@ -25,6 +25,8 @@ import {
   Phone,
   Mail,
   Briefcase,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { format } from "date-fns";
 import { DepartmentDue } from "../types/department";
@@ -61,23 +63,44 @@ const COURSE_OPTIONS = [
 ];
 
 interface StudentDetails {
-  roll_number: string;
+  roll_numbers: string[];
   name: string;
   course: string;
   caste: string;
   phone_number: string;
+  dues: DepartmentDue[];
+  totalAmount: number;
+  unpaidAmount: number;
+  user?: {
+    id: number;
+    email: string | null;
+    roll_number: string;
+    is_student: boolean;
+    is_staff: boolean;
+    first_name?: string;
+    last_name?: string;
+  };
 }
 
 interface StudentSuggestion {
-  roll_number: string;
+  roll_numbers: string[];
   name: string;
   course: string;
   caste: string;
   phone_number: string;
+  user?: {
+    id: number;
+    email: string | null;
+    roll_number: string;
+    is_student: boolean;
+    is_staff: boolean;
+    first_name?: string;
+    last_name?: string;
+  };
 }
 
 interface StudentResponse {
-  roll_number: string;
+  roll_numbers: string[];
   user: {
     first_name: string;
     last_name: string;
@@ -119,6 +142,11 @@ const StaffDashboard = () => {
   >([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedCaste, setSelectedCaste] = useState<string>("");
+  const [selectedStudent, setSelectedStudent] = useState<StudentDetails | null>(
+    null
+  );
+  const [showStudentDetails, setShowStudentDetails] = useState(false);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     console.log("StaffDashboard - Checking auth state:", {
@@ -312,11 +340,12 @@ const StaffDashboard = () => {
       const results = await searchStudentsByRollNumber(value);
       setStudentSuggestions(
         results.map((student) => ({
-          roll_number: student.roll_number,
+          roll_numbers: [student.roll_number],
           name: student.name,
           course: student.course,
           caste: student.caste,
           phone_number: student.phone_number,
+          user: student.user,
         }))
       );
     } catch (error) {
@@ -329,19 +358,25 @@ const StaffDashboard = () => {
 
   // Function to handle suggestion selection
   const handleSuggestionSelect = async (suggestion: StudentSuggestion) => {
-    setNewDue({ ...newDue, student_roll_number: suggestion.roll_number });
+    setNewDue({ ...newDue, student_roll_number: suggestion.roll_numbers[0] });
     setShowSuggestions(false);
 
     try {
-      const response = await searchStudentsByRollNumber(suggestion.roll_number);
+      const response = await searchStudentsByRollNumber(
+        suggestion.roll_numbers[0]
+      );
       if (response && response.length > 0) {
         const student = response[0];
         setStudentDetails({
-          roll_number: student.roll_number,
+          roll_numbers: [student.roll_number],
           name: `${student.user.first_name} ${student.user.last_name}`,
           course: student.course,
           caste: student.caste,
           phone_number: student.phone_number,
+          dues: [],
+          totalAmount: 0,
+          unpaidAmount: 0,
+          user: student.user,
         });
         setSelectedCaste(student.caste);
       }
@@ -369,7 +404,7 @@ const StaffDashboard = () => {
       const amount = parseFloat(newDue.amount).toFixed(2);
 
       const dueData = {
-        student: studentDetails.roll_number,
+        student: studentDetails.roll_numbers[0],
         amount: amount,
         due_date: newDue.due_date,
         description: newDue.description,
@@ -412,6 +447,46 @@ const StaffDashboard = () => {
       }
     }
   };
+
+  // Function to handle student selection
+  const handleStudentSelect = (student: StudentDetails) => {
+    setSelectedStudent(student);
+    setShowStudentDetails(true);
+  };
+
+  // Function to group dues by student
+  const groupDuesByStudent = (dues: DepartmentDue[]) => {
+    const grouped = dues.reduce((acc, due) => {
+      const key = due.student_details.user.roll_number;
+
+      if (!acc[key]) {
+        acc[key] = {
+          roll_numbers: [due.student_details.user.roll_number],
+          name: `${due.student_details.user.first_name} ${due.student_details.user.last_name}`,
+          course: due.student_details.course,
+          caste: due.student_details.caste,
+          phone_number: due.student_details.phone_number,
+          dues: [],
+          totalAmount: 0,
+          unpaidAmount: 0,
+          user: due.student_details.user,
+        };
+      }
+
+      acc[key].dues.push(due);
+      const amount = parseFloat(due.amount);
+      acc[key].totalAmount += amount;
+      if (!due.is_paid) {
+        acc[key].unpaidAmount += amount;
+      }
+
+      return acc;
+    }, {} as Record<string, StudentDetails>);
+
+    return Object.values(grouped);
+  };
+
+  const studentGroups = groupDuesByStudent(filteredDues);
 
   if (!accessToken) {
     return null;
@@ -583,92 +658,171 @@ const StaffDashboard = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                      onClick={() => handleSort("student_details")}
-                    >
-                      <div className="flex items-center">
-                        Student
-                        <ArrowUpDown className="h-4 w-4 ml-1" />
-                      </div>
-                    </th>
-                    <th
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                      onClick={() => handleSort("amount")}
-                    >
-                      <div className="flex items-center">
-                        Amount
-                        <ArrowUpDown className="h-4 w-4 ml-1" />
-                      </div>
-                    </th>
-                    <th
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                      onClick={() => handleSort("due_date")}
-                    >
-                      <div className="flex items-center">
-                        Due Date
-                        <ArrowUpDown className="h-4 w-4 ml-1" />
-                      </div>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-8"></th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Student Details
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Description
+                      Course Info
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
+                      Dues Summary
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredDues.map((due) => (
-                    <tr key={due.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {due.student_details.user.roll_number}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {due.student_details.course}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          ₹{due.amount}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {format(new Date(due.due_date), "dd MMM yyyy")}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">
-                          {due.description}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {due.is_paid ? (
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                            Paid
-                          </span>
-                        ) : (
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                            Unpaid
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        {!due.is_paid && (
+                  {studentGroups.map((group) => (
+                    <>
+                      <tr key={group.name} className="hover:bg-gray-50">
+                        <td className="px-4 py-4 whitespace-nowrap">
                           <button
-                            onClick={() => handleMarkAsPaid(due.id)}
-                            className="text-indigo-600 hover:text-indigo-900"
+                            onClick={() => {
+                              const newExpandedRows = new Set(expandedRows);
+                              if (newExpandedRows.has(group.roll_numbers[0])) {
+                                newExpandedRows.delete(group.roll_numbers[0]);
+                              } else {
+                                newExpandedRows.add(group.roll_numbers[0]);
+                              }
+                              setExpandedRows(newExpandedRows);
+                            }}
+                            className="text-gray-500 hover:text-gray-700"
                           >
-                            Mark as Paid
+                            {expandedRows.has(group.roll_numbers[0]) ? (
+                              <ChevronDown className="h-5 w-5" />
+                            ) : (
+                              <ChevronRight className="h-5 w-5" />
+                            )}
                           </button>
-                        )}
-                      </td>
-                    </tr>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm">
+                            <button
+                              onClick={() => handleStudentSelect(group)}
+                              className="font-medium text-indigo-600 hover:text-indigo-900"
+                            >
+                              {group.name}
+                            </button>
+                            <div className="text-gray-500">
+                              {group.roll_numbers[0]}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm">
+                            <div className="text-gray-900">{group.course}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm">
+                            <div className="font-medium text-gray-900">
+                              Total: ₹{group.totalAmount.toFixed(2)}
+                            </div>
+                            <div className="text-red-600">
+                              Unpaid: ₹{group.unpaidAmount.toFixed(2)}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                      {expandedRows.has(group.roll_numbers[0]) && (
+                        <tr>
+                          <td colSpan={4} className="px-6 py-4 bg-gray-50">
+                            <div className="border rounded-lg overflow-hidden">
+                              <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-100">
+                                  <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                      Due Date
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                      Description
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                      Amount
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                      Status
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                      Actions
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                  {group.dues.map((due) => (
+                                    <tr
+                                      key={due.id}
+                                      className="hover:bg-gray-50"
+                                    >
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="text-sm text-gray-900">
+                                          {format(
+                                            new Date(due.due_date),
+                                            "dd MMM yyyy"
+                                          )}
+                                        </div>
+                                      </td>
+                                      <td className="px-6 py-4">
+                                        <div className="text-sm text-gray-900">
+                                          {due.description}
+                                        </div>
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="text-sm text-gray-900">
+                                          ₹{due.amount}
+                                        </div>
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        {due.is_paid ? (
+                                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                            Paid
+                                          </span>
+                                        ) : (
+                                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                            Unpaid
+                                          </span>
+                                        )}
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        {!due.is_paid && (
+                                          <button
+                                            onClick={async () => {
+                                              try {
+                                                await markDueAsPaid(due.id);
+                                                // Update the local state
+                                                setDepartmentDues((prevDues) =>
+                                                  prevDues.map((d) =>
+                                                    d.id === due.id
+                                                      ? { ...d, is_paid: true }
+                                                      : d
+                                                  )
+                                                );
+                                                // Show success message
+                                                setError(null);
+                                              } catch (error) {
+                                                console.error(
+                                                  "Error marking due as paid:",
+                                                  error
+                                                );
+                                                setError(
+                                                  "Failed to mark due as paid. Please try again."
+                                                );
+                                              }
+                                            }}
+                                            className="text-indigo-600 hover:text-indigo-900"
+                                          >
+                                            Mark as Paid
+                                          </button>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   ))}
                 </tbody>
               </table>
@@ -733,26 +887,30 @@ const StaffDashboard = () => {
                     <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg">
                       {studentSuggestions.map((student) => (
                         <div
-                          key={student.roll_number}
+                          key={student.roll_numbers[0]}
                           className="px-4 py-2 cursor-pointer hover:bg-gray-100"
                           onClick={() => {
                             setNewDue((prev) => ({
                               ...prev,
-                              student_roll_number: student.roll_number,
+                              student_roll_number: student.roll_numbers[0],
                             }));
                             setStudentDetails({
-                              roll_number: student.roll_number,
+                              roll_numbers: student.roll_numbers,
                               name: student.name,
                               course: student.course,
                               caste: student.caste,
                               phone_number: student.phone_number,
+                              dues: [],
+                              totalAmount: 0,
+                              unpaidAmount: 0,
+                              user: student.user,
                             });
                             setShowSuggestions(false);
                           }}
                         >
                           <div className="flex justify-between items-center">
                             <span className="font-medium">
-                              {student.roll_number}
+                              {student.roll_numbers[0]}
                             </span>
                             <span className="text-gray-600">
                               {student.name}
@@ -869,6 +1027,61 @@ const StaffDashboard = () => {
                 >
                   Add Due
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Student Details Modal */}
+        {showStudentDetails && selectedStudent && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Student Details</h2>
+                <button
+                  onClick={() => {
+                    setShowStudentDetails(false);
+                    setSelectedStudent(null);
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500">Name</p>
+                    <p className="font-medium">{selectedStudent.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Roll Number</p>
+                    <p className="font-medium">
+                      {selectedStudent.roll_numbers[0]}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Course</p>
+                    <p className="font-medium">{selectedStudent.course}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Caste</p>
+                    <p className="font-medium">{selectedStudent.caste}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Phone Number</p>
+                    <p className="font-medium">
+                      {selectedStudent.phone_number}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Department</p>
+                    <p className="font-medium">
+                      {selectedStudent.dues[0]?.department_details.department}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

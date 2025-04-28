@@ -4,7 +4,7 @@ from .models import User, StudentProfile, StaffProfile, Department
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'email', 'roll_number', 'is_student', 'is_staff')
+        fields = ('id', 'email', 'roll_number', 'is_student', 'is_staff', 'first_name', 'last_name')
 
 class StudentLoginSerializer(serializers.Serializer):
     roll_number = serializers.CharField()

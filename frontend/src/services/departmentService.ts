@@ -38,7 +38,7 @@ export const getDepartmentDues = async (
 export const markDueAsPaid = async (dueId: number): Promise<void> => {
   try {
     await axios.post(
-      `${API_BASE_URL}/dues/${dueId}/mark_paid/`,
+      `${API_BASE_URL}/dues/${dueId}/mark_as_paid/`,
       {},
       {
         headers: {

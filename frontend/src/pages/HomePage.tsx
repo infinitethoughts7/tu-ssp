@@ -35,9 +35,9 @@ const HomePage = () => {
             <UsersRound size={40} strokeWidth={2.5} className="text-white" />
           </div>
 
-          <h2 className="text-xl sm:text-2xl font-semibold text-white mb-8">
-            Welcome to the Student Portal
-          </h2>
+          {/* <h2 className="text-xl sm:text-2xl font-semibold text-white mb-8">
+            Welcome to the Self Service Portal
+          </h2> */}
 
           <div className="space-y-4">
             <button
