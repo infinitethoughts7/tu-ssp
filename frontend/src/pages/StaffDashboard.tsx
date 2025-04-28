@@ -29,6 +29,36 @@ import { format } from "date-fns";
 import { DepartmentDue } from "../types/department";
 import axios from "axios";
 
+// Course options from models.py
+const COURSE_OPTIONS = [
+  "M.A English",
+  "M.A Hindi",
+  "M.A Mass Communication",
+  "M.A Telugu Studies",
+  "M.A Urdu",
+  "M.A Applied Economics (5 Years Integrated)",
+  "M.S.W Social Work",
+  "M.Com Commerce",
+  "M.Sc Applied Statistics",
+  "M.Sc Biotechnology",
+  "M.Sc Botany",
+  "M.Sc Geo-Informatics",
+  "M.Sc Organic Chemistry",
+  "M.Sc Pharmaceutical Chemistry (5 Years Integrated)",
+  "M.Sc Physics with Electronics",
+  "M.B.A Business Management",
+  "M.C.A Computer Science & Engineering",
+  "L.L.B Law",
+  "L.L.M Law",
+  "M.A Economics",
+  "M.Sc Mathematics",
+  "M.A Public Administration",
+  "M.Sc Pharmaceutical Chemistry",
+  "I.M.B.A Business Management (5 Years Integrated)",
+  "M.Ed",
+  "B.Ed",
+];
+
 const StaffDashboard = () => {
   const { logout, accessToken } = useAuth();
   const navigate = useNavigate();
@@ -38,6 +68,7 @@ const StaffDashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterPaid, setFilterPaid] = useState<boolean | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<string>("");
   const [sortField, setSortField] = useState<keyof DepartmentDue>("due_date");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [showAddDueModal, setShowAddDueModal] = useState(false);
@@ -203,7 +234,9 @@ const StaffDashboard = () => {
           .includes(searchTerm.toLowerCase());
       const matchesPaidFilter =
         filterPaid === null || due.is_paid === filterPaid;
-      return matchesSearch && matchesPaidFilter;
+      const matchesCourseFilter =
+        !selectedCourse || due.student_details.course === selectedCourse;
+      return matchesSearch && matchesPaidFilter && matchesCourseFilter;
     })
     .sort((a, b) => {
       const aValue = a[sortField];
@@ -326,17 +359,32 @@ const StaffDashboard = () => {
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex flex-col md:flex-row justify-between items-center mb-6 space-y-4 md:space-y-0">
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex items-center space-x-2">
               <Search className="h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by roll number or course..."
+                placeholder="Search by roll number..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
               />
+            </div>
+            <div className="flex items-center space-x-2">
+              <GraduationCap className="h-5 w-5 text-gray-400" />
+              <select
+                value={selectedCourse}
+                onChange={(e) => setSelectedCourse(e.target.value)}
+                className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+              >
+                <option value="">All Courses</option>
+                {COURSE_OPTIONS.map((course) => (
+                  <option key={course} value={course}>
+                    {course}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="flex items-center space-x-4">
               <button
@@ -371,7 +419,9 @@ const StaffDashboard = () => {
               </button>
             </div>
           </div>
+        </div>
 
+        <div className="bg-white rounded-lg shadow p-6">
           {loading ? (
             <div className="flex justify-center items-center h-64">
               <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
