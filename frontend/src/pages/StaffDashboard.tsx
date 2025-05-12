@@ -792,8 +792,7 @@ const StaffDashboard = () => {
                           </TableCell>
                           <TableCell>
                             <div className="text-sm">
-                              <div className="flex items-center gap-2 text-gray-900">
-                                <GraduationCap className="h-4 w-4 text-blue-500" />
+                              <div className="text-gray-900">
                                 {group.course}
                               </div>
                             </div>
