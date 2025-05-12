@@ -27,10 +27,48 @@ import {
   Briefcase,
   ChevronDown,
   ChevronRight,
+  LogOut,
+  IndianRupee,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  School,
 } from "lucide-react";
 import { format } from "date-fns";
 import { DepartmentDue } from "../types/department";
 import axios from "axios";
+import { cn } from "../lib/utils";
+import { Button } from "../components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import { Input } from "../components/ui/input";
+import { Badge } from "../components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
 
 // Course options from models.py
 const COURSE_OPTIONS = [
@@ -119,7 +157,7 @@ const StaffDashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterPaid, setFilterPaid] = useState<boolean | null>(null);
-  const [selectedCourse, setSelectedCourse] = useState<string>("");
+  const [selectedCourse, setSelectedCourse] = useState<string>("all");
   const [sortField, setSortField] = useState<keyof DepartmentDue>("due_date");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [showAddDueModal, setShowAddDueModal] = useState(false);
@@ -187,10 +225,12 @@ const StaffDashboard = () => {
         try {
           setLoading(true);
           const dues = await getDepartmentDues(department);
+          console.log("Fetched dues:", dues);
           setDepartmentDues(dues);
+          setError(null);
         } catch (err) {
+          console.error("Error fetching dues:", err);
           setError("Failed to fetch department dues. Please try again later.");
-          console.error(err);
         } finally {
           setLoading(false);
         }
@@ -292,6 +332,7 @@ const StaffDashboard = () => {
   const filteredDues = departmentDues
     .filter((due) => {
       const matchesSearch =
+        searchTerm === "" ||
         due.student_details.user.roll_number
           .toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
@@ -301,7 +342,8 @@ const StaffDashboard = () => {
       const matchesPaidFilter =
         filterPaid === null || due.is_paid === filterPaid;
       const matchesCourseFilter =
-        !selectedCourse || due.student_details.course === selectedCourse;
+        selectedCourse === "all" ||
+        due.student_details.course === selectedCourse;
       return matchesSearch && matchesPaidFilter && matchesCourseFilter;
     })
     .sort((a, b) => {
@@ -367,22 +409,35 @@ const StaffDashboard = () => {
       );
       if (response && response.length > 0) {
         const student = response[0];
+        // Add null checks for user and name properties
+        const firstName = student.user?.first_name || "";
+        const lastName = student.user?.last_name || "";
+        const fullName =
+          `${firstName} ${lastName}`.trim() || student.name || "N/A";
+
         setStudentDetails({
           roll_numbers: [student.roll_number],
-          name: `${student.user.first_name} ${student.user.last_name}`,
-          course: student.course,
-          caste: student.caste,
-          phone_number: student.phone_number,
+          name: fullName,
+          course: student.course || "N/A",
+          caste: student.caste || "N/A",
+          phone_number: student.phone_number || "N/A",
           dues: [],
           totalAmount: 0,
           unpaidAmount: 0,
-          user: student.user,
+          user: student.user || {
+            id: 0,
+            email: null,
+            roll_number: student.roll_number,
+            is_student: true,
+            is_staff: false,
+          },
         });
-        setSelectedCaste(student.caste);
+        setSelectedCaste(student.caste || "");
       }
     } catch (error) {
       console.error("Error fetching student details:", error);
-      setError("Error fetching student details");
+      setError("Error fetching student details. Please try again.");
+      setStudentDetails(null);
     }
   };
 
@@ -493,444 +548,445 @@ const StaffDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center space-x-3">
-            {getDepartmentIcon()}
+          <div className="flex items-center space-x-4">
+            <div className="bg-gradient-to-br from-blue-600 to-purple-600 p-3 rounded-xl shadow-md">
+              {getDepartmentIcon()}
+            </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                {getDepartmentTitle()}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-3xl font-bold text-gray-900">
+                  {getDepartmentTitle()}
+                </h1>
+              </div>
               {staffProfile && (
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <Briefcase className="h-4 w-4" />
+                <div className="flex items-center space-x-2 text-sm text-gray-600 mt-1">
+                  <Briefcase className="h-4 w-4 text-blue-500" />
                   <span>{staffProfile.designation}</span>
                 </div>
               )}
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            <button
+            <Button
               onClick={() => setShowAddDueModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center space-x-2"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md"
             >
-              <Plus className="h-4 w-4" />
-              <span>Add Due</span>
-            </button>
-            <button
+              <Plus className="h-4 w-4 mr-2" />
+              Add Due
+            </Button>
+            <Button
+              variant="outline"
               onClick={logout}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+              className="hover:bg-red-50 hover:text-red-600 hover:border-red-200"
             >
+              <LogOut className="h-4 w-4 mr-2" />
               Logout
-            </button>
+            </Button>
           </div>
         </div>
 
         {error && (
-          <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-md flex items-center">
-            <AlertCircle className="h-5 w-5 mr-2" />
-            {error}
-          </div>
+          <Card className="mb-6 border-red-200 bg-red-50">
+            <CardContent className="p-4 flex items-center text-red-700">
+              <AlertCircle className="h-5 w-5 mr-2" />
+              {error}
+            </CardContent>
+          </Card>
         )}
 
+        {/* Staff Profile Card */}
         {staffProfile ? (
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="flex items-center space-x-3">
-                <div className="bg-blue-100 p-3 rounded-full">
-                  <User className="h-6 w-6 text-blue-600" />
+          <Card className="mb-6 border-none shadow-lg bg-gradient-to-br from-white to-blue-50">
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-gradient-to-br from-blue-500 to-purple-500 p-3 rounded-full shadow-md">
+                    <User className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Name</p>
+                    <p className="font-medium text-gray-800">
+                      {staffProfile.name}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">Name</p>
-                  <p className="font-medium">{staffProfile.name}</p>
+                <div className="flex items-center space-x-3">
+                  <div className="bg-gradient-to-br from-green-500 to-emerald-500 p-3 rounded-full shadow-md">
+                    <Mail className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Email</p>
+                    <p className="font-medium text-gray-800">
+                      {staffProfile.email}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-3 rounded-full shadow-md">
+                    <Phone className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Phone</p>
+                    <p className="font-medium text-gray-800">
+                      {staffProfile.phone_number}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="bg-gradient-to-br from-yellow-500 to-orange-500 p-3 rounded-full shadow-md">
+                    <Briefcase className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Department</p>
+                    <p className="font-medium text-gray-800">
+                      {staffProfile.department}
+                    </p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center space-x-3">
-                <div className="bg-green-100 p-3 rounded-full">
-                  <Mail className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Email</p>
-                  <p className="font-medium">{staffProfile.email}</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="bg-purple-100 p-3 rounded-full">
-                  <Phone className="h-6 w-6 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Phone</p>
-                  <p className="font-medium">{staffProfile.phone_number}</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="bg-yellow-100 p-3 rounded-full">
-                  <Briefcase className="h-6 w-6 text-yellow-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Department</p>
-                  <p className="font-medium">{staffProfile.department}</p>
-                </div>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         ) : (
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <div className="flex justify-center items-center">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-              <span className="ml-2 text-gray-600">
-                Loading staff profile...
-              </span>
-            </div>
-          </div>
+          <Card className="mb-6 border-none shadow-lg bg-gradient-to-br from-white to-blue-50">
+            <CardContent className="p-6">
+              <div className="flex justify-center items-center">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                <span className="ml-2 text-gray-600">
+                  Loading staff profile...
+                </span>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center space-x-2">
-              <Search className="h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by roll number..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
-              />
+        {/* Combined Filters and Dues Card */}
+        <Card className="border-none shadow-lg bg-white">
+          <CardContent className="p-6">
+            {/* Search and Filters */}
+            <div className="mb-6 pb-6 border-b border-gray-100">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-600" />
+                  <Input
+                    type="text"
+                    placeholder="Search by roll number..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 bg-white border-gray-200 focus:border-black focus:ring-black"
+                  />
+                </div>
+                <Select
+                  value={selectedCourse}
+                  onValueChange={setSelectedCourse}
+                >
+                  <SelectTrigger className="bg-white border-gray-200 focus:border-black focus:ring-black">
+                    <SelectValue placeholder="All Courses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Courses</SelectItem>
+                    {COURSE_OPTIONS.map((course) => (
+                      <SelectItem key={course} value={course}>
+                        {course}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center space-x-4">
+                  <Button
+                    variant={filterPaid === null ? "default" : "outline"}
+                    onClick={() => setFilterPaid(null)}
+                    className={cn(
+                      filterPaid === null
+                        ? "bg-black text-white hover:bg-gray-800"
+                        : "border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300"
+                    )}
+                  >
+                    All
+                  </Button>
+                  <Button
+                    variant={filterPaid === false ? "default" : "outline"}
+                    onClick={() => setFilterPaid(false)}
+                    className={cn(
+                      filterPaid === false
+                        ? "bg-black text-white hover:bg-gray-800"
+                        : "border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300"
+                    )}
+                  >
+                    Unpaid
+                  </Button>
+                  <Button
+                    variant={filterPaid === true ? "default" : "outline"}
+                    onClick={() => setFilterPaid(true)}
+                    className={cn(
+                      filterPaid === true
+                        ? "bg-black text-white hover:bg-gray-800"
+                        : "border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300"
+                    )}
+                  >
+                    Paid
+                  </Button>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <GraduationCap className="h-5 w-5 text-gray-400" />
-              <select
-                value={selectedCourse}
-                onChange={(e) => setSelectedCourse(e.target.value)}
-                className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
-              >
-                <option value="">All Courses</option>
-                {COURSE_OPTIONS.map((course) => (
-                  <option key={course} value={course}>
-                    {course}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setFilterPaid(null)}
-                className={`px-4 py-2 rounded-md ${
-                  filterPaid === null
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-700"
-                }`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setFilterPaid(false)}
-                className={`px-4 py-2 rounded-md ${
-                  filterPaid === false
-                    ? "bg-red-600 text-white"
-                    : "bg-gray-200 text-gray-700"
-                }`}
-              >
-                Unpaid
-              </button>
-              <button
-                onClick={() => setFilterPaid(true)}
-                className={`px-4 py-2 rounded-md ${
-                  filterPaid === true
-                    ? "bg-green-600 text-white"
-                    : "bg-gray-200 text-gray-700"
-                }`}
-              >
-                Paid
-              </button>
-            </div>
-          </div>
-        </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-8"></th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Student Details
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Course Info
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Dues Summary
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {studentGroups.map((group) => (
-                    <>
-                      <tr key={group.name} className="hover:bg-gray-50">
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <button
-                            onClick={() => {
-                              const newExpandedRows = new Set(expandedRows);
-                              if (newExpandedRows.has(group.roll_numbers[0])) {
-                                newExpandedRows.delete(group.roll_numbers[0]);
-                              } else {
-                                newExpandedRows.add(group.roll_numbers[0]);
-                              }
-                              setExpandedRows(newExpandedRows);
-                            }}
-                            className="text-gray-500 hover:text-gray-700"
-                          >
-                            {expandedRows.has(group.roll_numbers[0]) ? (
-                              <ChevronDown className="h-5 w-5" />
-                            ) : (
-                              <ChevronRight className="h-5 w-5" />
-                            )}
-                          </button>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm">
-                            <button
-                              onClick={() => handleStudentSelect(group)}
-                              className="font-medium text-indigo-600 hover:text-indigo-900"
+            {/* Dues Table */}
+            {loading ? (
+              <div className="flex justify-center items-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-600" />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="w-8"></TableHead>
+                      <TableHead>Student Details</TableHead>
+                      <TableHead>Course Info</TableHead>
+                      <TableHead>Dues Summary</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {studentGroups.map((group) => (
+                      <>
+                        <TableRow key={group.name} className="hover:bg-gray-50">
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                const newExpandedRows = new Set(expandedRows);
+                                if (
+                                  newExpandedRows.has(group.roll_numbers[0])
+                                ) {
+                                  newExpandedRows.delete(group.roll_numbers[0]);
+                                } else {
+                                  newExpandedRows.add(group.roll_numbers[0]);
+                                }
+                                setExpandedRows(newExpandedRows);
+                              }}
                             >
-                              {group.name}
-                            </button>
-                            <div className="text-gray-500">
-                              {group.roll_numbers[0]}
+                              {expandedRows.has(group.roll_numbers[0]) ? (
+                                <ChevronDown className="h-5 w-5 text-gray-600" />
+                              ) : (
+                                <ChevronRight className="h-5 w-5 text-gray-600" />
+                              )}
+                            </Button>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              <div className="font-medium text-blue-600 mb-1">
+                                {group.roll_numbers[0]}
+                              </div>
+                              <Button
+                                variant="link"
+                                onClick={() => handleStudentSelect(group)}
+                                className="font-medium text-gray-900 hover:text-gray-700 p-0 h-auto"
+                              >
+                                {group.name}
+                              </Button>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm">
-                            <div className="text-gray-900">{group.course}</div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm">
-                            <div className="font-medium text-gray-900">
-                              Total: ₹{group.totalAmount.toFixed(2)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              <div className="flex items-center gap-2 text-gray-900">
+                                <GraduationCap className="h-4 w-4 text-blue-500" />
+                                {group.course}
+                              </div>
                             </div>
-                            <div className="text-red-600">
-                              Unpaid: ₹{group.unpaidAmount.toFixed(2)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              <div className="flex items-center gap-2 font-medium text-gray-900">
+                                <IndianRupee className="h-4 w-4 text-blue-500" />
+                                Total: ₹{group.totalAmount.toFixed(2)}
+                              </div>
+                              <div className="flex items-center gap-2 text-red-600 mt-1">
+                                <AlertCircle className="h-4 w-4" />
+                                Unpaid: ₹{group.unpaidAmount.toFixed(2)}
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                      </tr>
-                      {expandedRows.has(group.roll_numbers[0]) && (
-                        <tr>
-                          <td colSpan={4} className="px-6 py-4 bg-gray-50">
-                            <div className="border rounded-lg overflow-hidden">
-                              <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-100">
-                                  <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                      Due Date
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                      Description
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                      Amount
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                      Status
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                      Actions
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                  {group.dues.map((due) => (
-                                    <tr
-                                      key={due.id}
-                                      className="hover:bg-gray-50"
-                                    >
-                                      <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm text-gray-900">
-                                          {format(
-                                            new Date(due.due_date),
-                                            "dd MMM yyyy"
-                                          )}
-                                        </div>
-                                      </td>
-                                      <td className="px-6 py-4">
-                                        <div className="text-sm text-gray-900">
-                                          {due.description}
-                                        </div>
-                                      </td>
-                                      <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm text-gray-900">
-                                          ₹{due.amount}
-                                        </div>
-                                      </td>
-                                      <td className="px-6 py-4 whitespace-nowrap">
-                                        {due.is_paid ? (
-                                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                            Paid
-                                          </span>
-                                        ) : (
-                                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                                            Unpaid
-                                          </span>
-                                        )}
-                                      </td>
-                                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        {!due.is_paid && (
-                                          <button
-                                            onClick={async () => {
-                                              try {
-                                                await markDueAsPaid(due.id);
-                                                // Update the local state
-                                                setDepartmentDues((prevDues) =>
-                                                  prevDues.map((d) =>
-                                                    d.id === due.id
-                                                      ? { ...d, is_paid: true }
-                                                      : d
-                                                  )
-                                                );
-                                                // Show success message
-                                                setError(null);
-                                              } catch (error) {
-                                                console.error(
-                                                  "Error marking due as paid:",
-                                                  error
-                                                );
-                                                setError(
-                                                  "Failed to mark due as paid. Please try again."
-                                                );
-                                              }
-                                            }}
-                                            className="text-indigo-600 hover:text-indigo-900"
+                          </TableCell>
+                        </TableRow>
+                        {expandedRows.has(group.roll_numbers[0]) && (
+                          <TableRow>
+                            <TableCell colSpan={4} className="p-0">
+                              <div className="bg-gray-50 p-4">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow className="bg-gray-100">
+                                      <TableHead>Due Date</TableHead>
+                                      <TableHead>Description</TableHead>
+                                      <TableHead>Amount</TableHead>
+                                      <TableHead>Status</TableHead>
+                                      <TableHead>Actions</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {group.dues.map((due) => (
+                                      <TableRow
+                                        key={due.id}
+                                        className="hover:bg-gray-50"
+                                      >
+                                        <TableCell>
+                                          <div className="flex items-center gap-2">
+                                            <Calendar className="h-4 w-4 text-gray-600" />
+                                            {format(
+                                              new Date(due.due_date),
+                                              "dd MMM yyyy"
+                                            )}
+                                          </div>
+                                        </TableCell>
+                                        <TableCell>{due.description}</TableCell>
+                                        <TableCell>
+                                          <div className="flex items-center gap-2">
+                                            <IndianRupee className="h-4 w-4 text-gray-600" />
+                                            {due.amount}
+                                          </div>
+                                        </TableCell>
+                                        <TableCell>
+                                          <Badge
+                                            variant={
+                                              due.is_paid
+                                                ? "default"
+                                                : "destructive"
+                                            }
+                                            className={
+                                              due.is_paid
+                                                ? "bg-gray-100 text-gray-700 hover:bg-gray-100"
+                                                : ""
+                                            }
                                           >
-                                            Mark as Paid
-                                          </button>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                                            {due.is_paid ? (
+                                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                                            ) : (
+                                              <AlertCircle className="h-3 w-3 mr-1" />
+                                            )}
+                                            {due.is_paid ? "Paid" : "Unpaid"}
+                                          </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                          {!due.is_paid && (
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={async () => {
+                                                try {
+                                                  await markDueAsPaid(due.id);
+                                                  setDepartmentDues(
+                                                    (prevDues) =>
+                                                      prevDues.map((d) =>
+                                                        d.id === due.id
+                                                          ? {
+                                                              ...d,
+                                                              is_paid: true,
+                                                            }
+                                                          : d
+                                                      )
+                                                  );
+                                                  setError(null);
+                                                } catch (error) {
+                                                  console.error(
+                                                    "Error marking due as paid:",
+                                                    error
+                                                  );
+                                                  setError(
+                                                    "Failed to mark due as paid. Please try again."
+                                                  );
+                                                }
+                                              }}
+                                              className="border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300"
+                                            >
+                                              Mark as Paid
+                                            </Button>
+                                          )}
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Add Due Modal */}
-        {showAddDueModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">Add New Due</h2>
-                <button
-                  onClick={() => {
-                    setShowAddDueModal(false);
-                    setStudentDetails(null);
-                    setNewDue({
-                      student_roll_number: "",
-                      amount: "",
-                      due_date: "",
-                      description: "",
-                    });
-                  }}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                {/* Roll Number Search with Autocomplete */}
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Roll Number
-                  </label>
-                  <div className="relative w-full">
-                    <input
-                      type="text"
-                      value={newDue.student_roll_number}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setNewDue((prev) => ({
-                          ...prev,
-                          student_roll_number: value,
-                        }));
-                        handleRollNumberSearch(value);
-                      }}
-                      onFocus={() => setShowSuggestions(true)}
-                      className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter roll number"
-                    />
-                    {isSearching && (
-                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Suggestions Dropdown */}
-                  {showSuggestions && studentSuggestions.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg">
-                      {studentSuggestions.map((student) => (
-                        <div
-                          key={student.roll_numbers[0]}
-                          className="px-4 py-2 cursor-pointer hover:bg-gray-100"
-                          onClick={() => {
-                            setNewDue((prev) => ({
-                              ...prev,
-                              student_roll_number: student.roll_numbers[0],
-                            }));
-                            setStudentDetails({
-                              roll_numbers: student.roll_numbers,
-                              name: student.name,
-                              course: student.course,
-                              caste: student.caste,
-                              phone_number: student.phone_number,
-                              dues: [],
-                              totalAmount: 0,
-                              unpaidAmount: 0,
-                              user: student.user,
-                            });
-                            setShowSuggestions(false);
-                          }}
-                        >
-                          <div className="flex justify-between items-center">
-                            <span className="font-medium">
-                              {student.roll_numbers[0]}
-                            </span>
-                            <span className="text-gray-600">
-                              {student.name}
-                            </span>
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {student.course} • {student.caste}
-                          </div>
-                        </div>
-                      ))}
+        <Dialog open={showAddDueModal} onOpenChange={setShowAddDueModal}>
+          <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Add New Due</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {/* Roll Number Search with Autocomplete */}
+              <div className="relative">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Roll Number
+                </label>
+                <div className="relative w-full">
+                  <Input
+                    type="text"
+                    value={newDue.student_roll_number}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setNewDue((prev) => ({
+                        ...prev,
+                        student_roll_number: value,
+                      }));
+                      handleRollNumberSearch(value);
+                    }}
+                    onFocus={() => setShowSuggestions(true)}
+                    className="w-full"
+                    placeholder="Enter roll number"
+                  />
+                  {isSearching && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <Loader2 className="h-5 w-5 animate-spin" />
                     </div>
-                  )}
-                  {searchError && (
-                    <p className="mt-1 text-sm text-red-600">{searchError}</p>
                   )}
                 </div>
 
-                {/* Student Details (Auto-filled) */}
-                {studentDetails && (
-                  <div className="bg-gray-50 p-4 rounded-md">
+                {/* Suggestions Dropdown */}
+                {showSuggestions && studentSuggestions.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg border border-gray-200">
+                    {studentSuggestions.map((student) => (
+                      <div
+                        key={student.roll_numbers[0]}
+                        className="px-4 py-2 cursor-pointer hover:bg-gray-50"
+                        onClick={() => handleSuggestionSelect(student)}
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium">
+                            {student.roll_numbers[0]}
+                          </span>
+                          <span className="text-gray-600">{student.name}</span>
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {student.course} • {student.caste}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {searchError && (
+                  <p className="mt-1 text-sm text-red-600">{searchError}</p>
+                )}
+              </div>
+
+              {/* Student Details */}
+              {studentDetails && (
+                <Card className="bg-gray-50">
+                  <CardContent className="p-4">
                     <h3 className="text-sm font-medium text-gray-700 mb-2">
                       Student Details
                     </h3>
@@ -954,101 +1010,89 @@ const StaffDashboard = () => {
                         </p>
                       </div>
                     </div>
-                  </div>
-                )}
+                  </CardContent>
+                </Card>
+              )}
 
-                {/* Due Details */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Amount
-                    </label>
-                    <input
-                      type="number"
-                      value={newDue.amount}
-                      onChange={(e) =>
-                        setNewDue({ ...newDue, amount: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter amount"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Due Date
-                    </label>
-                    <input
-                      type="date"
-                      value={newDue.due_date}
-                      onChange={(e) =>
-                        setNewDue({ ...newDue, due_date: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-
+              {/* Due Details */}
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description
+                    Amount
                   </label>
-                  <textarea
-                    value={newDue.description}
+                  <Input
+                    type="number"
+                    value={newDue.amount}
                     onChange={(e) =>
-                      setNewDue({ ...newDue, description: e.target.value })
+                      setNewDue({ ...newDue, amount: e.target.value })
                     }
-                    className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter description"
-                    rows={3}
+                    placeholder="Enter amount"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Due Date
+                  </label>
+                  <Input
+                    type="date"
+                    value={newDue.due_date}
+                    onChange={(e) =>
+                      setNewDue({ ...newDue, due_date: e.target.value })
+                    }
                   />
                 </div>
               </div>
 
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  onClick={() => {
-                    setShowAddDueModal(false);
-                    setStudentDetails(null);
-                    setNewDue({
-                      student_roll_number: "",
-                      amount: "",
-                      due_date: "",
-                      description: "",
-                    });
-                  }}
-                  className="px-4 py-2 border rounded-md hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAddDue}
-                  disabled={!studentDetails}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300"
-                >
-                  Add Due
-                </button>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={newDue.description}
+                  onChange={(e) =>
+                    setNewDue({ ...newDue, description: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="Enter description"
+                  rows={3}
+                />
               </div>
             </div>
-          </div>
-        )}
+
+            <div className="mt-6 flex justify-end space-x-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowAddDueModal(false);
+                  setStudentDetails(null);
+                  setNewDue({
+                    student_roll_number: "",
+                    amount: "",
+                    due_date: "",
+                    description: "",
+                  });
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleAddDue}
+                disabled={!studentDetails}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+              >
+                Add Due
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Student Details Modal */}
-        {showStudentDetails && selectedStudent && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">Student Details</h2>
-                <button
-                  onClick={() => {
-                    setShowStudentDetails(false);
-                    setSelectedStudent(null);
-                  }}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-
+        <Dialog open={showStudentDetails} onOpenChange={setShowStudentDetails}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Student Details</DialogTitle>
+            </DialogHeader>
+            {selectedStudent && (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -1083,9 +1127,9 @@ const StaffDashboard = () => {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

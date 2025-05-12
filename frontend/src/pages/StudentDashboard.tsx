@@ -16,7 +16,40 @@ import {
   Upload,
   X,
   Receipt,
+  IndianRupee,
+  CreditCard,
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  School,
+  Shield,
+  LogOut,
 } from "lucide-react";
+import { cn } from "../lib/utils";
+import { Button } from "../components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import { Input } from "../components/ui/input";
+import { Badge } from "../components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../components/ui/dialog";
 
 // Types
 type Department = {
@@ -97,62 +130,49 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-6 w-full max-w-md">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Upload Payment Receipt
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <X size={20} />
-          </button>
-        </div>
-        <div className="mb-4">
-          <p className="text-sm text-gray-600 mb-2">
-            Department: <span className="font-medium">{department}</span>
-          </p>
-          <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center">
-            <input
-              type="file"
-              accept="image/*,.pdf"
-              onChange={handleFileChange}
-              className="hidden"
-              id="receipt-upload"
-            />
-            <label
-              htmlFor="receipt-upload"
-              className="cursor-pointer flex flex-col items-center gap-2"
-            >
-              <Upload size={24} className="text-gray-400" />
-              <span className="text-sm text-gray-600">
-                {file ? file.name : "Click to upload receipt"}
-              </span>
-              <span className="text-xs text-gray-500">
-                Supported formats: JPG, PNG, PDF
-              </span>
-            </label>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Upload Payment Receipt</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm text-muted-foreground mb-2">
+              Department: <span className="font-medium">{department}</span>
+            </p>
+            <div className="border-2 border-dashed rounded-lg p-6 text-center">
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                onChange={handleFileChange}
+                className="hidden"
+                id="receipt-upload"
+              />
+              <label
+                htmlFor="receipt-upload"
+                className="cursor-pointer flex flex-col items-center gap-2"
+              >
+                <Upload className="h-8 w-8 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">
+                  {file ? file.name : "Click to upload receipt"}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  Supported formats: JPG, PNG, PDF
+                </span>
+              </label>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpload} disabled={!file || isUploading}>
+              {isUploading ? "Uploading..." : "Upload Receipt"}
+            </Button>
           </div>
         </div>
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleUpload}
-            disabled={!file || isUploading}
-            className="px-4 py-2 text-sm font-medium text-white bg-gray-800 hover:bg-gray-900 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isUploading ? "Uploading..." : "Upload Receipt"}
-          </button>
-        </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -275,239 +295,270 @@ const StudentDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* University Header */}
-      <div className="bg-white border-b border-gray-200">
+      <header className="bg-white border-b shadow-sm">
         <div className="container mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">
-              <div className="bg-gray-800 p-2 rounded-lg">
-                <GraduationCap size={32} className="text-white" />
+              <div className="bg-gradient-to-br from-blue-600 to-purple-600 p-3 rounded-xl shadow-md">
+                <School className="h-8 w-8 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                   Telangana University
                 </h1>
-                <p className="text-sm text-gray-500">Excellence in Education</p>
-              </div>
-            </div>
-            <button
-              onClick={logout}
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="container mx-auto px-6 py-8">
-        {/* Student Profile Card */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
-          <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
-            <div className="flex-shrink-0 bg-gray-50 p-4 rounded-xl text-gray-600">
-              <UserRound size={48} />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-grow">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {studentDetails.name}
-                </h2>
-                <p className="text-gray-600 font-medium">
-                  {studentDetails.roll_number}
+                <p className="text-sm text-muted-foreground">
+                  Excellence in Education
                 </p>
               </div>
+            </div>
+            <Button
+              variant="outline"
+              onClick={logout}
+              className="hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </div>
+        </div>
+      </header>
 
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-gray-600">
-                  <BookOpen size={16} />
-                  <span>
-                    {studentDetails.course} - {studentDetails.branch}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-gray-600">
-                  <Calendar size={16} />
-                  <span>Year {studentDetails.year}</span>
-                </div>
-                <div className="flex items-center gap-2 text-gray-600">
-                  <FileText size={16} />
-                  <span>Category: {studentDetails.category}</span>
-                </div>
+      <main className="container mx-auto px-6 py-8">
+        {/* Student Profile Card */}
+        <Card className="mb-8 border-none shadow-lg bg-gradient-to-br from-white to-blue-50">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
+              <div className="flex-shrink-0 bg-gradient-to-br from-blue-500 to-purple-500 p-4 rounded-xl shadow-md">
+                <UserRound className="h-12 w-12 text-white" />
               </div>
 
-              <div className="flex items-center justify-end">
-                <div className="bg-red-50 text-red-700 px-6 py-3 rounded-lg font-medium flex items-center gap-2 border border-red-100">
-                  <span className="text-sm">Total Unpaid:</span>
-                  <span className="text-lg">
-                    ₹
-                    {departmentSummaries
-                      .reduce((sum, dept) => sum + dept.unpaidAmount, 0)
-                      .toFixed(2)}
-                  </span>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-grow">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-800">
+                    {studentDetails.name}
+                  </h2>
+                  <p className="text-blue-600 font-medium">
+                    {studentDetails.roll_number}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <BookOpen className="h-4 w-4 text-blue-500" />
+                    <span>
+                      {studentDetails.course} - {studentDetails.branch}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <Calendar className="h-4 w-4 text-purple-500" />
+                    <span>Year {studentDetails.year}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <FileText className="h-4 w-4 text-indigo-500" />
+                    <span>Category: {studentDetails.category}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end">
+                  <Card className="bg-gradient-to-br from-red-50 to-orange-50 border-none shadow-md">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <AlertCircle className="h-5 w-5 text-red-500" />
+                        <div>
+                          <span className="text-sm text-gray-600 block">
+                            Total Unpaid:
+                          </span>
+                          <span className="text-lg font-bold text-red-600">
+                            ₹
+                            {departmentSummaries
+                              .reduce((sum, dept) => sum + dept.unpaidAmount, 0)
+                              .toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Department Dues Section */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-            <div className="flex items-center gap-3">
-              <div className="bg-gray-50 p-2 rounded-lg">
-                <Building2 size={20} className="text-gray-600" />
-              </div>
-              <h2 className="text-xl font-semibold text-gray-900">
-                Department Dues
-              </h2>
-            </div>
-
-            <div className="relative w-full md:w-64">
-              <input
-                type="text"
-                placeholder="Search departments..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-sm bg-gray-50"
-              />
-              <Search
-                size={16}
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-              />
-            </div>
-          </div>
-
-          {/* Department Cards */}
-          <div className="space-y-4">
-            {departmentSummaries
-              .filter(
-                (summary) =>
-                  searchTerm === "" ||
-                  summary.department
-                    .toLowerCase()
-                    .includes(searchTerm.toLowerCase())
-              )
-              .map((summary) => (
-                <div
-                  key={summary.department}
-                  className="border border-gray-100 rounded-lg overflow-hidden hover:border-gray-200 transition-colors"
-                >
-                  {/* Department Header */}
-                  <div
-                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
-                    onClick={() => toggleDepartment(summary.department)}
-                  >
-                    <div className="flex items-center gap-3 mb-3 sm:mb-0">
-                      {summary.isExpanded ? (
-                        <ChevronDown size={20} className="text-gray-500" />
-                      ) : (
-                        <ChevronRight size={20} className="text-gray-500" />
-                      )}
-                      <h3 className="text-lg font-medium text-gray-900">
-                        {summary.department}
-                      </h3>
-                    </div>
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 w-full sm:w-auto">
-                      <div className="text-right w-full sm:w-auto">
-                        <p className="text-sm text-gray-500">Total Amount</p>
-                        <p className="text-lg font-semibold text-gray-900">
-                          ₹{summary.totalAmount.toFixed(2)}
-                        </p>
-                      </div>
-                      <div className="text-right w-full sm:w-auto">
-                        <p className="text-sm text-gray-500">Unpaid</p>
-                        <p className="text-lg font-semibold text-red-600">
-                          ₹{summary.unpaidAmount.toFixed(2)}
-                        </p>
-                      </div>
-                      {summary.unpaidAmount > 0 && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedDepartment(summary.department);
-                            setShowReceiptModal(true);
-                          }}
-                          className="mt-2 sm:mt-0 w-full sm:w-auto text-gray-700 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                        >
-                          <Upload size={16} />
-                          Upload Receipt
-                        </button>
-                      )}
-                      {summary.receipt && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Open receipt in new tab or modal
-                            window.open(summary.receipt, "_blank");
-                          }}
-                          className="mt-2 sm:mt-0 w-full sm:w-auto text-gray-700 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                        >
-                          <Receipt size={16} />
-                          View Receipt
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Department Details */}
-                  {summary.isExpanded && (
-                    <div className="border-t border-gray-100">
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Description
-                              </th>
-                              <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Amount
-                              </th>
-                              <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Due Date
-                              </th>
-                              <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Status
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100">
-                            {summary.dues.map((due) => (
-                              <tr
-                                key={due.id}
-                                className="hover:bg-gray-50 transition-colors"
-                              >
-                                <td className="px-4 sm:px-6 py-4 text-sm text-gray-900">
-                                  {due.description}
-                                </td>
-                                <td className="px-4 sm:px-6 py-4 text-sm text-gray-900">
-                                  ₹{due.amount}
-                                </td>
-                                <td className="px-4 sm:px-6 py-4 text-sm text-gray-900">
-                                  {new Date(due.due_date).toLocaleDateString()}
-                                </td>
-                                <td className="px-4 sm:px-6 py-4 text-sm">
-                                  <span
-                                    className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${
-                                      due.is_paid
-                                        ? "bg-green-100 text-green-800"
-                                        : "bg-red-100 text-red-800"
-                                    }`}
-                                  >
-                                    {due.is_paid ? "Paid" : "Unpaid"}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
+        <Card className="border-none shadow-lg bg-gradient-to-br from-white to-purple-50">
+          <CardHeader>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-gradient-to-br from-purple-500 to-blue-500 p-2 rounded-lg shadow-md">
+                  <Building2 className="h-5 w-5 text-white" />
                 </div>
-              ))}
-          </div>
-        </div>
+                <CardTitle className="text-gray-800">Department Dues</CardTitle>
+              </div>
+
+              <div className="relative w-full md:w-64">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Search departments..."
+                  value={searchTerm}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setSearchTerm(e.target.value)
+                  }
+                  className="pl-9 bg-white/50 backdrop-blur-sm border-gray-200 focus:border-purple-500 focus:ring-purple-500"
+                />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {departmentSummaries
+                .filter(
+                  (summary) =>
+                    searchTerm === "" ||
+                    summary.department
+                      .toLowerCase()
+                      .includes(searchTerm.toLowerCase())
+                )
+                .map((summary) => (
+                  <Card
+                    key={summary.department}
+                    className="border-none shadow-md hover:shadow-lg transition-shadow"
+                  >
+                    <CardContent className="p-0">
+                      <div
+                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-gradient-to-r from-white to-blue-50 cursor-pointer hover:from-blue-50 hover:to-purple-50 transition-colors"
+                        onClick={() => toggleDepartment(summary.department)}
+                      >
+                        <div className="flex items-center gap-3 mb-3 sm:mb-0">
+                          {summary.isExpanded ? (
+                            <ChevronDown className="h-5 w-5 text-purple-600" />
+                          ) : (
+                            <ChevronRight className="h-5 w-5 text-purple-600" />
+                          )}
+                          <h3 className="text-lg font-medium text-gray-800">
+                            {summary.department}
+                          </h3>
+                        </div>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 w-full sm:w-auto">
+                          <div className="text-right w-full sm:w-auto">
+                            <p className="text-sm text-gray-600 flex items-center gap-2 justify-end">
+                              <CreditCard className="h-4 w-4 text-blue-500" />
+                              Total Amount
+                            </p>
+                            <p className="text-lg font-semibold text-gray-800">
+                              ₹{summary.totalAmount.toFixed(2)}
+                            </p>
+                          </div>
+                          <div className="text-right w-full sm:w-auto">
+                            <p className="text-sm text-gray-600 flex items-center gap-2 justify-end">
+                              <AlertCircle className="h-4 w-4 text-red-500" />
+                              Unpaid
+                            </p>
+                            <p className="text-lg font-semibold text-red-600">
+                              ₹{summary.unpaidAmount.toFixed(2)}
+                            </p>
+                          </div>
+                          {summary.unpaidAmount > 0 && (
+                            <Button
+                              variant="outline"
+                              onClick={(
+                                e: React.MouseEvent<HTMLButtonElement>
+                              ) => {
+                                e.stopPropagation();
+                                setSelectedDepartment(summary.department);
+                                setShowReceiptModal(true);
+                              }}
+                              className="mt-2 sm:mt-0 w-full sm:w-auto border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-300"
+                            >
+                              <Upload className="h-4 w-4 mr-2" />
+                              Upload Receipt
+                            </Button>
+                          )}
+                          {summary.receipt && (
+                            <Button
+                              variant="outline"
+                              onClick={(
+                                e: React.MouseEvent<HTMLButtonElement>
+                              ) => {
+                                e.stopPropagation();
+                                window.open(summary.receipt, "_blank");
+                              }}
+                              className="mt-2 sm:mt-0 w-full sm:w-auto border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300"
+                            >
+                              <Receipt className="h-4 w-4 mr-2" />
+                              View Receipt
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      {summary.isExpanded && (
+                        <div className="border-t border-gray-100">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-gray-50/50">
+                                <TableHead>Description</TableHead>
+                                <TableHead>Amount</TableHead>
+                                <TableHead>Due Date</TableHead>
+                                <TableHead>Status</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {summary.dues.map((due) => (
+                                <TableRow
+                                  key={due.id}
+                                  className="hover:bg-gray-50/50"
+                                >
+                                  <TableCell className="font-medium">
+                                    {due.description}
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center gap-2">
+                                      <IndianRupee className="h-4 w-4 text-blue-500" />
+                                      {due.amount}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center gap-2">
+                                      <Clock className="h-4 w-4 text-purple-500" />
+                                      {new Date(
+                                        due.due_date
+                                      ).toLocaleDateString()}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge
+                                      variant={
+                                        due.is_paid ? "default" : "destructive"
+                                      }
+                                      className={
+                                        due.is_paid
+                                          ? "bg-green-100 text-green-700 hover:bg-green-100"
+                                          : ""
+                                      }
+                                    >
+                                      {due.is_paid ? (
+                                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                                      ) : (
+                                        <AlertCircle className="h-3 w-3 mr-1" />
+                                      )}
+                                      {due.is_paid ? "Paid" : "Unpaid"}
+                                    </Badge>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Receipt Upload Modal */}
         <ReceiptModal
@@ -523,11 +574,11 @@ const StudentDashboard: React.FC = () => {
         />
 
         {/* Footer */}
-        <div className="text-center text-gray-500 text-sm py-4">
+        <footer className="text-center text-gray-500 text-sm py-6">
           <p>© 2025 Telangana University. All rights reserved.</p>
           <p className="mt-1">Student Portal v2.0</p>
-        </div>
-      </div>
+        </footer>
+      </main>
     </div>
   );
 };
