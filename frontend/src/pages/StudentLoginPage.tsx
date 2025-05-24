@@ -45,7 +45,7 @@ const StudentLoginPage = () => {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <Card className="w-full max-w-md border-none shadow-lg">
+      <Card className="w-full max-w-md border-none shadow-lg px-4">
         <CardHeader className="space-y-1">
           <div className="flex justify-center mb-4">
             <div className="bg-gradient-to-br from-blue-600 to-purple-600 p-3 rounded-xl shadow-md">

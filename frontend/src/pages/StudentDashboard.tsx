@@ -2,19 +2,13 @@ import React, { useEffect, useState } from "react";
 import { fetchDues } from "../services/api";
 import { useAuth } from "../context/useAuth";
 import {
-  UserRound,
+  
   Building2,
-  BookOpen,
-  Calendar,
-  Search,
-  Filter,
-  Download,
-  FileText,
-  GraduationCap,
+ 
   ChevronDown,
   ChevronRight,
   Upload,
-  X,
+
   Receipt,
   IndianRupee,
   CreditCard,
@@ -25,7 +19,6 @@ import {
   Shield,
   LogOut,
 } from "lucide-react";
-import { cn } from "../lib/utils";
 import { Button } from "../components/ui/button";
 import {
   Card,
@@ -33,7 +26,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
-import { Input } from "../components/ui/input";
+
 import { Badge } from "../components/ui/badge";
 import {
   Table,
@@ -48,8 +41,12 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "../components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../components/ui/popover";
 
 // Types
 type Department = {
@@ -176,6 +173,14 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
   );
 };
 
+const getInitials = (name: string) => {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase();
+};
+
 const StudentDashboard: React.FC = () => {
   const [dues, setDues] = useState<Due[]>([]);
   const { logout, accessToken, user } = useAuth();
@@ -184,7 +189,6 @@ const StudentDashboard: React.FC = () => {
   const [departmentSummaries, setDepartmentSummaries] = useState<
     DepartmentSummary[]
   >([]);
-  const [searchTerm, setSearchTerm] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(
     null
   );
@@ -295,267 +299,255 @@ const StudentDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-white">
       {/* University Header */}
       <header className="bg-white border-b shadow-sm">
         <div className="container mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">
-              <div className="bg-gradient-to-br from-blue-600 to-purple-600 p-3 rounded-xl shadow-md">
+              <div className="bg-blue-700 p-3 rounded-xl shadow-md">
                 <School className="h-8 w-8 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                <h1 className="text-2xl font-bold text-blue-800">
                   Telangana University
                 </h1>
-                <p className="text-sm text-muted-foreground">
-                  Excellence in Education
-                </p>
+                <p className="text-sm text-gray-500">Excellence in Education</p>
               </div>
             </div>
-            <Button
-              variant="outline"
-              onClick={logout}
-              className="hover:bg-red-50 hover:text-red-600 hover:border-red-200"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
+            <div className="flex items-center gap-4">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="focus:outline-none">
+                    {studentDetails.image ? (
+                      <img
+                        src={studentDetails.image}
+                        alt="Student Avatar"
+                        className="w-10 h-10 rounded-full object-cover border-2 border-blue-700 shadow"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-blue-700 flex items-center justify-center text-white font-bold text-lg border-2 border-blue-700 shadow">
+                        {getInitials(studentDetails.name)}
+                      </div>
+                    )}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-64 p-4">
+                  <div className="flex flex-col items-center gap-2">
+                    {studentDetails.image ? (
+                      <img
+                        src={studentDetails.image}
+                        alt="Student Avatar"
+                        className="w-16 h-16 rounded-full object-cover border-2 border-blue-700 shadow mb-2"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-blue-700 flex items-center justify-center text-white font-bold text-2xl border-2 border-blue-700 shadow mb-2">
+                        {getInitials(studentDetails.name)}
+                      </div>
+                    )}
+                    <div className="text-center">
+                      <div className="font-semibold text-lg text-gray-800">
+                        {studentDetails.name}
+                      </div>
+                      <div className="text-blue-700 font-medium text-sm">
+                        {studentDetails.roll_number}
+                      </div>
+                    </div>
+                    <div className="w-full border-t my-2" />
+                    <div className="text-sm text-gray-600 w-full">
+                      <div className="flex justify-between py-1">
+                        <span className="font-medium">Course:</span>{" "}
+                        <span>{studentDetails.course}</span>
+                      </div>
+                      <div className="flex justify-between py-1">
+                        <span className="font-medium">Branch:</span>{" "}
+                        <span>{studentDetails.branch}</span>
+                      </div>
+                      <div className="flex justify-between py-1">
+                        <span className="font-medium">Year:</span>{" "}
+                        <span>{studentDetails.year}</span>
+                      </div>
+                      <div className="flex justify-between py-1">
+                        <span className="font-medium">Category:</span>{" "}
+                        <span>{studentDetails.category}</span>
+                      </div>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <Button
+                variant="outline"
+                onClick={logout}
+                className="hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-6 py-8">
-        {/* Student Profile Card */}
-        <Card className="mb-8 border-none shadow-lg bg-gradient-to-br from-white to-blue-50">
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
-              <div className="flex-shrink-0 bg-gradient-to-br from-blue-500 to-purple-500 p-4 rounded-xl shadow-md">
-                <UserRound className="h-12 w-12 text-white" />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-grow">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-800">
-                    {studentDetails.name}
-                  </h2>
-                  <p className="text-blue-600 font-medium">
-                    {studentDetails.roll_number}
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <BookOpen className="h-4 w-4 text-blue-500" />
-                    <span>
-                      {studentDetails.course} - {studentDetails.branch}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Calendar className="h-4 w-4 text-purple-500" />
-                    <span>Year {studentDetails.year}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <FileText className="h-4 w-4 text-indigo-500" />
-                    <span>Category: {studentDetails.category}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end">
-                  <Card className="bg-gradient-to-br from-red-50 to-orange-50 border-none shadow-md">
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3">
-                        <AlertCircle className="h-5 w-5 text-red-500" />
-                        <div>
-                          <span className="text-sm text-gray-600 block">
-                            Total Unpaid:
-                          </span>
-                          <span className="text-lg font-bold text-red-600">
-                            ₹
-                            {departmentSummaries
-                              .reduce((sum, dept) => sum + dept.unpaidAmount, 0)
-                              .toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Department Dues Section */}
-        <Card className="border-none shadow-lg bg-gradient-to-br from-white to-purple-50">
+        <Card className="border-none shadow-lg bg-white">
           <CardHeader>
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 w-full">
               <div className="flex items-center gap-3">
-                <div className="bg-gradient-to-br from-purple-500 to-blue-500 p-2 rounded-lg shadow-md">
+                <div className="bg-blue-700 p-2 rounded-lg shadow-md">
                   <Building2 className="h-5 w-5 text-white" />
                 </div>
                 <CardTitle className="text-gray-800">Department Dues</CardTitle>
               </div>
-
-              <div className="relative w-full md:w-64">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  type="text"
-                  placeholder="Search departments..."
-                  value={searchTerm}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setSearchTerm(e.target.value)
-                  }
-                  className="pl-9 bg-white/50 backdrop-blur-sm border-gray-200 focus:border-purple-500 focus:ring-purple-500"
-                />
+              <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+                <span className="hidden md:inline-block text-sm text-gray-600 mr-2">
+                  Total Unpaid:
+                </span>
+                <span className="inline-flex items-center gap-1 bg-orange-100 text-red-700 font-semibold px-4 py-1 rounded-full text-base shadow-sm border border-orange-200">
+                  <AlertCircle className="h-4 w-4 text-red-500" />₹
+                  {departmentSummaries
+                    .reduce((sum, dept) => sum + dept.unpaidAmount, 0)
+                    .toFixed(2)}
+                </span>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {departmentSummaries
-                .filter(
-                  (summary) =>
-                    searchTerm === "" ||
-                    summary.department
-                      .toLowerCase()
-                      .includes(searchTerm.toLowerCase())
-                )
-                .map((summary) => (
-                  <Card
-                    key={summary.department}
-                    className="border-none shadow-md hover:shadow-lg transition-shadow"
-                  >
-                    <CardContent className="p-0">
-                      <div
-                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-gradient-to-r from-white to-blue-50 cursor-pointer hover:from-blue-50 hover:to-purple-50 transition-colors"
-                        onClick={() => toggleDepartment(summary.department)}
-                      >
-                        <div className="flex items-center gap-3 mb-3 sm:mb-0">
-                          {summary.isExpanded ? (
-                            <ChevronDown className="h-5 w-5 text-purple-600" />
-                          ) : (
-                            <ChevronRight className="h-5 w-5 text-purple-600" />
-                          )}
-                          <h3 className="text-lg font-medium text-gray-800">
-                            {summary.department}
-                          </h3>
-                        </div>
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 w-full sm:w-auto">
-                          <div className="text-right w-full sm:w-auto">
-                            <p className="text-sm text-gray-600 flex items-center gap-2 justify-end">
-                              <CreditCard className="h-4 w-4 text-blue-500" />
-                              Total Amount
-                            </p>
-                            <p className="text-lg font-semibold text-gray-800">
-                              ₹{summary.totalAmount.toFixed(2)}
-                            </p>
-                          </div>
-                          <div className="text-right w-full sm:w-auto">
-                            <p className="text-sm text-gray-600 flex items-center gap-2 justify-end">
-                              <AlertCircle className="h-4 w-4 text-red-500" />
-                              Unpaid
-                            </p>
-                            <p className="text-lg font-semibold text-red-600">
-                              ₹{summary.unpaidAmount.toFixed(2)}
-                            </p>
-                          </div>
-                          {summary.unpaidAmount > 0 && (
-                            <Button
-                              variant="outline"
-                              onClick={(
-                                e: React.MouseEvent<HTMLButtonElement>
-                              ) => {
-                                e.stopPropagation();
-                                setSelectedDepartment(summary.department);
-                                setShowReceiptModal(true);
-                              }}
-                              className="mt-2 sm:mt-0 w-full sm:w-auto border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-300"
-                            >
-                              <Upload className="h-4 w-4 mr-2" />
-                              Upload Receipt
-                            </Button>
-                          )}
-                          {summary.receipt && (
-                            <Button
-                              variant="outline"
-                              onClick={(
-                                e: React.MouseEvent<HTMLButtonElement>
-                              ) => {
-                                e.stopPropagation();
-                                window.open(summary.receipt, "_blank");
-                              }}
-                              className="mt-2 sm:mt-0 w-full sm:w-auto border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300"
-                            >
-                              <Receipt className="h-4 w-4 mr-2" />
-                              View Receipt
-                            </Button>
-                          )}
-                        </div>
+              {departmentSummaries.map((summary) => (
+                <Card
+                  key={summary.department}
+                  className="border-none shadow-md hover:shadow-lg transition-shadow bg-white"
+                >
+                  <CardContent className="p-0">
+                    <div
+                      className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-white cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-100"
+                      onClick={() => toggleDepartment(summary.department)}
+                    >
+                      <div className="flex items-center gap-3 mb-3 sm:mb-0">
+                        {summary.isExpanded ? (
+                          <ChevronDown className="h-5 w-5 text-purple-600" />
+                        ) : (
+                          <ChevronRight className="h-5 w-5 text-purple-600" />
+                        )}
+                        <h3 className="text-lg font-medium text-gray-800">
+                          {summary.department}
+                        </h3>
                       </div>
-
-                      {summary.isExpanded && (
-                        <div className="border-t border-gray-100">
-                          <Table>
-                            <TableHeader>
-                              <TableRow className="bg-gray-50/50">
-                                <TableHead>Description</TableHead>
-                                <TableHead>Amount</TableHead>
-                                <TableHead>Due Date</TableHead>
-                                <TableHead>Status</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {summary.dues.map((due) => (
-                                <TableRow
-                                  key={due.id}
-                                  className="hover:bg-gray-50/50"
-                                >
-                                  <TableCell className="font-medium">
-                                    {due.description}
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex items-center gap-2">
-                                      <IndianRupee className="h-4 w-4 text-blue-500" />
-                                      {due.amount}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex items-center gap-2">
-                                      <Clock className="h-4 w-4 text-purple-500" />
-                                      {new Date(
-                                        due.due_date
-                                      ).toLocaleDateString()}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Badge
-                                      variant={
-                                        due.is_paid ? "default" : "destructive"
-                                      }
-                                      className={
-                                        due.is_paid
-                                          ? "bg-green-100 text-green-700 hover:bg-green-100"
-                                          : ""
-                                      }
-                                    >
-                                      {due.is_paid ? (
-                                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                                      ) : (
-                                        <AlertCircle className="h-3 w-3 mr-1" />
-                                      )}
-                                      {due.is_paid ? "Paid" : "Unpaid"}
-                                    </Badge>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 w-full sm:w-auto">
+                        <div className="text-right w-full sm:w-auto">
+                          <p className="text-sm text-gray-600 flex items-center gap-2 justify-end">
+                            <CreditCard className="h-4 w-4 text-blue-500" />
+                            Total Amount
+                          </p>
+                          <p className="text-lg font-semibold text-gray-800">
+                            ₹{summary.totalAmount.toFixed(2)}
+                          </p>
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                        <div className="text-right w-full sm:w-auto">
+                          <p className="text-sm text-gray-600 flex items-center gap-2 justify-end">
+                            <AlertCircle className="h-4 w-4 text-red-500" />
+                            Unpaid
+                          </p>
+                          <p className="text-lg font-semibold text-red-600">
+                            ₹{summary.unpaidAmount.toFixed(2)}
+                          </p>
+                        </div>
+                        {summary.unpaidAmount > 0 && (
+                          <Button
+                            variant="outline"
+                            onClick={(
+                              e: React.MouseEvent<HTMLButtonElement>
+                            ) => {
+                              e.stopPropagation();
+                              setSelectedDepartment(summary.department);
+                              setShowReceiptModal(true);
+                            }}
+                            className="mt-2 sm:mt-0 w-full sm:w-auto border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-300"
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            Upload Receipt
+                          </Button>
+                        )}
+                        {summary.receipt && (
+                          <Button
+                            variant="outline"
+                            onClick={(
+                              e: React.MouseEvent<HTMLButtonElement>
+                            ) => {
+                              e.stopPropagation();
+                              window.open(summary.receipt, "_blank");
+                            }}
+                            className="mt-2 sm:mt-0 w-full sm:w-auto border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300"
+                          >
+                            <Receipt className="h-4 w-4 mr-2" />
+                            View Receipt
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    {summary.isExpanded && (
+                      <div className="border-t border-gray-100">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50/50">
+                              <TableHead>Description</TableHead>
+                              <TableHead>Amount</TableHead>
+                              <TableHead>Due Date</TableHead>
+                              <TableHead>Status</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {summary.dues.map((due) => (
+                              <TableRow
+                                key={due.id}
+                                className="hover:bg-gray-50/50"
+                              >
+                                <TableCell className="font-medium">
+                                  {due.description}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <IndianRupee className="h-4 w-4 text-blue-500" />
+                                    {due.amount}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <Clock className="h-4 w-4 text-purple-500" />
+                                    {new Date(
+                                      due.due_date
+                                    ).toLocaleDateString()}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant={
+                                      due.is_paid ? "default" : "destructive"
+                                    }
+                                    className={
+                                      due.is_paid
+                                        ? "bg-green-100 text-green-700 hover:bg-green-100"
+                                        : ""
+                                    }
+                                  >
+                                    {due.is_paid ? (
+                                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    ) : (
+                                      <AlertCircle className="h-3 w-3 mr-1" />
+                                    )}
+                                    {due.is_paid ? "Paid" : "Unpaid"}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </CardContent>
         </Card>

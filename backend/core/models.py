@@ -65,7 +65,6 @@ GENDER_CHOICES = [
     ('Female', 'Female'),
     ('Other', 'Other'),
 ]
-
 # Custom user manager to handle creating users without username
 class CustomUserManager(BaseUserManager):
     def create_user(self, email=None, roll_number=None, password=None, **extra_fields):
