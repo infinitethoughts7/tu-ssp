@@ -2,13 +2,15 @@ from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Dues
-from .serializers import DuesSerializer
+from .models import Dues, FeeStructure, AcademicDues
+from .serializers import DuesSerializer, FeeStructureSerializer, AcademicDuesSerializer
 from core.permisions.staff_permistion import IsStaffOfDepartment
 from .filters import DuesFilter 
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from core.models import StudentProfile, Department
 import logging
+from .permissions import IsAdminOrStaff
+from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 
@@ -140,4 +142,59 @@ class DuesViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Error creating due: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST) 
+        
+
+class FeeStructureViewSet(viewsets.ModelViewSet):
+    queryset = FeeStructure.objects.all()
+    serializer_class = FeeStructureSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrStaff]
+
+    def get_queryset(self):
+        queryset = FeeStructure.objects.all()
+        course_name = self.request.query_params.get('course_name', None)
+        academic_year = self.request.query_params.get('academic_year', None)
+        year = self.request.query_params.get('year', None)
+
+        if course_name:
+            queryset = queryset.filter(course_name=course_name)
+        if academic_year:
+            queryset = queryset.filter(academic_year=academic_year)
+        if year:
+            queryset = queryset.filter(year=year)
+
+        return queryset
+
+class AcademicDuesViewSet(viewsets.ModelViewSet):
+    queryset = AcademicDues.objects.all()
+    serializer_class = AcademicDuesSerializer
+    permission_classes = [AllowAny]  # Allow any user for testing
+
+    def get_queryset(self):
+        queryset = AcademicDues.objects.all()
+        if self.request.user.is_authenticated:
+            if not self.request.user.is_staff:
+                queryset = queryset.filter(student__user=self.request.user)
+        else:
+            # Return an empty queryset for unauthenticated users
+            return AcademicDues.objects.none()
+        
+        payment_status = self.request.query_params.get('payment_status', None)
+        year_of_study = self.request.query_params.get('year_of_study', None)
+
+        if payment_status:
+            queryset = queryset.filter(payment_status=payment_status)
+        if year_of_study:
+            queryset = queryset.filter(year_of_study=year_of_study)
+
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        try:
+            return super().create(request, *args, **kwargs)
+        except Exception as e:
+            logger.error(f"Error creating academic due: {str(e)}")
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         

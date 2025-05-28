@@ -3,33 +3,46 @@ from django.contrib.auth.models import User
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 
 COURSE_CHOICES = [
-    ('M.A English', 'M.A English'),
-    ('M.A Hindi', 'M.A Hindi'),
-    ('M.A Mass Communication', 'M.A Mass Communication'),
-    ('M.A Telugu Studies', 'M.A Telugu Studies'),
-    ('M.A Urdu', 'M.A Urdu'),
-    ('M.A Applied Economics (5 Years Integrated)', 'M.A Applied Economics (5 Years Integrated)'),
-    ('M.S.W Social Work', 'M.S.W Social Work'),
-    ('M.Com Commerce', 'M.Com Commerce'),
-    ('M.Sc Applied Statistics', 'M.Sc Applied Statistics'),
-    ('M.Sc Biotechnology', 'M.Sc Biotechnology'),
-    ('M.Sc Botany', 'M.Sc Botany'),
-    ('M.Sc Geo-Informatics', 'M.Sc Geo-Informatics'),
-    ('M.Sc Organic Chemistry', 'M.Sc Organic Chemistry'),
-    ('M.Sc Pharmaceutical Chemistry (5 Years Integrated)', 'M.Sc Pharmaceutical Chemistry (5 Years Integrated)'),
-    ('M.Sc Physics with Electronics', 'M.Sc Physics with Electronics'),
-    ('M.B.A Business Management', 'M.B.A Business Management'),
-    ('M.C.A Computer Science & Engineering', 'M.C.A Computer Science & Engineering'),
-    ('L.L.B Law', 'L.L.B Law'),
-    ('L.L.M Law', 'L.L.M Law'),
-    ('M.A Economics', 'M.A Economics'),
-    ('M.Sc Mathematics', 'M.Sc Mathematics'),
-    ('M.A Public Administration', 'M.A Public Administration'),
-    ('M.Sc Pharmaceutical Chemistry', 'M.Sc Pharmaceutical Chemistry'),
-    ('I.M.B.A Business Management (5 Years Integrated)', 'I.M.B.A Business Management (5 Years Integrated)'),
-    ('M.Ed', 'M.Ed'),
-    ('B.Ed', 'B.Ed'),
+    ("M.A. (Applied Economics - 5 Years)", "M.A. (Applied Economics - 5 Years)"),
+    ("M.A. (Economics)", "M.A. (Economics)"),
+    ("M.A. (English)", "M.A. (English)"),
+    ("M.A. (Hindi)", "M.A. (Hindi)"),
+    ("M.A. (Mass Communication)", "M.A. (Mass Communication)"),
+    ("M.A. (Public Administration)", "M.A. (Public Administration)"),
+    ("M.A. (Telugu Studies)", "M.A. (Telugu Studies)"),
+    ("M.A. (Telugu Studies - Comparative Literature)", "M.A. (Telugu Studies - Comparative Literature)"),
+    ("M.A. (Urdu)", "M.A. (Urdu)"),
+    ("M.A. (History)", "M.A. (History)"),
+    ("M.A. (Political Science)", "M.A. (Political Science)"),
+    ("M.Com. (e-Commerce)", "M.Com. (e-Commerce)"),
+    ("M.Com. (General)", "M.Com. (General)"),
+    ("M.S.W", "M.S.W"),
+    ("M.Sc. (Applied Statistics)", "M.Sc. (Applied Statistics)"),
+    ("M.Sc. (Bio-Technology)", "M.Sc. (Bio-Technology)"),
+    ("M.Sc. (Botany)", "M.Sc. (Botany)"),
+    ("M.Sc. (Chemistry - 2 Years Course in specialization with Organic Chemistry)", "M.Sc. (Chemistry - 2 Years Course in specialization with Organic Chemistry)"),
+    ("M.Sc. (Chemistry - 2 Years with specialization in Pharmaceutical Chemistry)", "M.Sc. (Chemistry - 2 Years with specialization in Pharmaceutical Chemistry)"),
+    ("M.Sc. (Chemistry - 5 Years Integrated with specialization in Pharmaceutical Chemistry)", "M.Sc. (Chemistry - 5 Years Integrated with specialization in Pharmaceutical Chemistry)"),
+    ("M.Sc. (Computer Science)", "M.Sc. (Computer Science)"),
+    ("M.Sc. (Food Science & Technology)", "M.Sc. (Food Science & Technology)"),
+    ("M.Sc. (Geo Informatics)", "M.Sc. (Geo Informatics)"),
+    ("M.Sc. (Mathematics)", "M.Sc. (Mathematics)"),
+    ("M.Sc. (Nutrition & Dietetics)", "M.Sc. (Nutrition & Dietetics)"),
+    ("M.Sc. (Physics)", "M.Sc. (Physics)"),
+    ("M.Sc. (Physics - 2 Years with specialization in Electronics)", "M.Sc. (Physics - 2 Years with specialization in Electronics)"),
+    ("M.Sc. (Statistics)", "M.Sc. (Statistics)"),
+    ("M.Sc. (Zoology)", "M.Sc. (Zoology)"),
+    ("IMBA (Integrated Master of Business Management) (5 Yrs Integrated)", "IMBA (Integrated Master of Business Management) (5 Yrs Integrated)"),
+    ("M.B.A", "M.B.A"),
+    ("M.C.A", "M.C.A"),
+    ("LL.B (3 Years)", "LL.B (3 Years)"),
+    ("LL.M (2 Years)", "LL.M (2 Years)"),
+    ("B.Lib.Sc", "B.Lib.Sc"),
+    ("B.Ed.", "B.Ed."),
+    ("M.Ed.", "M.Ed."),
+    ("B.P.Ed.", "B.P.Ed."),
 ]
+
 DURATION_CHOICES = [
     ('2 Years', '2 Years'),
     ('5 Years', '5 Years'),
@@ -137,6 +150,7 @@ class StudentProfile(models.Model):
     phone_number = models.CharField(max_length=15)
     course = models.CharField(max_length=100, choices=COURSE_CHOICES)
     course_duration = models.CharField(max_length=10, choices=DURATION_CHOICES)
-
+    year_of_study = models.CharField(max_length=10, choices=DURATION_CHOICES)
+    is_hostel = models.BooleanField(default=False)
     def __str__(self):
         return f"{self.user.username} - {self.roll_number}"

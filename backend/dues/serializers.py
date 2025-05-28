@@ -1,8 +1,8 @@
 from rest_framework import serializers
-from .models import Dues
+from .models import Dues, FeeStructure, AcademicDues
 from core.models import StudentProfile, Department
 from core.serializers import StudentProfileSerializer, DepartmentSerializer
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 import logging
 
 logger = logging.getLogger(__name__)
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class DuesSerializer(serializers.ModelSerializer):
     student_details = StudentProfileSerializer(source='student', read_only=True)
     department_details = DepartmentSerializer(source='department', read_only=True)
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     # Override the default field definitions
     student = serializers.CharField(write_only=True)
@@ -78,4 +78,24 @@ class DuesSerializer(serializers.ModelSerializer):
             return due
         except Exception as e:
             logger.error(f"Error creating due: {str(e)}")
-            raise 
+            raise
+
+class FeeStructureSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FeeStructure
+        fields = '__all__'
+
+class AcademicDuesSerializer(serializers.ModelSerializer):
+    student_name = serializers.SerializerMethodField()
+    course_name = serializers.SerializerMethodField()
+    permission_classes = [AllowAny]
+
+    class Meta:
+        model = AcademicDues
+        fields = '__all__'
+
+    def get_student_name(self, obj):
+        return f"{obj.student.user.first_name} {obj.student.user.last_name}"
+
+    def get_course_name(self, obj):
+        return obj.tuition_fee.course_name 

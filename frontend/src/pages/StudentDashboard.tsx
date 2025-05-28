@@ -2,13 +2,10 @@ import React, { useEffect, useState } from "react";
 import { fetchDues } from "../services/api";
 import { useAuth } from "../context/useAuth";
 import {
-  
   Building2,
- 
   ChevronDown,
   ChevronRight,
   Upload,
-
   Receipt,
   IndianRupee,
   CreditCard,
@@ -16,7 +13,6 @@ import {
   CheckCircle2,
   Clock,
   School,
-  Shield,
   LogOut,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
