@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, StudentProfile, StaffProfile, Department
+from .models import User, StudentProfile, StaffProfile
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -22,10 +22,6 @@ class StaffLoginSerializer(serializers.Serializer):
         # Additional validation can be added here if needed
         return data
 
-class DepartmentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Department
-        fields = ('id', 'department', 'designation')
 
 class StudentProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer()

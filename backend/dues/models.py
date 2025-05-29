@@ -1,6 +1,6 @@
 from django.db import models
 from django.conf import settings
-from core.models import Department, StudentProfile
+from core.models import StudentProfile
 
 COURSE_CHOICES = [
     ("M.A. (Applied Economics - 5 Years)", "M.A. (Applied Economics - 5 Years)"),
@@ -50,46 +50,49 @@ class FeeStructure(models.Model):
     course_name = models.CharField(max_length=100, choices=COURSE_CHOICES)
     academic_year = models.CharField(max_length=10)
     category = models.CharField(max_length=50)
-    year = models.PositiveSmallIntegerField()
     tuition_fee = models.IntegerField()
     special_fee = models.IntegerField(null=True, blank=True)
     other_fee = models.IntegerField(null=True, blank=True)
     exam_fee = models.IntegerField(null=True, blank=True)
-    first_year_mess_bill = models.IntegerField(null=True, blank=True)
-    second_year_mess_bill = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
-        return f"{self.course_name} - Year {self.year}"
+        return f"{self.course_name} - {self.academic_year}"
 
-class AcademicDues(models.Model):
+class Academic(models.Model):
     student = models.ForeignKey(StudentProfile, on_delete=models.CASCADE)
-    tuition_fee = models.ForeignKey(FeeStructure, on_delete=models.CASCADE, related_name='tuition_fee_dues')
-    special_fee = models.ForeignKey(FeeStructure, on_delete=models.CASCADE, related_name='special_fee_dues')
+    fee_structure = models.ForeignKey(FeeStructure, on_delete=models.CASCADE , null=True, blank=True)
     paid_by_govt = models.IntegerField(default=0)
     paid_by_student = models.IntegerField(default=0)
-    payment_status = models.CharField(max_length=20, choices=[("Processing", "Processing"), ("Unpaid", "Unpaid"), ("Paid", "Paid")])
-    year_of_study = models.CharField(max_length=10, choices=DURATION_CHOICES)
+    academic_year_label = models.CharField(max_length=2, choices=[('1', '1st Year'), ('2', '2nd Year')], default="1")
+    payment_status = models.CharField(max_length=20, choices=[("Processing", "Processing"), ("Unpaid", "Unpaid"), ("Paid", "Paid")], default="Unpaid")
     remarks = models.TextField(blank=True, null=True)
     def __str__(self):
-        return f"{self.student} - Year {self.year_of_study}"
-    
-class Dues(models.Model):
-    student = models.ForeignKey(StudentProfile, on_delete=models.CASCADE, related_name='student_dues')
-    department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='department_dues')
+        return f"{self.student} - Year {self.academic_year_label}"
+
+    @property
+    def due_amount(self):
+        return (self.fee_structure.tuition_fee or 0) + (self.fee_structure.special_fee or 0) - (self.paid_by_govt + self.paid_by_student)
+
+class DepartmentDue(models.Model):
+    DEPARTMENT_CHOICES = [
+        ("accounts", "Accounts"),
+        ("library", "Library"),
+        ("hostel", "Hostel"),
+        ("sports", "Sports"),
+        ("lab", "Lab"),
+    ]
+    student = models.ForeignKey(StudentProfile, on_delete=models.CASCADE)
+    department = models.CharField(max_length=50, choices=DEPARTMENT_CHOICES)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     due_date = models.DateField()
-    description = models.TextField()
+    description = models.TextField(blank=True)
     is_paid = models.BooleanField(default=False)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_dues')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name_plural = "Dues"
-        ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.student.user.get_full_name()} - {self.amount} - {self.due_date}" 
+        return f"{self.student} - {self.department} - {self.amount}"
+
     
 
 

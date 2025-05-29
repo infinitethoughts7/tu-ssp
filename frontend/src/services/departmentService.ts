@@ -115,3 +115,17 @@ export const searchStudentsByRollNumber = async (
     throw error;
   }
 };
+
+export const getAcademicDues = async (): Promise<any[]> => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/dues/academic-dues/`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching academic dues:", error);
+    throw error;
+  }
+};

@@ -59,25 +59,27 @@ CASTE_CHOICES = [
     ('OC', 'OC'),
     ('Other', 'Other'),
 ]
-DEPARTMENT_CHOICES = [
-    ('accounts', 'Accounts / Academic Section'),
-    ('hostel', 'Hostel Section'),
-    ('library', 'Library'),
-    ('lab', 'Department / Lab'),
-    ('sports', 'PE & Sports'),
-]
-DESIGNATION_CHOICES = [
-    ('Librarian', 'Librarian'),
-    ('Hostel Superintendent', 'Hostel Superintendent'),
-    ('PE & Sports In-charge', 'PE & Sports In-charge'),
-    ('Accounts Officer', 'Accounts Officer'),
-    ('Department / Lab In-charge', 'Department / Lab In-charge'),
-]
+
 GENDER_CHOICES = [
     ('Male', 'Male'),
     ('Female', 'Female'),
     ('Other', 'Other'),
 ]
+DEPARTMENT_CHOICES = [
+    ('accountant', 'Accountant'),
+    ('hostel_superintendent', 'Hostel Superintendent'),
+    ('librarian', 'Librarian'),
+    ('lab_incharge', 'Lab In-charge'),
+    ('sports_incharge', 'PE & Sports In-charge'),
+]
+DESIGNATION_CHOICES = [
+    ('Accountant', 'Accountant'),
+    ('Hostel Superintendent', 'Hostel Superintendent'),
+    ('Librarian', 'Librarian'),
+    ('Lab In-charge', 'Lab In-charge'),
+    ('PE & Sports In-charge', 'PE & Sports In-charge'),
+]
+
 # Custom user manager to handle creating users without username
 class CustomUserManager(BaseUserManager):
     def create_user(self, email=None, roll_number=None, password=None, **extra_fields):
@@ -124,23 +126,17 @@ class User(AbstractUser):
     class Meta:
         db_table = 'core_user'
 
-class Department(models.Model):
-    department = models.CharField(max_length=100 , choices=DEPARTMENT_CHOICES)  # eg: Library, Hostel, Academics
-    designation = models.CharField(max_length=100, choices=DESIGNATION_CHOICES)
-
-    def __str__(self):  
-        return f"{self.department} - {self.designation}"
-
 class StaffProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='staff_profile')
-    department = models.ForeignKey(Department, on_delete=models.CASCADE)
+    department = models.CharField(max_length=50, choices=DEPARTMENT_CHOICES)
+    designation = models.CharField(max_length=50, choices=DESIGNATION_CHOICES)
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
     phone_number = models.CharField(max_length=10)
-    designation = models.CharField(max_length=100, blank=True)
     join_date = models.DateField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.user.username} - {self.department.department}"
+        return f"{self.user.username} - {self.get_department_display()}"
+
 
 class StudentProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student_profile')

@@ -81,7 +81,7 @@ class StaffLoginView(APIView):
                 refresh = RefreshToken.for_user(user)
                 # Get staff profile and department
                 staff_profile = StaffProfile.objects.get(user=user)
-                department = staff_profile.department.department
+                department = staff_profile.department
                 
                 return Response({
                     'refresh': str(refresh),
@@ -148,7 +148,7 @@ def staff_profile(request):
         response_data = {
             'name': request.user.get_full_name(),
             'designation': staff_profile.designation,
-            'department': staff_profile.department.department,
+            'department': staff_profile.department,
             'phone_number': staff_profile.phone_number,
             'email': request.user.email
         }

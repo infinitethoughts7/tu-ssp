@@ -8,6 +8,7 @@ import {
   getStaffProfile,
   StaffProfile,
   searchStudentsByRollNumber,
+  getAcademicDues,
 } from "../services/departmentService";
 import {
   Loader2,
@@ -70,34 +71,46 @@ import {
   SelectValue,
 } from "../components/ui/select";
 
-// Course options from models.py
+// Replace dynamic courseOptions with static list from backend
 const COURSE_OPTIONS = [
-  "M.A English",
-  "M.A Hindi",
-  "M.A Mass Communication",
-  "M.A Telugu Studies",
-  "M.A Urdu",
-  "M.A Applied Economics (5 Years Integrated)",
-  "M.S.W Social Work",
-  "M.Com Commerce",
-  "M.Sc Applied Statistics",
-  "M.Sc Biotechnology",
-  "M.Sc Botany",
-  "M.Sc Geo-Informatics",
-  "M.Sc Organic Chemistry",
-  "M.Sc Pharmaceutical Chemistry (5 Years Integrated)",
-  "M.Sc Physics with Electronics",
-  "M.B.A Business Management",
-  "M.C.A Computer Science & Engineering",
-  "L.L.B Law",
-  "L.L.M Law",
-  "M.A Economics",
-  "M.Sc Mathematics",
-  "M.A Public Administration",
-  "M.Sc Pharmaceutical Chemistry",
-  "I.M.B.A Business Management (5 Years Integrated)",
-  "M.Ed",
-  "B.Ed",
+  "M.A. (Applied Economics - 5 Years)",
+  "M.A. (Economics)",
+  "M.A. (English)",
+  "M.A. (Hindi)",
+  "M.A. (Mass Communication)",
+  "M.A. (Public Administration)",
+  "M.A. (Telugu Studies)",
+  "M.A. (Telugu Studies - Comparative Literature)",
+  "M.A. (Urdu)",
+  "M.A. (History)",
+  "M.A. (Political Science)",
+  "M.Com. (e-Commerce)",
+  "M.Com. (General)",
+  "M.S.W",
+  "M.Sc. (Applied Statistics)",
+  "M.Sc. (Bio-Technology)",
+  "M.Sc. (Botany)",
+  "M.Sc. (Chemistry - 2 Years Course in specialization with Organic Chemistry)",
+  "M.Sc. (Chemistry - 2 Years with specialization in Pharmaceutical Chemistry)",
+  "M.Sc. (Chemistry - 5 Years Integrated with specialization in Pharmaceutical Chemistry)",
+  "M.Sc. (Computer Science)",
+  "M.Sc. (Food Science & Technology)",
+  "M.Sc. (Geo Informatics)",
+  "M.Sc. (Mathematics)",
+  "M.Sc. (Nutrition & Dietetics)",
+  "M.Sc. (Physics)",
+  "M.Sc. (Physics - 2 Years with specialization in Electronics)",
+  "M.Sc. (Statistics)",
+  "M.Sc. (Zoology)",
+  "IMBA (Integrated Master of Business Management) (5 Yrs Integrated)",
+  "M.B.A",
+  "M.C.A",
+  "LL.B (3 Years)",
+  "LL.M (2 Years)",
+  "B.Lib.Sc",
+  "B.Ed.",
+  "M.Ed.",
+  "B.P.Ed.",
 ];
 
 interface StudentDetails {
@@ -148,6 +161,34 @@ interface StudentResponse {
   phone_number: string;
 }
 
+interface AcademicDue {
+  id: number;
+  student: {
+    roll_number: string;
+    full_name: string;
+    phone_number: string;
+  };
+  fee_structure: {
+    course_name: string;
+    tuition_fee: number;
+    special_fee: number;
+    other_fee: number;
+    exam_fee: number;
+  };
+  paid_by_govt: number;
+  paid_by_student: number;
+  academic_year_label: string;
+  payment_status: string;
+  remarks: string;
+  due_amount: number;
+}
+
+type DepartmentStudentGroup = StudentDetails & { dues: DepartmentDue[] };
+type AcademicStudentGroup = Omit<StudentDetails, "caste" | "user" | "dues"> & {
+  dues: AcademicDue[];
+  caste: string;
+};
+
 const StaffDashboard = () => {
   const { logout, accessToken } = useAuth();
   const navigate = useNavigate();
@@ -185,6 +226,8 @@ const StaffDashboard = () => {
   );
   const [showStudentDetails, setShowStudentDetails] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [academicDues, setAcademicDues] = useState<AcademicDue[]>([]);
+  const [showAcademicDues, setShowAcademicDues] = useState(false);
 
   useEffect(() => {
     console.log("StaffDashboard - Checking auth state:", {
@@ -219,25 +262,25 @@ const StaffDashboard = () => {
   }, [accessToken, urlDepartment, navigate]);
 
   useEffect(() => {
-    const fetchDepartmentDues = async () => {
-      const department = localStorage.getItem("department");
-      if (department && accessToken) {
-        try {
-          setLoading(true);
-          const dues = await getDepartmentDues(department);
-          console.log("Fetched dues:", dues);
-          setDepartmentDues(dues);
-          setError(null);
-        } catch (err) {
-          console.error("Error fetching dues:", err);
-          setError("Failed to fetch department dues. Please try again later.");
-        } finally {
-          setLoading(false);
-        }
+    const department = localStorage.getItem("department");
+    if (department && accessToken) {
+      setLoading(true);
+      if (department === "accounts") {
+        getAcademicDues()
+          .then((dues) => {
+            setAcademicDues(dues);
+            setShowAcademicDues(true);
+          })
+          .finally(() => setLoading(false));
+      } else {
+        getDepartmentDues(department)
+          .then((dues) => {
+            setDepartmentDues(dues);
+            setShowAcademicDues(false);
+          })
+          .finally(() => setLoading(false));
       }
-    };
-
-    fetchDepartmentDues();
+    }
   }, [accessToken]);
 
   useEffect(() => {
@@ -541,7 +584,86 @@ const StaffDashboard = () => {
     return Object.values(grouped);
   };
 
-  const studentGroups = groupDuesByStudent(filteredDues);
+  // Function to group academic dues by student
+  const groupAcademicDuesByStudent = (dues: AcademicDue[]) => {
+    const grouped = dues.reduce((acc: Record<string, any>, due) => {
+      const key = due.student.roll_number;
+
+      if (!acc[key]) {
+        acc[key] = {
+          roll_numbers: [due.student.roll_number],
+          name: due.student.full_name,
+          course: due.fee_structure.course_name,
+          phone_number: due.student.phone_number,
+          caste: "", // Academic dues do not have caste
+          dues: [],
+          totalAmount: 0,
+          unpaidAmount: 0,
+        };
+      }
+
+      acc[key].dues.push(due);
+      const amount = due.due_amount;
+      acc[key].totalAmount += amount;
+      if (due.payment_status === "Unpaid") {
+        acc[key].unpaidAmount += amount;
+      }
+
+      return acc;
+    }, {} as Record<string, any>);
+
+    return Object.values(grouped);
+  };
+
+  // Unified filter for both department and academic dues
+  const filterAndGroupDues = (): (
+    | DepartmentStudentGroup
+    | AcademicStudentGroup
+  )[] => {
+    let groups: any[] = [];
+    if (showAcademicDues) {
+      // Academic dues
+      let filtered = academicDues.filter((due) => {
+        const search = searchTerm.trim().toLowerCase();
+        const matchesSearch =
+          !search ||
+          due.student.roll_number.toLowerCase().includes(search) ||
+          due.student.full_name.toLowerCase().includes(search) ||
+          due.fee_structure.course_name.toLowerCase().includes(search);
+        const matchesCourse =
+          selectedCourse === "all" ||
+          due.fee_structure.course_name === selectedCourse;
+        return matchesSearch && matchesCourse;
+      });
+      groups = groupAcademicDuesByStudent(filtered);
+    } else {
+      // Department dues
+      let filtered = departmentDues.filter((due) => {
+        const search = searchTerm.trim().toLowerCase();
+        const matchesSearch =
+          !search ||
+          due.student_details.user.roll_number.toLowerCase().includes(search) ||
+          (
+            due.student_details.user.first_name +
+            " " +
+            due.student_details.user.last_name
+          )
+            .toLowerCase()
+            .includes(search) ||
+          due.student_details.course.toLowerCase().includes(search);
+        const matchesPaidFilter =
+          filterPaid === null || due.is_paid === filterPaid;
+        const matchesCourse =
+          selectedCourse === "all" ||
+          due.student_details.course === selectedCourse;
+        return matchesSearch && matchesPaidFilter && matchesCourse;
+      });
+      groups = groupDuesByStudent(filtered);
+    }
+    return groups;
+  };
+
+  const filteredGroups = filterAndGroupDues();
 
   if (!accessToken) {
     return null;
@@ -559,7 +681,7 @@ const StaffDashboard = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-3xl font-bold text-gray-900">
-                  {getDepartmentTitle()}
+                  {showAcademicDues ? "Academic Dues" : getDepartmentTitle()}
                 </h1>
               </div>
               {staffProfile && (
@@ -571,13 +693,15 @@ const StaffDashboard = () => {
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            <Button
-              onClick={() => setShowAddDueModal(true)}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Due
-            </Button>
+            {!showAcademicDues && (
+              <Button
+                onClick={() => setShowAddDueModal(true)}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Due
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={logout}
@@ -695,41 +819,43 @@ const StaffDashboard = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                <div className="flex items-center space-x-4">
-                  <Button
-                    variant={filterPaid === null ? "default" : "outline"}
-                    onClick={() => setFilterPaid(null)}
-                    className={cn(
-                      filterPaid === null
-                        ? "bg-black text-white hover:bg-gray-800"
-                        : "border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300"
-                    )}
-                  >
-                    All
-                  </Button>
-                  <Button
-                    variant={filterPaid === false ? "default" : "outline"}
-                    onClick={() => setFilterPaid(false)}
-                    className={cn(
-                      filterPaid === false
-                        ? "bg-black text-white hover:bg-gray-800"
-                        : "border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300"
-                    )}
-                  >
-                    Unpaid
-                  </Button>
-                  <Button
-                    variant={filterPaid === true ? "default" : "outline"}
-                    onClick={() => setFilterPaid(true)}
-                    className={cn(
-                      filterPaid === true
-                        ? "bg-black text-white hover:bg-gray-800"
-                        : "border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300"
-                    )}
-                  >
-                    Paid
-                  </Button>
-                </div>
+                {!showAcademicDues && (
+                  <div className="flex items-center space-x-4">
+                    <Button
+                      variant={filterPaid === null ? "default" : "outline"}
+                      onClick={() => setFilterPaid(null)}
+                      className={cn(
+                        filterPaid === null
+                          ? "bg-black text-white hover:bg-gray-800"
+                          : "border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300"
+                      )}
+                    >
+                      All
+                    </Button>
+                    <Button
+                      variant={filterPaid === false ? "default" : "outline"}
+                      onClick={() => setFilterPaid(false)}
+                      className={cn(
+                        filterPaid === false
+                          ? "bg-black text-white hover:bg-gray-800"
+                          : "border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300"
+                      )}
+                    >
+                      Unpaid
+                    </Button>
+                    <Button
+                      variant={filterPaid === true ? "default" : "outline"}
+                      onClick={() => setFilterPaid(true)}
+                      className={cn(
+                        filterPaid === true
+                          ? "bg-black text-white hover:bg-gray-800"
+                          : "border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300"
+                      )}
+                    >
+                      Paid
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -750,9 +876,12 @@ const StaffDashboard = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {studentGroups.map((group) => (
+                    {filteredGroups.map((group) => (
                       <>
-                        <TableRow key={group.name} className="hover:bg-gray-50">
+                        <TableRow
+                          key={group.roll_numbers[0]}
+                          className="hover:bg-gray-50"
+                        >
                           <TableCell>
                             <Button
                               variant="ghost"
@@ -783,7 +912,9 @@ const StaffDashboard = () => {
                               </div>
                               <Button
                                 variant="link"
-                                onClick={() => handleStudentSelect(group)}
+                                onClick={() =>
+                                  handleStudentSelect(group as StudentDetails)
+                                }
                                 className="font-medium text-gray-900 hover:text-gray-700 p-0 h-auto"
                               >
                                 {group.name}
@@ -817,94 +948,192 @@ const StaffDashboard = () => {
                                 <Table>
                                   <TableHeader>
                                     <TableRow className="bg-gray-100">
-                                      <TableHead>Due Date</TableHead>
-                                      <TableHead>Description</TableHead>
-                                      <TableHead>Amount</TableHead>
-                                      <TableHead>Status</TableHead>
-                                      <TableHead>Actions</TableHead>
+                                      {showAcademicDues ? (
+                                        <>
+                                          <TableHead>Year</TableHead>
+                                          <TableHead>Tuition Fee</TableHead>
+                                          <TableHead>Special Fee</TableHead>
+                                          <TableHead>Paid by Govt</TableHead>
+                                          <TableHead>Paid by Student</TableHead>
+                                          <TableHead>Due Amount</TableHead>
+                                          <TableHead>Status</TableHead>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <TableHead>Due Date</TableHead>
+                                          <TableHead>Description</TableHead>
+                                          <TableHead>Amount</TableHead>
+                                          <TableHead>Status</TableHead>
+                                          <TableHead>Actions</TableHead>
+                                        </>
+                                      )}
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                    {group.dues.map((due) => (
-                                      <TableRow
-                                        key={due.id}
-                                        className="hover:bg-gray-50"
-                                      >
-                                        <TableCell>
-                                          <div className="flex items-center gap-2">
-                                            <Calendar className="h-4 w-4 text-gray-600" />
-                                            {format(
-                                              new Date(due.due_date),
-                                              "dd MMM yyyy"
-                                            )}
-                                          </div>
-                                        </TableCell>
-                                        <TableCell>{due.description}</TableCell>
-                                        <TableCell>
-                                          <div className="flex items-center gap-2">
-                                            <IndianRupee className="h-4 w-4 text-gray-600" />
-                                            {due.amount}
-                                          </div>
-                                        </TableCell>
-                                        <TableCell>
-                                          <Badge
-                                            variant={
-                                              due.is_paid
-                                                ? "default"
-                                                : "destructive"
-                                            }
-                                            className={
-                                              due.is_paid
-                                                ? "bg-gray-100 text-gray-700 hover:bg-gray-100"
-                                                : ""
-                                            }
-                                          >
-                                            {due.is_paid ? (
-                                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                                            ) : (
-                                              <AlertCircle className="h-3 w-3 mr-1" />
-                                            )}
-                                            {due.is_paid ? "Paid" : "Unpaid"}
-                                          </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                          {!due.is_paid && (
-                                            <Button
-                                              variant="outline"
-                                              size="sm"
-                                              onClick={async () => {
-                                                try {
-                                                  await markDueAsPaid(due.id);
-                                                  setDepartmentDues(
-                                                    (prevDues) =>
-                                                      prevDues.map((d) =>
-                                                        d.id === due.id
-                                                          ? {
-                                                              ...d,
-                                                              is_paid: true,
-                                                            }
-                                                          : d
-                                                      )
-                                                  );
-                                                  setError(null);
-                                                } catch (error) {
-                                                  console.error(
-                                                    "Error marking due as paid:",
-                                                    error
-                                                  );
-                                                  setError(
-                                                    "Failed to mark due as paid. Please try again."
-                                                  );
-                                                }
-                                              }}
-                                              className="border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300"
+                                    {showAcademicDues
+                                      ? (() => {
+                                          // Get only the first due for each unique year
+                                          const seenYears = new Set<string>();
+                                          const uniqueDues = (
+                                            group as AcademicStudentGroup
+                                          ).dues.filter((due) => {
+                                            if (
+                                              seenYears.has(
+                                                due.academic_year_label
+                                              )
+                                            )
+                                              return false;
+                                            seenYears.add(
+                                              due.academic_year_label
+                                            );
+                                            return true;
+                                          });
+                                          return uniqueDues.map((acadDue) => (
+                                            <TableRow
+                                              key={acadDue.academic_year_label}
+                                              className="hover:bg-gray-50"
                                             >
-                                              Mark as Paid
-                                            </Button>
-                                          )}
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
+                                              <TableCell>
+                                                {acadDue.academic_year_label}
+                                              </TableCell>
+                                              <TableCell>
+                                                ₹
+                                                {
+                                                  acadDue.fee_structure
+                                                    .tuition_fee
+                                                }
+                                              </TableCell>
+                                              <TableCell>
+                                                ₹
+                                                {
+                                                  acadDue.fee_structure
+                                                    .special_fee
+                                                }
+                                              </TableCell>
+                                              <TableCell>
+                                                ₹{acadDue.paid_by_govt}
+                                              </TableCell>
+                                              <TableCell>
+                                                ₹{acadDue.paid_by_student}
+                                              </TableCell>
+                                              <TableCell>
+                                                ₹{acadDue.due_amount}
+                                              </TableCell>
+                                              <TableCell>
+                                                <Badge
+                                                  variant={
+                                                    acadDue.payment_status ===
+                                                    "Paid"
+                                                      ? "default"
+                                                      : "destructive"
+                                                  }
+                                                  className={
+                                                    acadDue.payment_status ===
+                                                    "Paid"
+                                                      ? "bg-gray-100 text-gray-700 hover:bg-gray-100"
+                                                      : ""
+                                                  }
+                                                >
+                                                  {acadDue.payment_status ===
+                                                  "Paid" ? (
+                                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                                  ) : (
+                                                    <AlertCircle className="h-3 w-3 mr-1" />
+                                                  )}
+                                                  {acadDue.payment_status}
+                                                </Badge>
+                                              </TableCell>
+                                            </TableRow>
+                                          ));
+                                        })()
+                                      : (
+                                          group as DepartmentStudentGroup
+                                        ).dues.map((deptDue) => (
+                                          <TableRow
+                                            key={deptDue.id}
+                                            className="hover:bg-gray-50"
+                                          >
+                                            <TableCell>
+                                              <div className="flex items-center gap-2">
+                                                <Calendar className="h-4 w-4 text-gray-600" />
+                                                {format(
+                                                  new Date(deptDue.due_date),
+                                                  "dd MMM yyyy"
+                                                )}
+                                              </div>
+                                            </TableCell>
+                                            <TableCell>
+                                              {deptDue.description}
+                                            </TableCell>
+                                            <TableCell>
+                                              <div className="flex items-center gap-2">
+                                                <IndianRupee className="h-4 w-4 text-gray-600" />
+                                                {deptDue.amount}
+                                              </div>
+                                            </TableCell>
+                                            <TableCell>
+                                              <Badge
+                                                variant={
+                                                  deptDue.is_paid
+                                                    ? "default"
+                                                    : "destructive"
+                                                }
+                                                className={
+                                                  deptDue.is_paid
+                                                    ? "bg-gray-100 text-gray-700 hover:bg-gray-100"
+                                                    : ""
+                                                }
+                                              >
+                                                {deptDue.is_paid ? (
+                                                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                                                ) : (
+                                                  <AlertCircle className="h-3 w-3 mr-1" />
+                                                )}
+                                                {deptDue.is_paid
+                                                  ? "Paid"
+                                                  : "Unpaid"}
+                                              </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                              {!deptDue.is_paid && (
+                                                <Button
+                                                  variant="outline"
+                                                  size="sm"
+                                                  onClick={async () => {
+                                                    try {
+                                                      await markDueAsPaid(
+                                                        deptDue.id
+                                                      );
+                                                      setDepartmentDues(
+                                                        (prevDues) =>
+                                                          prevDues.map((d) =>
+                                                            d.id === deptDue.id
+                                                              ? {
+                                                                  ...d,
+                                                                  is_paid: true,
+                                                                }
+                                                              : d
+                                                          )
+                                                      );
+                                                      setError(null);
+                                                    } catch (error) {
+                                                      console.error(
+                                                        "Error marking due as paid:",
+                                                        error
+                                                      );
+                                                      setError(
+                                                        "Failed to mark due as paid. Please try again."
+                                                      );
+                                                    }
+                                                  }}
+                                                  className="border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300"
+                                                >
+                                                  Mark as Paid
+                                                </Button>
+                                              )}
+                                            </TableCell>
+                                          </TableRow>
+                                        ))}
                                   </TableBody>
                                 </Table>
                               </div>
