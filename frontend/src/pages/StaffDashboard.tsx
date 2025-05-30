@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import {
@@ -9,6 +9,7 @@ import {
   StaffProfile,
   searchStudentsByRollNumber,
   getAcademicDues,
+  updateAcademicDue,
 } from "../services/departmentService";
 import {
   Loader2,
@@ -50,6 +51,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "../components/ui/dialog";
 import {
   Select,
@@ -99,6 +101,9 @@ const StaffDashboard = () => {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [academicDues, setAcademicDues] = useState<AcademicDue[]>([]);
   const [showAcademicDues, setShowAcademicDues] = useState(false);
+  const [showUpdateDueModal, setShowUpdateDueModal] = useState(false);
+  const [dueToUpdate, setDueToUpdate] = useState<AcademicDue | null>(null);
+  const [isUpdatingDue, setIsUpdatingDue] = useState(false);
 
   useEffect(() => {
     console.log("StaffDashboard - Checking auth state:", {
@@ -201,7 +206,7 @@ const StaffDashboard = () => {
       case "hostel":
         return <Home className="h-6 w-6 text-green-600" />;
       case "accounts":
-        return <GraduationCap className="h-6 w-6 text-purple-600" />;
+        return <GraduationCap className="h-6 w-6 text-purple-600 bg-white rounded-full" />;
       case "sports":
         return <Trophy className="h-6 w-6 text-yellow-600" />;
       case "lab":
@@ -369,7 +374,7 @@ const StaffDashboard = () => {
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center space-x-4">
-            <div className="bg-gradient-to-br from-blue-600 to-purple-600 p-3 rounded-xl shadow-md">
+            <div className="bg-gradient-to-br from-blue-600  to-purple-600 p-3 rounded-xl shadow-md">
               {getDepartmentIcon()}
             </div>
             <div>
@@ -560,10 +565,10 @@ const StaffDashboard = () => {
                 <Loader2 className="h-8 w-8 animate-spin text-gray-600" />
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto w-full">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-gray-50">
+                    <TableRow className="bg-blue-50">
                       <TableHead className="w-8"></TableHead>
                       <TableHead>Student Details</TableHead>
                       <TableHead>Course Info</TableHead>
@@ -627,11 +632,11 @@ const StaffDashboard = () => {
                             <div className="text-sm">
                               <div className="flex items-center gap-2 font-medium text-gray-900">
                                 <IndianRupee className="h-4 w-4 text-blue-500" />
-                                Total: ₹{group.totalAmount.toFixed(2)}
+                                Total Amount: ₹{group.totalAmount.toFixed(2)}
                               </div>
                               <div className="flex items-center gap-2 text-red-600 mt-1">
                                 <AlertCircle className="h-4 w-4" />
-                                Unpaid: ₹{group.unpaidAmount.toFixed(2)}
+                                Total Due: ₹{group.unpaidAmount.toFixed(2)}
                               </div>
                             </div>
                           </TableCell>
@@ -639,7 +644,7 @@ const StaffDashboard = () => {
                         {expandedRows.has(group.roll_numbers[0]) && (
                           <TableRow>
                             <TableCell colSpan={4} className="p-0">
-                              <div className="bg-gray-50 p-4">
+                              <div className="bg-gray-50 p-4 overflow-x-auto w-full">
                                 <Table>
                                   <TableHeader>
                                     <TableRow className="bg-gray-100">
@@ -648,6 +653,7 @@ const StaffDashboard = () => {
                                           <TableHead>Year</TableHead>
                                           <TableHead>Tuition Fee</TableHead>
                                           <TableHead>Special Fee</TableHead>
+                                          <TableHead>Exam Fee</TableHead>
                                           <TableHead>Paid by Govt</TableHead>
                                           <TableHead>Paid by Student</TableHead>
                                           <TableHead>Due Amount</TableHead>
@@ -707,6 +713,10 @@ const StaffDashboard = () => {
                                                 }
                                               </TableCell>
                                               <TableCell>
+                                                ₹
+                                                {acadDue.fee_structure.exam_fee}
+                                              </TableCell>
+                                              <TableCell>
                                                 ₹{acadDue.paid_by_govt}
                                               </TableCell>
                                               <TableCell>
@@ -721,7 +731,19 @@ const StaffDashboard = () => {
                                               <TableCell>
                                                 ₹{acadDue.unpaid_amount}
                                               </TableCell>
-                                              <TableCell>null</TableCell>
+                                              <TableCell>
+                                                <Button
+                                                  variant="outline"
+                                                  size="sm"
+                                                  className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                                                  onClick={() => {
+                                                    setDueToUpdate(acadDue);
+                                                    setShowUpdateDueModal(true);
+                                                  }}
+                                                >
+                                                  Update
+                                                </Button>
+                                              </TableCell>
                                             </TableRow>
                                           ));
                                         })()
@@ -773,6 +795,9 @@ const StaffDashboard = () => {
           <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
               <DialogTitle>Add New Due</DialogTitle>
+              <DialogDescription>
+                Fill in the details below to add a new due for a student.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               {/* Roll Number Search with Autocomplete */}
@@ -908,6 +933,9 @@ const StaffDashboard = () => {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Student Details</DialogTitle>
+              <DialogDescription>
+                View detailed information about the selected student.
+              </DialogDescription>
             </DialogHeader>
             {selectedStudent && (
               <div className="space-y-4">
@@ -944,6 +972,125 @@ const StaffDashboard = () => {
                       {selectedStudent.phone_number}
                     </p>
                   </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Update Academic Due Modal */}
+        <Dialog open={showUpdateDueModal} onOpenChange={setShowUpdateDueModal}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Update Academic Due</DialogTitle>
+              <DialogDescription>
+                Update the Paid by Govt and Paid by Student fields for this due.
+              </DialogDescription>
+            </DialogHeader>
+            {dueToUpdate && (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Year</p>
+                  <p className="font-medium">
+                    {dueToUpdate.academic_year_label}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Paid by Govt
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                      <IndianRupee className="h-4 w-4" />
+                    </span>
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="Enter amount"
+                      className="pl-8"
+                      value={
+                        dueToUpdate.paid_by_govt === 0
+                          ? ""
+                          : dueToUpdate.paid_by_govt
+                      }
+                      onChange={(e) => {
+                        const val =
+                          e.target.value === "" ? 0 : Number(e.target.value);
+                        setDueToUpdate({ ...dueToUpdate, paid_by_govt: val });
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Enter the amount paid by government (leave blank for 0).
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Paid by Student
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                      <IndianRupee className="h-4 w-4" />
+                    </span>
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="Enter amount"
+                      className="pl-8"
+                      value={
+                        dueToUpdate.paid_by_student === 0
+                          ? ""
+                          : dueToUpdate.paid_by_student
+                      }
+                      onChange={(e) => {
+                        const val =
+                          e.target.value === "" ? 0 : Number(e.target.value);
+                        setDueToUpdate({
+                          ...dueToUpdate,
+                          paid_by_student: val,
+                        });
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Enter the amount paid by student (leave blank for 0).
+                  </p>
+                </div>
+                <div className="flex justify-end gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowUpdateDueModal(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      if (!dueToUpdate) return;
+                      setIsUpdatingDue(true);
+                      try {
+                        await updateAcademicDue(dueToUpdate.id, {
+                          paid_by_govt: dueToUpdate.paid_by_govt || 0,
+                          paid_by_student: dueToUpdate.paid_by_student || 0,
+                        });
+                        // Refresh academic dues
+                        const dues = await getAcademicDues();
+                        setAcademicDues(dues);
+                        setShowUpdateDueModal(false);
+                      } catch (err) {
+                        alert("Failed to update due.");
+                      } finally {
+                        setIsUpdatingDue(false);
+                      }
+                    }}
+                    disabled={isUpdatingDue}
+                    className={
+                      isUpdatingDue
+                        ? "bg-blue-400 text-white cursor-not-allowed"
+                        : "bg-blue-600 hover:bg-blue-700 text-white"
+                    }
+                  >
+                    Save
+                  </Button>
                 </div>
               </div>
             )}

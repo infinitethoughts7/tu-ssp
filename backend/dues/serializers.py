@@ -51,19 +51,22 @@ class AcademicSerializer(serializers.ModelSerializer):
         special = obj.fee_structure.special_fee or 0
         paid_student = obj.paid_by_student or 0
         paid_govt = obj.paid_by_govt or 0
-        return (tuition + special) - (paid_student + paid_govt)
+        exam = obj.fee_structure.exam_fee or 0
+        return (tuition + special + exam) - (paid_student + paid_govt)
 
     def get_total_amount(self, obj):
         tuition = obj.fee_structure.tuition_fee or 0
         special = obj.fee_structure.special_fee or 0
-        return tuition + special
+        exam = obj.fee_structure.exam_fee or 0
+        return tuition + special + exam
 
     def get_unpaid_amount(self, obj):
         tuition = obj.fee_structure.tuition_fee or 0
         special = obj.fee_structure.special_fee or 0
         paid_student = obj.paid_by_student or 0
         paid_govt = obj.paid_by_govt or 0
-        return (tuition + special) - (paid_student + paid_govt)
+        exam = obj.fee_structure.exam_fee or 0
+        return (tuition + special + exam) - (paid_student + paid_govt)
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:

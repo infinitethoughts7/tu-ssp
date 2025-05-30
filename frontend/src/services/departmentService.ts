@@ -142,3 +142,24 @@ export const getStudentProfileByRoll = async (rollNumber: string) => {
   // The API returns a list, so find the exact match
   return response.data.find((s: any) => s.roll_number === rollNumber);
 };
+
+export const updateAcademicDue = async (
+  id: number,
+  data: { paid_by_govt: number; paid_by_student: number }
+): Promise<any> => {
+  try {
+    const response = await axios.patch(
+      `${API_BASE_URL}/dues/academic-dues/${id}/`,
+      data,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error updating academic due:", error);
+    throw error;
+  }
+};
