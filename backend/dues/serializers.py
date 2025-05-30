@@ -18,7 +18,7 @@ class StudentProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = StudentProfile
-        fields = ['roll_number', 'full_name', 'phone_number']
+        fields = ['roll_number', 'full_name', 'phone_number', 'caste']
 
     def get_full_name(self, obj):
         return f"{obj.user.first_name} {obj.user.last_name}".strip()
@@ -26,6 +26,9 @@ class StudentProfileSerializer(serializers.ModelSerializer):
 class AcademicSerializer(serializers.ModelSerializer):
     fee_structure = FeeStructureSerializer(read_only=True)
     student = StudentProfileSerializer(read_only=True)
+    due_amount = serializers.SerializerMethodField()
+    total_amount = serializers.SerializerMethodField()
+    unpaid_amount = serializers.SerializerMethodField()
 
     class Meta:
         model = Academic
@@ -38,7 +41,29 @@ class AcademicSerializer(serializers.ModelSerializer):
             'academic_year_label',
             'payment_status',
             'remarks',
+            'due_amount',
+            'total_amount',
+            'unpaid_amount',
         ]
+
+    def get_due_amount(self, obj):
+        tuition = obj.fee_structure.tuition_fee or 0
+        special = obj.fee_structure.special_fee or 0
+        paid_student = obj.paid_by_student or 0
+        paid_govt = obj.paid_by_govt or 0
+        return (tuition + special) - (paid_student + paid_govt)
+
+    def get_total_amount(self, obj):
+        tuition = obj.fee_structure.tuition_fee or 0
+        special = obj.fee_structure.special_fee or 0
+        return tuition + special
+
+    def get_unpaid_amount(self, obj):
+        tuition = obj.fee_structure.tuition_fee or 0
+        special = obj.fee_structure.special_fee or 0
+        paid_student = obj.paid_by_student or 0
+        paid_govt = obj.paid_by_govt or 0
+        return (tuition + special) - (paid_student + paid_govt)
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:

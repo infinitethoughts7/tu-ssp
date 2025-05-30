@@ -19,9 +19,7 @@ import {
   Trophy,
   Beaker,
   Search,
-  ArrowUpDown,
   Plus,
-  X,
   User,
   Phone,
   Mail,
@@ -31,23 +29,14 @@ import {
   LogOut,
   IndianRupee,
   Calendar,
-  CheckCircle2,
-  Clock,
-  School,
 } from "lucide-react";
 import { format } from "date-fns";
 import { DepartmentDue } from "../types/department";
 import axios from "axios";
 import { cn } from "../lib/utils";
 import { Button } from "../components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
+import { Card, CardContent } from "../components/ui/card";
 import { Input } from "../components/ui/input";
-import { Badge } from "../components/ui/badge";
 import {
   Table,
   TableBody,
@@ -61,7 +50,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "../components/ui/dialog";
 import {
   Select,
@@ -70,124 +58,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
-
-// Replace dynamic courseOptions with static list from backend
-const COURSE_OPTIONS = [
-  "M.A. (Applied Economics - 5 Years)",
-  "M.A. (Economics)",
-  "M.A. (English)",
-  "M.A. (Hindi)",
-  "M.A. (Mass Communication)",
-  "M.A. (Public Administration)",
-  "M.A. (Telugu Studies)",
-  "M.A. (Telugu Studies - Comparative Literature)",
-  "M.A. (Urdu)",
-  "M.A. (History)",
-  "M.A. (Political Science)",
-  "M.Com. (e-Commerce)",
-  "M.Com. (General)",
-  "M.S.W",
-  "M.Sc. (Applied Statistics)",
-  "M.Sc. (Bio-Technology)",
-  "M.Sc. (Botany)",
-  "M.Sc. (Chemistry - 2 Years Course in specialization with Organic Chemistry)",
-  "M.Sc. (Chemistry - 2 Years with specialization in Pharmaceutical Chemistry)",
-  "M.Sc. (Chemistry - 5 Years Integrated with specialization in Pharmaceutical Chemistry)",
-  "M.Sc. (Computer Science)",
-  "M.Sc. (Food Science & Technology)",
-  "M.Sc. (Geo Informatics)",
-  "M.Sc. (Mathematics)",
-  "M.Sc. (Nutrition & Dietetics)",
-  "M.Sc. (Physics)",
-  "M.Sc. (Physics - 2 Years with specialization in Electronics)",
-  "M.Sc. (Statistics)",
-  "M.Sc. (Zoology)",
-  "IMBA (Integrated Master of Business Management) (5 Yrs Integrated)",
-  "M.B.A",
-  "M.C.A",
-  "LL.B (3 Years)",
-  "LL.M (2 Years)",
-  "B.Lib.Sc",
-  "B.Ed.",
-  "M.Ed.",
-  "B.P.Ed.",
-];
-
-interface StudentDetails {
-  roll_numbers: string[];
-  name: string;
-  course: string;
-  caste: string;
-  phone_number: string;
-  dues: DepartmentDue[];
-  totalAmount: number;
-  unpaidAmount: number;
-  user?: {
-    id: number;
-    email: string | null;
-    roll_number: string;
-    is_student: boolean;
-    is_staff: boolean;
-    first_name?: string;
-    last_name?: string;
-  };
-}
-
-interface StudentSuggestion {
-  roll_numbers: string[];
-  name: string;
-  course: string;
-  caste: string;
-  phone_number: string;
-  user?: {
-    id: number;
-    email: string | null;
-    roll_number: string;
-    is_student: boolean;
-    is_staff: boolean;
-    first_name?: string;
-    last_name?: string;
-  };
-}
-
-interface StudentResponse {
-  roll_numbers: string[];
-  user: {
-    first_name: string;
-    last_name: string;
-  };
-  course: string;
-  caste: string;
-  phone_number: string;
-}
-
-interface AcademicDue {
-  id: number;
-  student: {
-    roll_number: string;
-    full_name: string;
-    phone_number: string;
-  };
-  fee_structure: {
-    course_name: string;
-    tuition_fee: number;
-    special_fee: number;
-    other_fee: number;
-    exam_fee: number;
-  };
-  paid_by_govt: number;
-  paid_by_student: number;
-  academic_year_label: string;
-  payment_status: string;
-  remarks: string;
-  due_amount: number;
-}
-
-type DepartmentStudentGroup = StudentDetails & { dues: DepartmentDue[] };
-type AcademicStudentGroup = Omit<StudentDetails, "caste" | "user" | "dues"> & {
-  dues: AcademicDue[];
-  caste: string;
-};
+import type {
+  StudentDetails,
+  StudentSuggestion,
+  AcademicDue,
+  DepartmentStudentGroup,
+  AcademicStudentGroup,
+} from "../types/staffDashboardTypes";
+import { COURSE_OPTIONS } from "../types/constants";
 
 const StaffDashboard = () => {
   const { logout, accessToken } = useAuth();
@@ -213,14 +91,7 @@ const StaffDashboard = () => {
   );
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [students, setStudents] = useState<any[]>([]);
-  const [loadingStudents, setLoadingStudents] = useState(false);
   const [staffProfile, setStaffProfile] = useState<StaffProfile | null>(null);
-  const [studentSuggestions, setStudentSuggestions] = useState<
-    StudentSuggestion[]
-  >([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [selectedCaste, setSelectedCaste] = useState<string>("");
   const [selectedStudent, setSelectedStudent] = useState<StudentDetails | null>(
     null
   );
@@ -236,11 +107,12 @@ const StaffDashboard = () => {
       storedDepartment: localStorage.getItem("department"),
     });
 
-    if (!accessToken) {
-      console.log("No access token found, redirecting to login");
-      navigate("/staff-login");
-      return;
-    }
+    // --- DEVELOPMENT ONLY: Commented out auth redirect for easier testing ---
+    // if (!accessToken) {
+    //   console.log("No access token found, redirecting to login");
+    //   navigate("/staff-login");
+    //   return;
+    // }
 
     const storedDepartment = localStorage.getItem("department");
     if (!storedDepartment) {
@@ -321,21 +193,6 @@ const StaffDashboard = () => {
     }
   }, [accessToken, logout]);
 
-  const handleMarkAsPaid = async (dueId: number) => {
-    try {
-      await markDueAsPaid(dueId);
-      // Refresh the dues list
-      const department = localStorage.getItem("department");
-      if (department) {
-        const updatedDues = await getDepartmentDues(department);
-        setDepartmentDues(updatedDues);
-      }
-    } catch (error) {
-      console.error("Error marking due as paid:", error);
-      setError("Failed to mark due as paid. Please try again.");
-    }
-  };
-
   const getDepartmentIcon = () => {
     const department = localStorage.getItem("department")?.toLowerCase();
     switch (department) {
@@ -369,180 +226,6 @@ const StaffDashboard = () => {
         return "Students Lab Dues";
       default:
         return "Students Department Dues";
-    }
-  };
-
-  const filteredDues = departmentDues
-    .filter((due) => {
-      const matchesSearch =
-        searchTerm === "" ||
-        due.student_details.user.roll_number
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        due.student_details.course
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase());
-      const matchesPaidFilter =
-        filterPaid === null || due.is_paid === filterPaid;
-      const matchesCourseFilter =
-        selectedCourse === "all" ||
-        due.student_details.course === selectedCourse;
-      return matchesSearch && matchesPaidFilter && matchesCourseFilter;
-    })
-    .sort((a, b) => {
-      const aValue = a[sortField];
-      const bValue = b[sortField];
-      const direction = sortDirection === "asc" ? 1 : -1;
-
-      if (typeof aValue === "string" && typeof bValue === "string") {
-        return direction * aValue.localeCompare(bValue);
-      }
-      if (typeof aValue === "number" && typeof bValue === "number") {
-        return direction * (aValue - bValue);
-      }
-      return 0;
-    });
-
-  const handleSort = (field: keyof DepartmentDue) => {
-    if (field === sortField) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDirection("asc");
-    }
-  };
-
-  // Function to handle roll number search with suggestions
-  const handleRollNumberSearch = async (value: string) => {
-    if (value.length < 3) {
-      setStudentSuggestions([]);
-      return;
-    }
-
-    setIsSearching(true);
-    setSearchError(null);
-    try {
-      const results = await searchStudentsByRollNumber(value);
-      setStudentSuggestions(
-        results.map((student) => ({
-          roll_numbers: [student.roll_number],
-          name: student.name,
-          course: student.course,
-          caste: student.caste,
-          phone_number: student.phone_number,
-          user: student.user,
-        }))
-      );
-    } catch (error) {
-      console.error("Error searching student:", error);
-      setSearchError("Error searching for student");
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  // Function to handle suggestion selection
-  const handleSuggestionSelect = async (suggestion: StudentSuggestion) => {
-    setNewDue({ ...newDue, student_roll_number: suggestion.roll_numbers[0] });
-    setShowSuggestions(false);
-
-    try {
-      const response = await searchStudentsByRollNumber(
-        suggestion.roll_numbers[0]
-      );
-      if (response && response.length > 0) {
-        const student = response[0];
-        // Add null checks for user and name properties
-        const firstName = student.user?.first_name || "";
-        const lastName = student.user?.last_name || "";
-        const fullName =
-          `${firstName} ${lastName}`.trim() || student.name || "N/A";
-
-        setStudentDetails({
-          roll_numbers: [student.roll_number],
-          name: fullName,
-          course: student.course || "N/A",
-          caste: student.caste || "N/A",
-          phone_number: student.phone_number || "N/A",
-          dues: [],
-          totalAmount: 0,
-          unpaidAmount: 0,
-          user: student.user || {
-            id: 0,
-            email: null,
-            roll_number: student.roll_number,
-            is_student: true,
-            is_staff: false,
-          },
-        });
-        setSelectedCaste(student.caste || "");
-      }
-    } catch (error) {
-      console.error("Error fetching student details:", error);
-      setError("Error fetching student details. Please try again.");
-      setStudentDetails(null);
-    }
-  };
-
-  // Function to handle adding new due
-  const handleAddDue = async () => {
-    if (!studentDetails) {
-      setError("Please select a student first");
-      return;
-    }
-
-    try {
-      const department = localStorage.getItem("department");
-      if (!department) {
-        setError("Department not found");
-        return;
-      }
-
-      // Convert amount to decimal string
-      const amount = parseFloat(newDue.amount).toFixed(2);
-
-      const dueData = {
-        student: studentDetails.roll_numbers[0],
-        amount: amount,
-        due_date: newDue.due_date,
-        description: newDue.description,
-        department: department,
-      };
-
-      console.log("Sending due data:", JSON.stringify(dueData, null, 2));
-      console.log("Student details:", JSON.stringify(studentDetails, null, 2));
-      console.log("Department:", department);
-
-      const response = await addDepartmentDue(dueData);
-      console.log("Response from backend:", response);
-
-      setShowAddDueModal(false);
-      setNewDue({
-        student_roll_number: "",
-        amount: "",
-        due_date: "",
-        description: "",
-      });
-      setStudentDetails(null);
-
-      // Refresh the dues list
-      const updatedDues = await getDepartmentDues(department);
-      setDepartmentDues(updatedDues);
-    } catch (error: any) {
-      console.error("Error adding due:", error);
-      if (axios.isAxiosError(error)) {
-        console.error("Error details:", {
-          status: error.response?.status,
-          data: error.response?.data,
-          headers: error.response?.headers,
-          config: error.config,
-        });
-        setError(
-          `Failed to add due: ${error.response?.data?.error || error.message}`
-        );
-      } else {
-        setError("Failed to add due. Please try again.");
-      }
     }
   };
 
@@ -595,7 +278,7 @@ const StaffDashboard = () => {
           name: due.student.full_name,
           course: due.fee_structure.course_name,
           phone_number: due.student.phone_number,
-          caste: "", // Academic dues do not have caste
+          caste: due.student.caste || "", // Academic dues may have caste now
           dues: [],
           totalAmount: 0,
           unpaidAmount: 0,
@@ -603,14 +286,24 @@ const StaffDashboard = () => {
       }
 
       acc[key].dues.push(due);
-      const amount = due.due_amount;
-      acc[key].totalAmount += amount;
-      if (due.payment_status === "Unpaid") {
-        acc[key].unpaidAmount += amount;
-      }
-
       return acc;
     }, {} as Record<string, any>);
+
+    // For each group, sum only unique years for totalAmount and unpaidAmount
+    Object.values(grouped).forEach((group: any) => {
+      const seenYears = new Set<string>();
+      group.totalAmount = 0;
+      group.unpaidAmount = 0;
+      group.dues.forEach((due: AcademicDue) => {
+        if (!seenYears.has(due.academic_year_label)) {
+          group.totalAmount += due.total_amount;
+          if (due.payment_status === "Unpaid") {
+            group.unpaidAmount += due.unpaid_amount;
+          }
+          seenYears.add(due.academic_year_label);
+        }
+      });
+    });
 
     return Object.values(grouped);
   };
@@ -666,7 +359,8 @@ const StaffDashboard = () => {
   const filteredGroups = filterAndGroupDues();
 
   if (!accessToken) {
-    return null;
+    // --- DEVELOPMENT ONLY: Commented out auth check for easier testing ---
+    // return null;
   }
 
   return (
@@ -803,24 +497,25 @@ const StaffDashboard = () => {
                     className="pl-10 bg-white border-gray-200 focus:border-black focus:ring-black"
                   />
                 </div>
-                <Select
-                  value={selectedCourse}
-                  onValueChange={setSelectedCourse}
-                >
-                  <SelectTrigger className="bg-white border-gray-200 focus:border-black focus:ring-black">
-                    <SelectValue placeholder="All Courses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Courses</SelectItem>
-                    {COURSE_OPTIONS.map((course) => (
-                      <SelectItem key={course} value={course}>
-                        {course}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {!showAcademicDues && (
-                  <div className="flex items-center space-x-4">
+                <div className="flex items-center gap-4">
+                  <Select
+                    value={selectedCourse}
+                    onValueChange={setSelectedCourse}
+                  >
+                    <SelectTrigger className="bg-white border-gray-200 focus:border-black focus:ring-black">
+                      <SelectValue placeholder="All Courses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Courses</SelectItem>
+                      {COURSE_OPTIONS.map((course) => (
+                        <SelectItem key={course} value={course}>
+                          {course}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {/* New Paid/Unpaid Filter */}
+                  <div className="flex items-center space-x-2">
                     <Button
                       variant={filterPaid === null ? "default" : "outline"}
                       onClick={() => setFilterPaid(null)}
@@ -855,7 +550,7 @@ const StaffDashboard = () => {
                       Paid
                     </Button>
                   </div>
-                )}
+                </div>
               </div>
             </div>
 
@@ -956,14 +651,15 @@ const StaffDashboard = () => {
                                           <TableHead>Paid by Govt</TableHead>
                                           <TableHead>Paid by Student</TableHead>
                                           <TableHead>Due Amount</TableHead>
-                                          <TableHead>Status</TableHead>
+                                          <TableHead>Total Amount</TableHead>
+                                          <TableHead>Unpaid Amount</TableHead>
+                                          <TableHead>Actions</TableHead>
                                         </>
                                       ) : (
                                         <>
                                           <TableHead>Due Date</TableHead>
                                           <TableHead>Description</TableHead>
                                           <TableHead>Amount</TableHead>
-                                          <TableHead>Status</TableHead>
                                           <TableHead>Actions</TableHead>
                                         </>
                                       )}
@@ -1020,29 +716,12 @@ const StaffDashboard = () => {
                                                 ₹{acadDue.due_amount}
                                               </TableCell>
                                               <TableCell>
-                                                <Badge
-                                                  variant={
-                                                    acadDue.payment_status ===
-                                                    "Paid"
-                                                      ? "default"
-                                                      : "destructive"
-                                                  }
-                                                  className={
-                                                    acadDue.payment_status ===
-                                                    "Paid"
-                                                      ? "bg-gray-100 text-gray-700 hover:bg-gray-100"
-                                                      : ""
-                                                  }
-                                                >
-                                                  {acadDue.payment_status ===
-                                                  "Paid" ? (
-                                                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                                                  ) : (
-                                                    <AlertCircle className="h-3 w-3 mr-1" />
-                                                  )}
-                                                  {acadDue.payment_status}
-                                                </Badge>
+                                                ₹{acadDue.total_amount}
                                               </TableCell>
+                                              <TableCell>
+                                                ₹{acadDue.unpaid_amount}
+                                              </TableCell>
+                                              <TableCell>null</TableCell>
                                             </TableRow>
                                           ));
                                         })()
@@ -1071,67 +750,7 @@ const StaffDashboard = () => {
                                                 {deptDue.amount}
                                               </div>
                                             </TableCell>
-                                            <TableCell>
-                                              <Badge
-                                                variant={
-                                                  deptDue.is_paid
-                                                    ? "default"
-                                                    : "destructive"
-                                                }
-                                                className={
-                                                  deptDue.is_paid
-                                                    ? "bg-gray-100 text-gray-700 hover:bg-gray-100"
-                                                    : ""
-                                                }
-                                              >
-                                                {deptDue.is_paid ? (
-                                                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                                                ) : (
-                                                  <AlertCircle className="h-3 w-3 mr-1" />
-                                                )}
-                                                {deptDue.is_paid
-                                                  ? "Paid"
-                                                  : "Unpaid"}
-                                              </Badge>
-                                            </TableCell>
-                                            <TableCell>
-                                              {!deptDue.is_paid && (
-                                                <Button
-                                                  variant="outline"
-                                                  size="sm"
-                                                  onClick={async () => {
-                                                    try {
-                                                      await markDueAsPaid(
-                                                        deptDue.id
-                                                      );
-                                                      setDepartmentDues(
-                                                        (prevDues) =>
-                                                          prevDues.map((d) =>
-                                                            d.id === deptDue.id
-                                                              ? {
-                                                                  ...d,
-                                                                  is_paid: true,
-                                                                }
-                                                              : d
-                                                          )
-                                                      );
-                                                      setError(null);
-                                                    } catch (error) {
-                                                      console.error(
-                                                        "Error marking due as paid:",
-                                                        error
-                                                      );
-                                                      setError(
-                                                        "Failed to mark due as paid. Please try again."
-                                                      );
-                                                    }
-                                                  }}
-                                                  className="border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300"
-                                                >
-                                                  Mark as Paid
-                                                </Button>
-                                              )}
-                                            </TableCell>
+                                            <TableCell>null</TableCell>
                                           </TableRow>
                                         ))}
                                   </TableBody>
@@ -1171,44 +790,11 @@ const StaffDashboard = () => {
                         ...prev,
                         student_roll_number: value,
                       }));
-                      handleRollNumberSearch(value);
                     }}
-                    onFocus={() => setShowSuggestions(true)}
                     className="w-full"
                     placeholder="Enter roll number"
                   />
-                  {isSearching && (
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    </div>
-                  )}
                 </div>
-
-                {/* Suggestions Dropdown */}
-                {showSuggestions && studentSuggestions.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg border border-gray-200">
-                    {studentSuggestions.map((student) => (
-                      <div
-                        key={student.roll_numbers[0]}
-                        className="px-4 py-2 cursor-pointer hover:bg-gray-50"
-                        onClick={() => handleSuggestionSelect(student)}
-                      >
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">
-                            {student.roll_numbers[0]}
-                          </span>
-                          <span className="text-gray-600">{student.name}</span>
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {student.course} • {student.caste}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {searchError && (
-                  <p className="mt-1 text-sm text-red-600">{searchError}</p>
-                )}
               </div>
 
               {/* Student Details */}
@@ -1229,7 +815,11 @@ const StaffDashboard = () => {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Caste</p>
-                        <p className="font-medium">{studentDetails.caste}</p>
+                        <p className="font-medium">
+                          {"caste" in studentDetails && studentDetails.caste
+                            ? studentDetails.caste
+                            : "N/A"}
+                        </p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Phone</p>
@@ -1304,8 +894,7 @@ const StaffDashboard = () => {
                 Cancel
               </Button>
               <Button
-                onClick={handleAddDue}
-                disabled={!studentDetails}
+                disabled
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
               >
                 Add Due
@@ -1334,23 +923,25 @@ const StaffDashboard = () => {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Course</p>
-                    <p className="font-medium">{selectedStudent.course}</p>
-                  </div>
-                  <div>
                     <p className="text-sm text-gray-500">Caste</p>
-                    <p className="font-medium">{selectedStudent.caste}</p>
+                    <p className="font-medium">
+                      {showAcademicDues
+                        ? selectedStudent.dues &&
+                          selectedStudent.dues.length > 0 &&
+                          typeof selectedStudent.dues[0] === "object" &&
+                          "student" in selectedStudent.dues[0] &&
+                          typeof (selectedStudent.dues[0] as any).student ===
+                            "object" &&
+                          (selectedStudent.dues[0] as any).student.caste
+                          ? (selectedStudent.dues[0] as any).student.caste
+                          : "N/A"
+                        : selectedStudent.caste || "N/A"}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Phone Number</p>
                     <p className="font-medium">
                       {selectedStudent.phone_number}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Department</p>
-                    <p className="font-medium">
-                      {selectedStudent.dues[0]?.department_details.department}
                     </p>
                   </div>
                 </div>

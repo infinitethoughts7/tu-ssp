@@ -129,3 +129,16 @@ export const getAcademicDues = async (): Promise<any[]> => {
     throw error;
   }
 };
+
+export const getStudentProfileByRoll = async (rollNumber: string) => {
+  const response = await axios.get(
+    `${API_BASE_URL}/students/search/?q=${rollNumber}`,
+    {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+      },
+    }
+  );
+  // The API returns a list, so find the exact match
+  return response.data.find((s: any) => s.roll_number === rollNumber);
+};
