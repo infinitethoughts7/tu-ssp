@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import {
@@ -10,6 +10,7 @@ import {
   searchStudentsByRollNumber,
   getAcademicDues,
   updateAcademicDue,
+  getHostelDues,
 } from "../services/departmentService";
 import {
   Loader2,
@@ -69,7 +70,32 @@ import type {
 } from "../types/staffDashboardTypes";
 import { COURSE_OPTIONS } from "../types/constants";
 
-const StaffDashboard = () => {
+interface HostelDue {
+  id: number;
+  student: number;
+  student_name: string;
+  student_roll: string;
+  student_caste: string;
+  student_phone: string;
+  year_of_study: string;
+  mess_bill: number;
+  scholarship: number;
+  deposit: number;
+  remarks: string;
+}
+
+interface HostelStudentGroup {
+  roll_numbers: string[];
+  name: string;
+  course: string;
+  caste: string;
+  phone_number: string;
+  dues: HostelDue[];
+  totalAmount: number;
+  unpaidAmount: number;
+}
+
+export default function StaffDashboard() {
   const { logout, accessToken } = useAuth();
   const navigate = useNavigate();
   const { department: urlDepartment } = useParams();
@@ -104,6 +130,176 @@ const StaffDashboard = () => {
   const [showUpdateDueModal, setShowUpdateDueModal] = useState(false);
   const [dueToUpdate, setDueToUpdate] = useState<AcademicDue | null>(null);
   const [isUpdatingDue, setIsUpdatingDue] = useState(false);
+  const [hostelDues, setHostelDues] = useState<HostelDue[]>([]);
+
+  // Function to group dues by student
+  const groupDuesByStudent = (dues: DepartmentDue[]) => {
+    if (!Array.isArray(dues)) {
+      console.error("Invalid dues data:", dues);
+      return [];
+    }
+
+    const grouped = dues.reduce((acc, due) => {
+      // Skip if student_details or user is undefined
+      if (!due.student_details?.user) {
+        console.warn("Skipping due with missing student details:", due);
+        return acc;
+      }
+
+      const key = due.student_details.user.roll_number;
+      if (!key) {
+        console.warn("Skipping due with missing roll number:", due);
+        return acc;
+      }
+
+      if (!acc[key]) {
+        acc[key] = {
+          roll_numbers: [due.student_details.user.roll_number],
+          name: `${due.student_details.user.first_name || ""} ${
+            due.student_details.user.last_name || ""
+          }`.trim(),
+          course: due.student_details.course || "N/A",
+          caste: due.student_details.caste || "N/A",
+          phone_number: due.student_details.phone_number || "N/A",
+          dues: [],
+          totalAmount: 0,
+          unpaidAmount: 0,
+          user: due.student_details.user,
+        };
+      }
+
+      acc[key].dues.push(due);
+      const amount = parseFloat(due.amount) || 0;
+      acc[key].totalAmount += amount;
+      if (!due.is_paid) {
+        acc[key].unpaidAmount += amount;
+      }
+
+      return acc;
+    }, {} as Record<string, StudentDetails>);
+
+    return Object.values(grouped);
+  };
+
+  // Function to group academic dues by student
+  const groupAcademicDuesByStudent = (dues: AcademicDue[]) => {
+    if (!Array.isArray(dues)) {
+      console.error("Invalid academic dues data:", dues);
+      return [];
+    }
+
+    const grouped = dues.reduce((acc: Record<string, any>, due) => {
+      // Skip if student is undefined
+      if (!due.student) {
+        console.warn("Skipping academic due with missing student:", due);
+        return acc;
+      }
+
+      const key = due.student.roll_number;
+      if (!key) {
+        console.warn("Skipping academic due with missing roll number:", due);
+        return acc;
+      }
+
+      if (!acc[key]) {
+        acc[key] = {
+          roll_numbers: [due.student.roll_number],
+          name: due.student.full_name || "N/A",
+          course: due.fee_structure?.course_name || "N/A",
+          phone_number: due.student.phone_number || "N/A",
+          caste: due.student.caste || "N/A",
+          dues: [],
+          totalAmount: 0,
+          unpaidAmount: 0,
+        };
+      }
+
+      acc[key].dues.push(due);
+      return acc;
+    }, {} as Record<string, any>);
+
+    // For each group, sum only unique years for totalAmount and unpaidAmount
+    Object.values(grouped).forEach((group: any) => {
+      const seenYears = new Set<string>();
+      group.totalAmount = 0;
+      group.unpaidAmount = 0;
+      group.dues.forEach((due: AcademicDue) => {
+        if (!seenYears.has(due.academic_year_label)) {
+          group.totalAmount += due.total_amount || 0;
+          if (due.payment_status === "Unpaid") {
+            group.unpaidAmount += due.unpaid_amount || 0;
+          }
+          seenYears.add(due.academic_year_label);
+        }
+      });
+    });
+
+    return Object.values(grouped);
+  };
+
+  // Unified filter for both department and academic dues
+  const filterAndGroupDues = (): (
+    | DepartmentStudentGroup
+    | AcademicStudentGroup
+  )[] => {
+    let groups: any[] = [];
+    if (showAcademicDues) {
+      // Academic dues
+      if (!Array.isArray(academicDues)) {
+        console.error("Invalid academic dues data:", academicDues);
+        return [];
+      }
+      let filtered = academicDues.filter((due) => {
+        if (!due.student) return false;
+        const search = searchTerm.trim().toLowerCase();
+        const matchesSearch =
+          !search ||
+          (due.student.roll_number?.toLowerCase() || "").includes(search) ||
+          (due.student.full_name?.toLowerCase() || "").includes(search) ||
+          (due.fee_structure?.course_name?.toLowerCase() || "").includes(
+            search
+          );
+        const matchesCourse =
+          selectedCourse === "all" ||
+          due.fee_structure?.course_name === selectedCourse;
+        return matchesSearch && matchesCourse;
+      });
+      groups = groupAcademicDuesByStudent(filtered);
+    } else {
+      // Department dues
+      if (!Array.isArray(departmentDues)) {
+        console.error("Invalid department dues data:", departmentDues);
+        return [];
+      }
+      let filtered = departmentDues.filter((due) => {
+        if (!due.student_details?.user) return false;
+        const search = searchTerm.trim().toLowerCase();
+        const matchesSearch =
+          !search ||
+          (due.student_details.user.roll_number?.toLowerCase() || "").includes(
+            search
+          ) ||
+          (
+            (due.student_details.user.first_name || "") +
+            " " +
+            (due.student_details.user.last_name || "")
+          )
+            .toLowerCase()
+            .includes(search) ||
+          (due.student_details.course?.toLowerCase() || "").includes(search);
+        const matchesPaidFilter =
+          filterPaid === null || due.is_paid === filterPaid;
+        const matchesCourse =
+          selectedCourse === "all" ||
+          due.student_details.course === selectedCourse;
+        return matchesSearch && matchesPaidFilter && matchesCourse;
+      });
+      groups = groupDuesByStudent(filtered);
+    }
+    return groups;
+  };
+
+  const filteredGroups = filterAndGroupDues();
 
   useEffect(() => {
     console.log("StaffDashboard - Checking auth state:", {
@@ -112,17 +308,23 @@ const StaffDashboard = () => {
       storedDepartment: localStorage.getItem("department"),
     });
 
-    // --- DEVELOPMENT ONLY: Commented out auth redirect for easier testing ---
-    // if (!accessToken) {
-    //   console.log("No access token found, redirecting to login");
-    //   navigate("/staff-login");
-    //   return;
-    // }
-
     const storedDepartment = localStorage.getItem("department");
     if (!storedDepartment) {
       console.log("No department found in localStorage");
       navigate("/staff-login");
+      return;
+    }
+
+    // If department is hostel or hostel_superintendent, redirect to hostel-dues page
+    if (
+      storedDepartment.toLowerCase() === "hostel" ||
+      storedDepartment.toLowerCase() === "hostel_superintendent"
+    ) {
+      console.log(
+        "Redirecting to hostel dues page for department:",
+        storedDepartment
+      );
+      navigate("/hostel-dues", { replace: true });
       return;
     }
 
@@ -206,7 +408,9 @@ const StaffDashboard = () => {
       case "hostel":
         return <Home className="h-6 w-6 text-green-600" />;
       case "accounts":
-        return <GraduationCap className="h-6 w-6 text-purple-600 bg-white rounded-full" />;
+        return (
+          <GraduationCap className="h-6 w-6 text-purple-600 bg-white rounded-full" />
+        );
       case "sports":
         return <Trophy className="h-6 w-6 text-yellow-600" />;
       case "lab":
@@ -239,129 +443,6 @@ const StaffDashboard = () => {
     setSelectedStudent(student);
     setShowStudentDetails(true);
   };
-
-  // Function to group dues by student
-  const groupDuesByStudent = (dues: DepartmentDue[]) => {
-    const grouped = dues.reduce((acc, due) => {
-      const key = due.student_details.user.roll_number;
-
-      if (!acc[key]) {
-        acc[key] = {
-          roll_numbers: [due.student_details.user.roll_number],
-          name: `${due.student_details.user.first_name} ${due.student_details.user.last_name}`,
-          course: due.student_details.course,
-          caste: due.student_details.caste,
-          phone_number: due.student_details.phone_number,
-          dues: [],
-          totalAmount: 0,
-          unpaidAmount: 0,
-          user: due.student_details.user,
-        };
-      }
-
-      acc[key].dues.push(due);
-      const amount = parseFloat(due.amount);
-      acc[key].totalAmount += amount;
-      if (!due.is_paid) {
-        acc[key].unpaidAmount += amount;
-      }
-
-      return acc;
-    }, {} as Record<string, StudentDetails>);
-
-    return Object.values(grouped);
-  };
-
-  // Function to group academic dues by student
-  const groupAcademicDuesByStudent = (dues: AcademicDue[]) => {
-    const grouped = dues.reduce((acc: Record<string, any>, due) => {
-      const key = due.student.roll_number;
-
-      if (!acc[key]) {
-        acc[key] = {
-          roll_numbers: [due.student.roll_number],
-          name: due.student.full_name,
-          course: due.fee_structure.course_name,
-          phone_number: due.student.phone_number,
-          caste: due.student.caste || "", // Academic dues may have caste now
-          dues: [],
-          totalAmount: 0,
-          unpaidAmount: 0,
-        };
-      }
-
-      acc[key].dues.push(due);
-      return acc;
-    }, {} as Record<string, any>);
-
-    // For each group, sum only unique years for totalAmount and unpaidAmount
-    Object.values(grouped).forEach((group: any) => {
-      const seenYears = new Set<string>();
-      group.totalAmount = 0;
-      group.unpaidAmount = 0;
-      group.dues.forEach((due: AcademicDue) => {
-        if (!seenYears.has(due.academic_year_label)) {
-          group.totalAmount += due.total_amount;
-          if (due.payment_status === "Unpaid") {
-            group.unpaidAmount += due.unpaid_amount;
-          }
-          seenYears.add(due.academic_year_label);
-        }
-      });
-    });
-
-    return Object.values(grouped);
-  };
-
-  // Unified filter for both department and academic dues
-  const filterAndGroupDues = (): (
-    | DepartmentStudentGroup
-    | AcademicStudentGroup
-  )[] => {
-    let groups: any[] = [];
-    if (showAcademicDues) {
-      // Academic dues
-      let filtered = academicDues.filter((due) => {
-        const search = searchTerm.trim().toLowerCase();
-        const matchesSearch =
-          !search ||
-          due.student.roll_number.toLowerCase().includes(search) ||
-          due.student.full_name.toLowerCase().includes(search) ||
-          due.fee_structure.course_name.toLowerCase().includes(search);
-        const matchesCourse =
-          selectedCourse === "all" ||
-          due.fee_structure.course_name === selectedCourse;
-        return matchesSearch && matchesCourse;
-      });
-      groups = groupAcademicDuesByStudent(filtered);
-    } else {
-      // Department dues
-      let filtered = departmentDues.filter((due) => {
-        const search = searchTerm.trim().toLowerCase();
-        const matchesSearch =
-          !search ||
-          due.student_details.user.roll_number.toLowerCase().includes(search) ||
-          (
-            due.student_details.user.first_name +
-            " " +
-            due.student_details.user.last_name
-          )
-            .toLowerCase()
-            .includes(search) ||
-          due.student_details.course.toLowerCase().includes(search);
-        const matchesPaidFilter =
-          filterPaid === null || due.is_paid === filterPaid;
-        const matchesCourse =
-          selectedCourse === "all" ||
-          due.student_details.course === selectedCourse;
-        return matchesSearch && matchesPaidFilter && matchesCourse;
-      });
-      groups = groupDuesByStudent(filtered);
-    }
-    return groups;
-  };
-
-  const filteredGroups = filterAndGroupDues();
 
   if (!accessToken) {
     // --- DEVELOPMENT ONLY: Commented out auth check for easier testing ---
@@ -577,11 +658,8 @@ const StaffDashboard = () => {
                   </TableHeader>
                   <TableBody>
                     {filteredGroups.map((group) => (
-                      <>
-                        <TableRow
-                          key={group.roll_numbers[0]}
-                          className="hover:bg-gray-50"
-                        >
+                      <React.Fragment key={group.roll_numbers[0]}>
+                        <TableRow className="hover:bg-gray-50">
                           <TableCell>
                             <Button
                               variant="ghost"
@@ -781,7 +859,7 @@ const StaffDashboard = () => {
                             </TableCell>
                           </TableRow>
                         )}
-                      </>
+                      </React.Fragment>
                     ))}
                   </TableBody>
                 </Table>
@@ -1099,6 +1177,4 @@ const StaffDashboard = () => {
       </div>
     </div>
   );
-};
-
-export default StaffDashboard;
+}

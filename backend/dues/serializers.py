@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import FeeStructure, Academic, DepartmentDue
+from .models import FeeStructure, Academic, HostelDues
 from core.models import StudentProfile
 from core.serializers import StudentProfileSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -73,14 +73,17 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['username']
 
-class DepartmentDueSerializer(serializers.ModelSerializer):
-    student = StudentProfileSerializer(read_only=True)
-    student_id = serializers.PrimaryKeyRelatedField(queryset=StudentProfile.objects.all(), source="student", write_only=True)
-    created_by = UserSerializer(read_only=True)
+
+class HostelDuesSerializer(serializers.ModelSerializer):
+    student_name = serializers.SerializerMethodField()
+    student_caste = serializers.CharField(source='student.caste', read_only=True)
+    student_phone = serializers.CharField(source='student.phone_number', read_only=True)
+    student_roll = serializers.CharField(source='student.roll_number', read_only=True)
 
     class Meta:
-        model = DepartmentDue
-        fields = [
-            "id", "student", "student_id", "department", "amount", "due_date", "description", "is_paid", "created_by", "created_at"
-        ]
-        read_only_fields = ("id", "created_by", "created_at", "is_paid") 
+        model = HostelDues
+        fields = ['id', 'student', 'student_name', 'student_roll', 'student_caste', 'student_phone', 
+                 'year_of_study', 'mess_bill', 'scholarship', 'deposit', 'remarks']
+
+    def get_student_name(self, obj):
+        return f"{obj.student.user.first_name} {obj.student.user.last_name}".strip() 

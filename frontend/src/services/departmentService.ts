@@ -22,15 +22,91 @@ export const getDepartmentDues = async (
   department: string
 ): Promise<DepartmentDue[]> => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/dues/`, {
+    const accessToken = localStorage.getItem("accessToken");
+    console.log("Access token present:", !!accessToken);
+
+    if (!accessToken) {
+      throw new Error("No access token found. Please log in again.");
+    }
+
+    console.log("Fetching department dues for:", department);
+
+    // If department is hostel, use hostel-dues endpoint
+    if (department === "hostel_superintendent") {
+      const response = await axios.get(`${API_BASE_URL}/dues/hostel-dues/`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      console.log("Raw hostel dues response:", response.data);
+      return response.data;
+    }
+
+    // For other departments, use the regular dues endpoint
+    const response = await axios.get(`${API_BASE_URL}/dues/dues/`, {
       params: { department },
       headers: {
-        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     });
-    return response.data;
+
+    console.log("Raw response data:", response.data);
+
+    // Django REST Framework returns paginated data by default
+    if (response.data && typeof response.data === "object") {
+      // Check if it's a paginated response
+      if (Array.isArray(response.data.results)) {
+        console.log("Found paginated results:", response.data.results);
+        return response.data.results;
+      }
+      // Check if it's a direct array
+      if (Array.isArray(response.data)) {
+        console.log("Found direct array:", response.data);
+        return response.data;
+      }
+      // If it's a single object, wrap it in an array
+      if (response.data.id) {
+        console.log("Found single object:", response.data);
+        return [response.data];
+      }
+      // If it's an empty object, return empty array
+      if (Object.keys(response.data).length === 0) {
+        console.log("Found empty object, returning empty array");
+        return [];
+      }
+      // If it's a paginated response without results array
+      if (response.data.count !== undefined) {
+        console.log(
+          "Found paginated response without results array:",
+          response.data
+        );
+        return [];
+      }
+    }
+
+    console.error("Invalid response format:", response.data);
+    throw new Error("Invalid response format from server");
   } catch (error) {
     console.error("Error fetching department dues:", error);
+    if (axios.isAxiosError(error)) {
+      console.error("Axios error details:", {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        headers: error.response?.headers,
+      });
+      if (error.response?.status === 401) {
+        // Clear the invalid token
+        localStorage.removeItem("accessToken");
+        throw new Error("Your session has expired. Please log in again.");
+      } else if (error.response?.status === 403) {
+        throw new Error("You don't have permission to view these dues");
+      } else {
+        throw new Error(
+          error.response?.data?.message || "Failed to fetch department dues"
+        );
+      }
+    }
     throw error;
   }
 };
@@ -160,6 +236,59 @@ export const updateAcademicDue = async (
     return response.data;
   } catch (error) {
     console.error("Error updating academic due:", error);
+    throw error;
+  }
+};
+
+export const getHostelDues = async (): Promise<any[]> => {
+  try {
+    const accessToken = localStorage.getItem("accessToken");
+    console.log("Access token present:", !!accessToken);
+
+    if (!accessToken) {
+      throw new Error("No access token found. Please log in again.");
+    }
+
+    console.log("Fetching hostel dues...");
+    const response = await axios.get(`${API_BASE_URL}/dues/hostel-dues/`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    console.log("Raw hostel dues response:", response.data);
+
+    if (Array.isArray(response.data)) {
+      console.log("Found hostel dues array:", response.data);
+      return response.data;
+    }
+
+    if (response.data && typeof response.data === "object") {
+      if (Array.isArray(response.data.results)) {
+        console.log("Found paginated hostel dues:", response.data.results);
+        return response.data.results;
+      }
+      if (response.data.id) {
+        console.log("Found single hostel due:", response.data);
+        return [response.data];
+      }
+    }
+
+    console.error("Invalid hostel dues response format:", response.data);
+    return [];
+  } catch (error) {
+    console.error("Error fetching hostel dues:", error);
+    if (axios.isAxiosError(error)) {
+      console.error("Error details:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        headers: error.response?.headers,
+      });
+      if (error.response?.status === 401) {
+        localStorage.removeItem("accessToken");
+        throw new Error("Your session has expired. Please log in again.");
+      }
+    }
     throw error;
   }
 };

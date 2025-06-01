@@ -41,11 +41,14 @@ COURSE_CHOICES = [
     ("B.Ed.", "B.Ed."),
     ("M.Ed.", "M.Ed."),
     ("B.P.Ed.", "B.P.Ed."),
-]
+]    
 DURATION_CHOICES = [
-    ("1st Year", "1st Year"),
-    ("2nd Year", "2nd Year"),
+    ('1', '1'),
+    ('2', '2'),
+    ('3', '3'),
+    ('5', '5'),
 ]
+
 class FeeStructure(models.Model):
     course_name = models.CharField(max_length=100, choices=COURSE_CHOICES)
     academic_year = models.CharField(max_length=10)
@@ -71,27 +74,43 @@ class Academic(models.Model):
 
     @property
     def due_amount(self):
-        return (self.fee_structure.tuition_fee or 0) + (self.fee_structure.special_fee or 0) - (self.paid_by_govt + self.paid_by_student)
+        return (self.fee_structure.tuition_fee or 0) + (self.fee_structure.special_fee or 0) + (self.fee_structure.exam_fee or 0) - (self.paid_by_govt + self.paid_by_student)
 
-class DepartmentDue(models.Model):
-    DEPARTMENT_CHOICES = [
-        ("accounts", "Accounts"),
-        ("library", "Library"),
-        ("hostel", "Hostel"),
-        ("sports", "Sports"),
-        ("lab", "Lab"),
-    ]
+class HostelDues(models.Model):
     student = models.ForeignKey(StudentProfile, on_delete=models.CASCADE)
-    department = models.CharField(max_length=50, choices=DEPARTMENT_CHOICES)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    due_date = models.DateField()
-    description = models.TextField(blank=True)
-    is_paid = models.BooleanField(default=False)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    year_of_study = models.CharField(max_length=1, choices=DURATION_CHOICES)
+    mess_bill = models.IntegerField(default=0)
+    scholarship = models.IntegerField(default=0)
+    deposit = models.IntegerField(default=0)
+    # renewal_amount = models.IntegerField(default=0, null=True, blank=True)
+    remarks = models.TextField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ('student', 'year_of_study')  # Ensure one entry per year per student
 
     def __str__(self):
-        return f"{self.student} - {self.department} - {self.amount}"
+        return f"{self.student.roll_number} - Year {self.year_of_study} Hostel Dues"
+
+
+# class DepartmentDue(models.Model):
+#     DEPARTMENT_CHOICES = [
+#         ("accounts", "Accounts"),
+#         ("library", "Library"),
+#         ("hostel", "Hostel"),
+#         ("sports", "Sports"),
+#         ("lab", "Lab"),
+#     ]
+#     student = models.ForeignKey(StudentProfile, on_delete=models.CASCADE)
+#     department = models.CharField(max_length=50, choices=DEPARTMENT_CHOICES)
+#     amount = models.DecimalField(max_digits=10, decimal_places=2)
+#     due_date = models.DateField()
+#     description = models.TextField(blank=True)
+#     is_paid = models.BooleanField(default=False)
+#     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+#     created_at = models.DateTimeField(auto_now_add=True)
+
+#     def __str__(self):
+#         return f"{self.student} - {self.department} - {self.amount}"
 
     
 

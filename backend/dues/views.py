@@ -2,8 +2,8 @@ from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import FeeStructure, Academic, DepartmentDue
-from .serializers import  FeeStructureSerializer, AcademicSerializer, DepartmentDueSerializer
+from .models import FeeStructure, Academic, HostelDues
+from .serializers import  FeeStructureSerializer, AcademicSerializer, HostelDuesSerializer
 from core.permisions.staff_permistion import IsStaffOfDepartment
 
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -56,30 +56,10 @@ class AcademicViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'Authentication required for POST.'}, status=status.HTTP_401_UNAUTHORIZED)
         return super().create(request, *args, **kwargs)
 
-class DepartmentDueViewSet(viewsets.ModelViewSet):
-    queryset = DepartmentDue.objects.all()
-    serializer_class = DepartmentDueSerializer
-    permission_classes = [IsAuthenticated, IsAdminOrStaff]
 
-    def get_queryset(self):
-        user = self.request.user
-        if not user.is_authenticated:
-            return DepartmentDue.objects.none()
-        if hasattr(user, 'is_staff') and user.is_staff:
-            # Get staff profile and department
-            staff_profile = getattr(user, 'staffprofile', None)
-            if staff_profile:
-                return DepartmentDue.objects.filter(department=staff_profile.department)
-            return DepartmentDue.objects.none()
-        return DepartmentDue.objects.none()
 
-    def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
-
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsAdminOrStaff])
-    def mark_as_paid(self, request, pk=None):
-        due = self.get_object()
-        due.is_paid = True
-        due.save()
-        return Response({'status': 'marked as paid'})
+class HostelDuesViewSet(viewsets.ModelViewSet):
+    queryset = HostelDues.objects.all()
+    serializer_class = HostelDuesSerializer
+    permission_classes = [AllowAny]
         

@@ -5,6 +5,7 @@ import StudentLoginPage from "../pages/StudentLoginPage";
 import StaffLoginPage from "../pages/StaffLoginPage";
 import StudentDashboard from "../pages/StudentDashboard";
 import StaffDashboard from "../pages/StaffDashboard";
+import HostelDues from "../pages/HostelDues";
 
 const router = createBrowserRouter([
   {
@@ -44,6 +45,14 @@ const router = createBrowserRouter([
     element: (
       <AuthProvider>
         <StaffDashboard />
+      </AuthProvider>
+    ),
+  },
+  {
+    path: "/hostel-dues",
+    element: (
+      <AuthProvider>
+        <HostelDues />
       </AuthProvider>
     ),
   },
