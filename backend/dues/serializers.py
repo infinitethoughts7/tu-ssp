@@ -79,11 +79,12 @@ class HostelDuesSerializer(serializers.ModelSerializer):
     student_caste = serializers.CharField(source='student.caste', read_only=True)
     student_phone = serializers.CharField(source='student.phone_number', read_only=True)
     student_roll = serializers.CharField(source='student.roll_number', read_only=True)
+    course_name = serializers.CharField(source='student.course', read_only=True)
 
     class Meta:
         model = HostelDues
         fields = ['id', 'student', 'student_name', 'student_roll', 'student_caste', 'student_phone', 
-                 'year_of_study', 'mess_bill', 'scholarship', 'deposit', 'remarks']
+                 'year_of_study', 'mess_bill', 'scholarship', 'deposit', 'remarks', 'course_name']
 
     def get_student_name(self, obj):
         return f"{obj.student.user.first_name} {obj.student.user.last_name}".strip() 

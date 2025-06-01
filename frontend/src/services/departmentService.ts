@@ -292,3 +292,44 @@ export const getHostelDues = async (): Promise<any[]> => {
     throw error;
   }
 };
+
+export const updateHostelDue = async (
+  dueId: number,
+  data: {
+    mess_bill?: number;
+    scholarship?: number;
+    deposit?: number;
+    remarks?: string;
+  }
+): Promise<any> => {
+  try {
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) {
+      throw new Error("No access token found. Please log in again.");
+    }
+
+    const response = await axios.patch(
+      `${API_BASE_URL}/dues/hostel-dues/${dueId}/`,
+      data,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("Error updating hostel due:", error);
+    if (axios.isAxiosError(error)) {
+      if (error.response?.status === 401) {
+        localStorage.removeItem("accessToken");
+        throw new Error("Your session has expired. Please log in again.");
+      }
+      throw new Error(
+        error.response?.data?.error || "Failed to update hostel due"
+      );
+    }
+    throw error;
+  }
+};

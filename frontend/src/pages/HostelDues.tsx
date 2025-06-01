@@ -5,6 +5,8 @@ import {
   getHostelDues,
   getStaffProfile,
   StaffProfile,
+  searchStudentsByRollNumber,
+  updateHostelDue,
 } from "../services/departmentService";
 import {
   Loader2,
@@ -50,6 +52,11 @@ import {
 } from "../components/ui/dialog";
 import { COURSE_OPTIONS } from "../types/constants";
 
+interface StudentSearchResponse {
+  course: string;
+  // Add other fields if needed
+}
+
 interface HostelDue {
   id: number;
   student: number;
@@ -62,6 +69,7 @@ interface HostelDue {
   scholarship: number;
   deposit: number;
   remarks: string;
+  course_name: string;
 }
 
 interface HostelStudentGroup {
@@ -88,6 +96,30 @@ export default function HostelDues() {
   const [selectedStudent, setSelectedStudent] =
     useState<HostelStudentGroup | null>(null);
   const [showStudentDetails, setShowStudentDetails] = useState(false);
+  const [studentCourses, setStudentCourses] = useState<Record<string, string>>(
+    {}
+  );
+  const [editingDue, setEditingDue] = useState<HostelDue | null>(null);
+  const [updateLoading, setUpdateLoading] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+
+  // Function to fetch course for a student
+  const fetchStudentCourse = async (rollNumber: string) => {
+    try {
+      const students = await searchStudentsByRollNumber(rollNumber);
+      if (Array.isArray(students) && students.length > 0) {
+        const student = students[0] as StudentSearchResponse;
+        if (student && student.course) {
+          setStudentCourses((prev) => ({
+            ...prev,
+            [rollNumber]: student.course,
+          }));
+        }
+      }
+    } catch (error) {
+      console.error(`Error fetching course for student ${rollNumber}:`, error);
+    }
+  };
 
   // Function to group hostel dues by student
   const groupHostelDuesByStudent = (
@@ -111,7 +143,7 @@ export default function HostelDues() {
           acc[key] = {
             roll_numbers: [due.student_roll],
             name: due.student_name || "N/A",
-            course: due.year_of_study || "N/A",
+            course: due.course_name || "N/A",
             caste: due.student_caste || "N/A",
             phone_number: due.student_phone || "N/A",
             dues: [],
@@ -143,10 +175,40 @@ export default function HostelDues() {
         (due.student_roll?.toLowerCase() || "").includes(search) ||
         (due.student_name?.toLowerCase() || "").includes(search);
       const matchesCourse =
-        selectedCourse === "all" || due.year_of_study === selectedCourse;
+        selectedCourse === "all" ||
+        studentCourses[due.student_roll] === selectedCourse;
       return matchesSearch && matchesCourse;
     })
   );
+
+  // Function to handle due update
+  const handleUpdateDue = async (due: HostelDue) => {
+    try {
+      setUpdateLoading(true);
+      setUpdateError(null);
+
+      const updatedDue = await updateHostelDue(due.id, {
+        mess_bill: due.mess_bill,
+        scholarship: due.scholarship,
+        deposit: due.deposit,
+        remarks: due.remarks,
+      });
+
+      // Update the local state with the updated due
+      setHostelDues((prevDues) =>
+        prevDues.map((d) => (d.id === due.id ? updatedDue : d))
+      );
+
+      // Close the editing state
+      setEditingDue(null);
+    } catch (error) {
+      setUpdateError(
+        error instanceof Error ? error.message : "Failed to update due"
+      );
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -185,6 +247,15 @@ export default function HostelDues() {
         }
 
         setHostelDues(dues);
+
+        // Fetch courses for all unique students
+        const uniqueRollNumbers = [
+          ...new Set(dues.map((due) => due.student_roll)),
+        ];
+        for (const rollNumber of uniqueRollNumbers) {
+          await fetchStudentCourse(rollNumber);
+        }
+
         setError(null);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -403,9 +474,7 @@ export default function HostelDues() {
                           <TableCell>
                             <div className="text-sm">
                               <div className="text-gray-900">
-                                {COURSE_OPTIONS.find(
-                                  (course) => course === group.course
-                                ) || group.course}
+                                {group.course}
                               </div>
                             </div>
                           </TableCell>
@@ -435,6 +504,7 @@ export default function HostelDues() {
                                       <TableHead>Deposit</TableHead>
                                       <TableHead>Total</TableHead>
                                       <TableHead>Remarks</TableHead>
+                                      <TableHead>Actions</TableHead>
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
@@ -446,22 +516,132 @@ export default function HostelDues() {
                                         <TableCell>
                                           {due.year_of_study}
                                         </TableCell>
-                                        <TableCell>₹{due.mess_bill}</TableCell>
                                         <TableCell>
-                                          ₹{due.scholarship}
+                                          {editingDue?.id === due.id ? (
+                                            <Input
+                                              type="number"
+                                              value={editingDue.mess_bill}
+                                              onChange={(e) =>
+                                                setEditingDue({
+                                                  ...editingDue,
+                                                  mess_bill:
+                                                    parseInt(e.target.value) ||
+                                                    0,
+                                                })
+                                              }
+                                              className="w-24"
+                                            />
+                                          ) : (
+                                            `₹${due.mess_bill}`
+                                          )}
                                         </TableCell>
-                                        <TableCell>₹{due.deposit}</TableCell>
+                                        <TableCell>
+                                          {editingDue?.id === due.id ? (
+                                            <Input
+                                              type="number"
+                                              value={editingDue.scholarship}
+                                              onChange={(e) =>
+                                                setEditingDue({
+                                                  ...editingDue,
+                                                  scholarship:
+                                                    parseInt(e.target.value) ||
+                                                    0,
+                                                })
+                                              }
+                                              className="w-24"
+                                            />
+                                          ) : (
+                                            `₹${due.scholarship}`
+                                          )}
+                                        </TableCell>
+                                        <TableCell>
+                                          {editingDue?.id === due.id ? (
+                                            <Input
+                                              type="number"
+                                              value={editingDue.deposit}
+                                              onChange={(e) =>
+                                                setEditingDue({
+                                                  ...editingDue,
+                                                  deposit:
+                                                    parseInt(e.target.value) ||
+                                                    0,
+                                                })
+                                              }
+                                              className="w-24"
+                                            />
+                                          ) : (
+                                            `₹${due.deposit}`
+                                          )}
+                                        </TableCell>
                                         <TableCell>
                                           ₹
                                           {due.mess_bill +
                                             due.scholarship +
                                             due.deposit}
                                         </TableCell>
-                                        <TableCell>{due.remarks}</TableCell>
+                                        <TableCell>
+                                          {editingDue?.id === due.id ? (
+                                            <Input
+                                              value={editingDue.remarks}
+                                              onChange={(e) =>
+                                                setEditingDue({
+                                                  ...editingDue,
+                                                  remarks: e.target.value,
+                                                })
+                                              }
+                                              className="w-32"
+                                            />
+                                          ) : (
+                                            due.remarks
+                                          )}
+                                        </TableCell>
+                                        <TableCell>
+                                          {editingDue?.id === due.id ? (
+                                            <div className="flex space-x-2">
+                                              <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() =>
+                                                  handleUpdateDue(editingDue)
+                                                }
+                                                disabled={updateLoading}
+                                              >
+                                                {updateLoading ? (
+                                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : (
+                                                  "Save"
+                                                )}
+                                              </Button>
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() =>
+                                                  setEditingDue(null)
+                                                }
+                                                disabled={updateLoading}
+                                              >
+                                                Cancel
+                                              </Button>
+                                            </div>
+                                          ) : (
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => setEditingDue(due)}
+                                            >
+                                              Edit
+                                            </Button>
+                                          )}
+                                        </TableCell>
                                       </TableRow>
                                     ))}
                                   </TableBody>
                                 </Table>
+                                {updateError && (
+                                  <div className="mt-2 text-sm text-red-600">
+                                    {updateError}
+                                  </div>
+                                )}
                               </div>
                             </TableCell>
                           </TableRow>

@@ -62,4 +62,17 @@ class HostelDuesViewSet(viewsets.ModelViewSet):
     queryset = HostelDues.objects.all()
     serializer_class = HostelDuesSerializer
     permission_classes = [AllowAny]
+
+    def update(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
