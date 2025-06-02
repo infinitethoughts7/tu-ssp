@@ -419,7 +419,7 @@ const StudentDashboard: React.FC = () => {
                 </TableBody>
               </Table>
               <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 mt-4 w-full">
-                <Button className="bg-purple-600 text-white flex items-center gap-2 w-full sm:w-auto px-4 py-2 sm:px-6 sm:py-2 text-base sm:text-sm">
+                <Button className="bg-blue-600 text-white flex items-center gap-2 w-full sm:w-auto px-4 py-2 sm:px-6 sm:py-2 text-base sm:text-sm">
                   <CreditCard className="h-4 w-4" />
                   Pay Now
                 </Button>
