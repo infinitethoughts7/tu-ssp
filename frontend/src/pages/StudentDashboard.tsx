@@ -8,6 +8,8 @@ import {
   AlertCircle,
   LogOut,
   User,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import {
@@ -31,6 +33,8 @@ const StudentDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [academicDues, setAcademicDues] = useState<any[]>([]);
   const [hostelDues, setHostelDues] = useState<any[]>([]);
+  const [showAcademic, setShowAcademic] = useState(false);
+  const [showHostel, setShowHostel] = useState(false);
 
   useEffect(() => {
     const getDues = async () => {
@@ -53,6 +57,16 @@ const StudentDashboard: React.FC = () => {
     };
     getDues();
   }, [accessToken]);
+
+  // Filter academic dues to only show one entry per year (remove duplicates)
+  const uniqueAcademicDues = React.useMemo(() => {
+    const seenYears = new Set();
+    return academicDues.filter((due: any) => {
+      if (seenYears.has(due.academic_year_label)) return false;
+      seenYears.add(due.academic_year_label);
+      return true;
+    });
+  }, [academicDues]);
 
   if (loading) {
     return (
@@ -110,111 +124,127 @@ const StudentDashboard: React.FC = () => {
       </header>
       <main className="container mx-auto px-6 py-8">
         {/* Student Profile Section */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8 p-6 rounded-2xl shadow-xl bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">
-          <span className="text-3xl md:text-4xl font-extrabold text-white tracking-tight drop-shadow-lg w-full md:w-auto text-left">
+        <div className="flex flex-col items-center justify-center gap-2 mb-8 p-6 rounded-2xl shadow-xl bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">
+          <span className="text-3xl md:text-4xl font-extrabold text-white tracking-tight drop-shadow-lg text-center">
             {(user as any)?.user?.first_name?.toUpperCase()}{" "}
             {(user as any)?.user?.last_name?.toUpperCase()}
           </span>
-          <div className="flex flex-col items-end w-full md:w-auto">
-            <span className="text-lg md:text-xl font-medium text-white/90 drop-shadow">
-              Roll Number:{" "}
-              <span className="font-semibold">
-                {(user as any)?.roll_number}
-              </span>
-            </span>
-            <span className="text-lg md:text-xl font-medium text-white/90 mt-1 drop-shadow">
-              Course:{" "}
-              <span className="font-semibold">{(user as any)?.course}</span>
-            </span>
-          </div>
+          <span className="text-lg md:text-xl font-semibold text-white/90 drop-shadow text-center">
+            {(user as any)?.roll_number}
+          </span>
+          <span className="text-lg md:text-xl font-semibold text-white/90 drop-shadow text-center">
+            {(user as any)?.course}
+          </span>
         </div>
         {/* Academic Dues Section */}
         <Card className="border-none shadow-lg bg-white mb-8">
-          <CardHeader>
+          <CardHeader
+            onClick={() => setShowAcademic((prev) => !prev)}
+            className="cursor-pointer select-none"
+          >
             <div className="flex items-center gap-3">
               <div className="bg-blue-700 p-2 rounded-lg shadow-md">
                 <School className="h-5 w-5 text-white" />
               </div>
-              <CardTitle className="text-gray-800">Academic Dues</CardTitle>
+              <CardTitle className="text-gray-800 flex items-center gap-2">
+                Academic Dues
+                {showAcademic ? (
+                  <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-200" />
+                ) : (
+                  <ChevronRight className="h-5 w-5 text-gray-500 transition-transform duration-200" />
+                )}
+              </CardTitle>
             </div>
           </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50/50">
-                  <TableHead>Year</TableHead>
-                  <TableHead>Course</TableHead>
-                  <TableHead>Tuition Fee</TableHead>
-                  <TableHead>Special Fee</TableHead>
-                  <TableHead>Exam Fee</TableHead>
-                  <TableHead>Paid by Govt</TableHead>
-                  <TableHead>Paid by Student</TableHead>
-                  <TableHead>Due Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {academicDues.map((due: any) => (
-                  <TableRow key={due.id}>
-                    <TableCell>{due.academic_year_label}</TableCell>
-                    <TableCell>{due.fee_structure?.course_name}</TableCell>
-                    <TableCell>₹{due.fee_structure?.tuition_fee}</TableCell>
-                    <TableCell>₹{due.fee_structure?.special_fee}</TableCell>
-                    <TableCell>₹{due.fee_structure?.exam_fee}</TableCell>
-                    <TableCell>₹{due.paid_by_govt}</TableCell>
-                    <TableCell>₹{due.paid_by_student}</TableCell>
-                    <TableCell>₹{due.due_amount}</TableCell>
-                    <TableCell>
-                      {due.payment_status === "Unpaid" ? (
-                        <span className="text-red-600 font-semibold">
-                          Unpaid
-                        </span>
-                      ) : (
-                        <span className="text-green-600 font-semibold">
-                          Paid
-                        </span>
-                      )}
-                    </TableCell>
+          {showAcademic && (
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50/50">
+                    <TableHead>Year</TableHead>
+                    <TableHead>Tuition Fee</TableHead>
+                    <TableHead>Special Fee</TableHead>
+                    <TableHead>Exam Fee</TableHead>
+                    <TableHead>Paid by Govt</TableHead>
+                    <TableHead>Paid by Student</TableHead>
+                    <TableHead>Due Amount</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
+                </TableHeader>
+                <TableBody>
+                  {uniqueAcademicDues.map((due: any) => (
+                    <TableRow key={due.id}>
+                      <TableCell>{due.academic_year_label}</TableCell>
+                      <TableCell>₹{due.fee_structure?.tuition_fee}</TableCell>
+                      <TableCell>₹{due.fee_structure?.special_fee}</TableCell>
+                      <TableCell>₹{due.fee_structure?.exam_fee}</TableCell>
+                      <TableCell>₹{due.paid_by_govt}</TableCell>
+                      <TableCell>₹{due.paid_by_student}</TableCell>
+                      <TableCell>₹{due.due_amount}</TableCell>
+                      <TableCell>
+                        {due.payment_status === "Unpaid" ? (
+                          <span className="text-red-600 font-semibold">
+                            Unpaid
+                          </span>
+                        ) : (
+                          <span className="text-green-600 font-semibold">
+                            Paid
+                          </span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          )}
         </Card>
         {/* Hostel Dues Section */}
         <Card className="border-none shadow-lg bg-white">
-          <CardHeader>
+          <CardHeader
+            onClick={() => setShowHostel((prev) => !prev)}
+            className="cursor-pointer select-none"
+          >
             <div className="flex items-center gap-3">
               <div className="bg-purple-700 p-2 rounded-lg shadow-md">
                 <Home className="h-5 w-5 text-white" />
               </div>
-              <CardTitle className="text-gray-800">Hostel Dues</CardTitle>
+              <CardTitle className="text-gray-800 flex items-center gap-2">
+                Hostel Dues
+                {showHostel ? (
+                  <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-200" />
+                ) : (
+                  <ChevronRight className="h-5 w-5 text-gray-500 transition-transform duration-200" />
+                )}
+              </CardTitle>
             </div>
           </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50/50">
-                  <TableHead>Year</TableHead>
-                  <TableHead>Mess Bill</TableHead>
-                  <TableHead>Scholarship</TableHead>
-                  <TableHead>Deposit</TableHead>
-                  <TableHead>Remarks</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {hostelDues.map((due: any) => (
-                  <TableRow key={due.id}>
-                    <TableCell>{due.year_of_study}</TableCell>
-                    <TableCell>₹{due.mess_bill}</TableCell>
-                    <TableCell>₹{due.scholarship}</TableCell>
-                    <TableCell>₹{due.deposit}</TableCell>
-                    <TableCell>{due.remarks}</TableCell>
+          {showHostel && (
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50/50">
+                    <TableHead>Year</TableHead>
+                    <TableHead>Mess Bill</TableHead>
+                    <TableHead>Scholarship</TableHead>
+                    <TableHead>Deposit</TableHead>
+                    <TableHead>Remarks</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
+                </TableHeader>
+                <TableBody>
+                  {hostelDues.map((due: any) => (
+                    <TableRow key={due.id}>
+                      <TableCell>{due.year_of_study}</TableCell>
+                      <TableCell>₹{due.mess_bill}</TableCell>
+                      <TableCell>₹{due.scholarship}</TableCell>
+                      <TableCell>₹{due.deposit}</TableCell>
+                      <TableCell>{due.remarks}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          )}
         </Card>
       </main>
     </div>
