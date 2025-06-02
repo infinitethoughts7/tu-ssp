@@ -2,8 +2,8 @@ from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import FeeStructure, Academic, HostelDues
-from .serializers import  FeeStructureSerializer, AcademicSerializer, HostelDuesSerializer
+from .models import FeeStructure, Academic, HostelDues, Challan
+from .serializers import  FeeStructureSerializer, AcademicSerializer, HostelDuesSerializer, ChallanSerializer
 from core.permisions.staff_permistion import IsStaffOfDepartment
 
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -126,4 +126,26 @@ class HostelDuesViewSet(viewsets.ModelViewSet):
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+class ChallanViewSet(viewsets.ModelViewSet):
+    queryset = Challan.objects.all()
+    serializer_class = ChallanSerializer
+    permission_classes = [AllowAny]  # Allow any for development/testing
+
+    def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return Challan.objects.none()  # Unauthenticated users see nothing
+        if hasattr(user, 'is_staff') and user.is_staff:
+            return Challan.objects.all()
+        if hasattr(user, 'is_student') and user.is_student:
+            return Challan.objects.filter(student__user=user)
+        return Challan.objects.none()
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if user.is_authenticated:
+            serializer.save(uploaded_by=user)
+        else:
+            serializer.save()
         

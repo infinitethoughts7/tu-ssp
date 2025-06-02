@@ -1,5 +1,5 @@
-import axios from "axios";
-import { API_BASE_URL } from "./api";
+import api from "./api";
+import { isAxiosError } from "axios";
 import { DepartmentDue } from "../types/department";
 
 export interface StaffProfile {
@@ -22,7 +22,9 @@ export const getDepartmentDues = async (
   department?: string
 ): Promise<DepartmentDue[]> => {
   try {
-    const accessToken = localStorage.getItem("accessToken");
+    const accessToken =
+      localStorage.getItem("studentAccessToken") ||
+      localStorage.getItem("staffAccessToken");
     console.log("Access token present:", !!accessToken);
 
     if (!accessToken) {
@@ -33,7 +35,7 @@ export const getDepartmentDues = async (
 
     // If department is hostel, use hostel-dues endpoint
     if (department === "hostel_superintendent") {
-      const response = await axios.get(`${API_BASE_URL}/dues/hostel-dues/`, {
+      const response = await api.get("/dues/hostel-dues/", {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
@@ -44,7 +46,7 @@ export const getDepartmentDues = async (
 
     // For other departments, use the regular dues endpoint
     const params = department ? { department } : {};
-    const response = await axios.get(`${API_BASE_URL}/dues/dues/`, {
+    const response = await api.get("/dues/dues/", {
       params,
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -89,7 +91,7 @@ export const getDepartmentDues = async (
     throw new Error("Invalid response format from server");
   } catch (error) {
     console.error("Error fetching department dues:", error);
-    if (axios.isAxiosError(error)) {
+    if (isAxiosError(error)) {
       console.error("Axios error details:", {
         status: error.response?.status,
         statusText: error.response?.statusText,
@@ -98,7 +100,8 @@ export const getDepartmentDues = async (
       });
       if (error.response?.status === 401) {
         // Clear the invalid token
-        localStorage.removeItem("accessToken");
+        localStorage.removeItem("studentAccessToken");
+        localStorage.removeItem("staffAccessToken");
         throw new Error("Your session has expired. Please log in again.");
       } else if (error.response?.status === 403) {
         throw new Error("You don't have permission to view these dues");
@@ -114,8 +117,8 @@ export const getDepartmentDues = async (
 
 export const markDueAsPaid = async (dueId: number): Promise<void> => {
   try {
-    await axios.post(
-      `${API_BASE_URL}/dues/${dueId}/mark_as_paid/`,
+    await api.post(
+      `/dues/${dueId}/mark_as_paid/`,
       {},
       {
         headers: {
@@ -133,7 +136,7 @@ export const addDepartmentDue = async (
   data: AddDueData
 ): Promise<DepartmentDue> => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/dues/`, data, {
+    const response = await api.post(`/dues/`, data, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
       },
@@ -146,7 +149,7 @@ export const addDepartmentDue = async (
 };
 
 export const getStaffProfile = async (): Promise<StaffProfile> => {
-  let accessToken = localStorage.getItem("accessToken") || "";
+  let accessToken = localStorage.getItem("staffAccessToken") || "";
   const refreshToken = localStorage.getItem("refreshToken");
 
   if (!accessToken) {
@@ -154,7 +157,7 @@ export const getStaffProfile = async (): Promise<StaffProfile> => {
   }
 
   try {
-    const response = await axios.get(`${API_BASE_URL}/staff/profile/`, {
+    const response = await api.get(`/staff/profile/`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
@@ -162,34 +165,25 @@ export const getStaffProfile = async (): Promise<StaffProfile> => {
     return response.data;
   } catch (error: any) {
     // If 401, try to refresh token
-    if (
-      axios.isAxiosError(error) &&
-      error.response?.status === 401 &&
-      refreshToken
-    ) {
+    if (isAxiosError(error) && error.response?.status === 401 && refreshToken) {
       try {
         // Attempt to refresh the token
-        const res = await axios.post(`${API_BASE_URL}/auth/token/refresh/`, {
+        const res = await api.post(`/auth/token/refresh/`, {
           refresh: refreshToken,
         });
         accessToken = res.data.access || "";
-        localStorage.setItem("accessToken", accessToken);
-        axios.defaults.headers.common[
-          "Authorization"
-        ] = `Bearer ${accessToken}`;
+        localStorage.setItem("staffAccessToken", accessToken);
+        api.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
         // Retry the original request
-        const retryResponse = await axios.get(
-          `${API_BASE_URL}/staff/profile/`,
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          }
-        );
+        const retryResponse = await api.get(`/staff/profile/`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
         return retryResponse.data;
       } catch (refreshError) {
         // Refresh failed, log out
-        localStorage.removeItem("accessToken");
+        localStorage.removeItem("staffAccessToken");
         localStorage.removeItem("refreshToken");
         window.location.href = "/staff-login";
         throw new Error("Session expired. Please log in again.");
@@ -203,14 +197,11 @@ export const searchStudentsByRollNumber = async (
   query: string
 ): Promise<any[]> => {
   try {
-    const response = await axios.get(
-      `${API_BASE_URL}/students/search/?q=${query}`,
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
-      }
-    );
+    const response = await api.get(`/students/search/?q=${query}`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+      },
+    });
     return response.data;
   } catch (error) {
     console.error("Error searching students:", error);
@@ -220,9 +211,12 @@ export const searchStudentsByRollNumber = async (
 
 export const getAcademicDues = async (): Promise<any[]> => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/dues/academic-dues/`, {
+    const accessToken =
+      localStorage.getItem("studentAccessToken") ||
+      localStorage.getItem("staffAccessToken");
+    const response = await api.get(`/dues/academic-dues/`, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     });
     return response.data;
@@ -233,14 +227,11 @@ export const getAcademicDues = async (): Promise<any[]> => {
 };
 
 export const getStudentProfileByRoll = async (rollNumber: string) => {
-  const response = await axios.get(
-    `${API_BASE_URL}/students/search/?q=${rollNumber}`,
-    {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-      },
-    }
-  );
+  const response = await api.get(`/students/search/?q=${rollNumber}`, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+    },
+  });
   // The API returns a list, so find the exact match
   return response.data.find((s: any) => s.roll_number === rollNumber);
 };
@@ -250,15 +241,11 @@ export const updateAcademicDue = async (
   data: { paid_by_govt: number; paid_by_student: number }
 ): Promise<any> => {
   try {
-    const response = await axios.patch(
-      `${API_BASE_URL}/dues/academic-dues/${id}/`,
-      data,
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
-      }
-    );
+    const response = await api.patch(`/dues/academic-dues/${id}/`, data, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+      },
+    });
     return response.data;
   } catch (error) {
     console.error("Error updating academic due:", error);
@@ -268,7 +255,9 @@ export const updateAcademicDue = async (
 
 export const getHostelDues = async (): Promise<any[]> => {
   try {
-    const accessToken = localStorage.getItem("accessToken");
+    const accessToken =
+      localStorage.getItem("studentAccessToken") ||
+      localStorage.getItem("staffAccessToken");
     console.log("Access token present:", !!accessToken);
 
     if (!accessToken) {
@@ -276,7 +265,7 @@ export const getHostelDues = async (): Promise<any[]> => {
     }
 
     console.log("Fetching hostel dues...");
-    const response = await axios.get(`${API_BASE_URL}/dues/hostel-dues/`, {
+    const response = await api.get(`/dues/hostel-dues/`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
@@ -304,7 +293,7 @@ export const getHostelDues = async (): Promise<any[]> => {
     return [];
   } catch (error) {
     console.error("Error fetching hostel dues:", error);
-    if (axios.isAxiosError(error)) {
+    if (isAxiosError(error)) {
       console.error("Error details:", {
         status: error.response?.status,
         data: error.response?.data,
@@ -312,8 +301,8 @@ export const getHostelDues = async (): Promise<any[]> => {
       });
       if (error.response?.status === 401) {
         // Clear the invalid token
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("studentAccessToken");
+        localStorage.removeItem("staffAccessToken");
         throw new Error("Your session has expired. Please log in again.");
       }
     }
@@ -336,20 +325,16 @@ export const updateHostelDue = async (
       throw new Error("No access token found. Please log in again.");
     }
 
-    const response = await axios.patch(
-      `${API_BASE_URL}/dues/hostel-dues/${dueId}/`,
-      data,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
+    const response = await api.patch(`/dues/hostel-dues/${dueId}/`, data, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
 
     return response.data;
   } catch (error) {
     console.error("Error updating hostel due:", error);
-    if (axios.isAxiosError(error)) {
+    if (isAxiosError(error)) {
       if (error.response?.status === 401) {
         localStorage.removeItem("accessToken");
         throw new Error("Your session has expired. Please log in again.");

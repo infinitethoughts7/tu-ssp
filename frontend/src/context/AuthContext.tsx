@@ -3,7 +3,7 @@ import axios, { AxiosError } from "axios";
 import { useNavigate } from "react-router-dom";
 import { AuthProviderProps, User } from "./auth.types";
 import { AuthContext } from "./auth.context";
-import { API_BASE_URL } from "../services/api";
+import api from "../services/api";
 
 interface ErrorResponse {
   error: string;
@@ -16,7 +16,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return storedUser ? JSON.parse(storedUser) : null;
   });
   const [accessToken, setAccessToken] = useState<string | null>(
-    localStorage.getItem("accessToken")
+    localStorage.getItem("staffAccessToken") ||
+      localStorage.getItem("studentAccessToken") ||
+      localStorage.getItem("accessToken")
   );
   const [refreshToken, setRefreshToken] = useState<string | null>(
     localStorage.getItem("refreshToken")
@@ -37,6 +39,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     localStorage.removeItem("userData");
     localStorage.removeItem("userType");
     localStorage.removeItem("department");
+    localStorage.removeItem("staffAccessToken");
+    localStorage.removeItem("studentAccessToken");
 
     delete axios.defaults.headers.common["Authorization"];
     navigate(userType === "staff" ? "/staff-login" : "/student-login");
@@ -45,7 +49,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const refreshAccessToken = useCallback(async () => {
     try {
       console.log("Attempting to refresh token...");
-      const response = await axios.post(`${API_BASE_URL}/auth/token/refresh/`, {
+      const response = await api.post("/auth/token/refresh/", {
         refresh: refreshToken,
       });
       const newAccessToken = response.data.access;
@@ -53,9 +57,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setAccessToken(newAccessToken);
       localStorage.setItem("accessToken", newAccessToken);
       // Update axios default headers
-      axios.defaults.headers.common[
-        "Authorization"
-      ] = `Bearer ${newAccessToken}`;
+      api.defaults.headers.common["Authorization"] = `Bearer ${newAccessToken}`;
       return newAccessToken;
     } catch (error) {
       console.error("Token refresh failed:", error);
@@ -97,6 +99,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
   }, [refreshToken, refreshAccessToken, logout]);
 
+  // Auto-refresh access token on mount if only refreshToken is present
+  useEffect(() => {
+    const tryRefresh = async () => {
+      const refreshToken = localStorage.getItem("refreshToken");
+      const staffToken = localStorage.getItem("staffAccessToken");
+      const studentToken = localStorage.getItem("studentAccessToken");
+      if (!staffToken && !studentToken && refreshToken) {
+        try {
+          const res = await api.post("/auth/token/refresh/", {
+            refresh: refreshToken,
+          });
+          if (localStorage.getItem("userType") === "staff") {
+            localStorage.setItem("staffAccessToken", res.data.access);
+            setAccessToken(res.data.access);
+          } else {
+            localStorage.setItem("studentAccessToken", res.data.access);
+            setAccessToken(res.data.access);
+          }
+          api.defaults.headers.common[
+            "Authorization"
+          ] = `Bearer ${res.data.access}`;
+        } catch (err) {
+          // Refresh failed, log out
+          logout();
+        }
+      }
+    };
+    tryRefresh();
+  }, []);
+
   const login = async (credentials: {
     email?: string;
     roll_number?: string;
@@ -114,12 +146,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         ...credentials,
         password: "***",
       });
-      console.log("API Endpoint:", `${API_BASE_URL}${endpoint}`);
+      console.log("API Endpoint:", endpoint);
 
-      const response = await axios.post(
-        `${API_BASE_URL}${endpoint}`,
-        credentials
-      );
+      const response = await api.post(endpoint, credentials);
 
       console.log("Full Login Response:", response);
       console.log("Response Data:", response.data);
@@ -135,16 +164,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       setAccessToken(access);
       setRefreshToken(refresh);
-      localStorage.setItem("accessToken", access);
+      if (credentials.email) {
+        localStorage.setItem("staffAccessToken", access);
+      } else {
+        localStorage.setItem("studentAccessToken", access);
+      }
       localStorage.setItem("refreshToken", refresh);
       localStorage.setItem("department", department || "");
       localStorage.setItem("userType", credentials.email ? "staff" : "student");
 
       // Set the Authorization header for future requests
-      axios.defaults.headers.common["Authorization"] = `Bearer ${access}`;
+      api.defaults.headers.common["Authorization"] = `Bearer ${access}`;
 
       // Fetch user profile
-      const profileResponse = await axios.get(`${API_BASE_URL}/profile/`);
+      const profileResponse = await api.get("/profile/");
       const userData = profileResponse.data.profile;
       setUser(userData);
       localStorage.setItem("userData", JSON.stringify(userData));

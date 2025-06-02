@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import FeeStructure, Academic, HostelDues
+from .models import FeeStructure, Academic, HostelDues, Challan
 from core.models import StudentProfile
 from core.serializers import StudentProfileSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -94,3 +94,30 @@ class HostelDuesSerializer(serializers.ModelSerializer):
         scholarship = obj.scholarship or 0
         deposit = obj.deposit or 0
         return mess_bill - (scholarship + deposit)
+
+class ChallanSerializer(serializers.ModelSerializer):
+    student_roll_number = serializers.CharField(write_only=True, required=True)
+    student = StudentProfileSerializer(read_only=True)
+
+    class Meta:
+        model = Challan
+        fields = [
+            'id', 'student', 'department', 'image', 'amount', 'status', 'uploaded_by', 'verified_by',
+            'uploaded_at', 'verified_at', 'remarks', 'student_roll_number'
+        ]
+        read_only_fields = ['uploaded_by', 'verified_by', 'uploaded_at', 'student']
+
+    def create(self, validated_data):
+        student_roll = validated_data.pop('student_roll_number')
+        try:
+            student = StudentProfile.objects.get(roll_number=student_roll)
+            validated_data['student'] = student
+        except StudentProfile.DoesNotExist:
+            raise serializers.ValidationError({
+                'student_roll_number': f'No student found with roll number: {student_roll}'
+            })
+        
+        user = self.context['request'].user
+        if user.is_authenticated:
+            validated_data['uploaded_by'] = user
+        return super().create(validated_data)

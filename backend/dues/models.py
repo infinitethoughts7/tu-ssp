@@ -1,6 +1,6 @@
 from django.db import models
 from django.conf import settings
-from core.models import StudentProfile
+from core.models import StudentProfile, User
 
 COURSE_CHOICES = [
     ("M.A. (Applied Economics - 5 Years)", "M.A. (Applied Economics - 5 Years)"),
@@ -91,6 +91,24 @@ class HostelDues(models.Model):
     def __str__(self):
         return f"{self.student.roll_number} - Year {self.year_of_study} Hostel Dues"
 
+class Challan(models.Model):
+    DEPARTMENT_CHOICES = [
+        ('academic', 'Academic'),
+        ('hostel', 'Hostel'),
+    ]
+    student = models.ForeignKey(StudentProfile, on_delete=models.CASCADE)
+    department = models.CharField(max_length=20, choices=DEPARTMENT_CHOICES)
+    image = models.ImageField(upload_to='challans/')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20, choices=[('pending', 'Pending'), ('verified', 'Verified'), ('rejected', 'Rejected')], default='pending')
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='uploaded_challans')
+    verified_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='verified_challans')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    verified_at = models.DateTimeField(null=True, blank=True)
+    remarks = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f'{self.amount} - {self.student.roll_number} ({self.department})'
 
 # class DepartmentDue(models.Model):
 #     DEPARTMENT_CHOICES = [
