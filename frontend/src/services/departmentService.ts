@@ -285,7 +285,9 @@ export const getHostelDues = async (): Promise<any[]> => {
         headers: error.response?.headers,
       });
       if (error.response?.status === 401) {
+        // Clear the invalid token
         localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
         throw new Error("Your session has expired. Please log in again.");
       }
     }

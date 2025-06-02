@@ -24,19 +24,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refreshAccessToken = useCallback(async () => {
-    try {
-      const response = await axios.post(`${API_BASE_URL}/auth/token/refresh/`, {
-        refresh: refreshToken,
-      });
-      const newAccessToken = response.data.access;
-      setAccessToken(newAccessToken);
-      localStorage.setItem("accessToken", newAccessToken);
-    } catch {
-      throw new Error("Failed to refresh token");
-    }
-  }, [refreshToken]);
-
   const logout = useCallback(() => {
     const userType = localStorage.getItem("userType") || "student";
 
@@ -55,6 +42,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
     navigate(userType === "staff" ? "/staff-login" : "/student-login");
   }, [navigate]);
 
+  const refreshAccessToken = useCallback(async () => {
+    try {
+      console.log("Attempting to refresh token...");
+      const response = await axios.post(`${API_BASE_URL}/auth/token/refresh/`, {
+        refresh: refreshToken,
+      });
+      const newAccessToken = response.data.access;
+      console.log("Token refresh successful");
+      setAccessToken(newAccessToken);
+      localStorage.setItem("accessToken", newAccessToken);
+      // Update axios default headers
+      axios.defaults.headers.common[
+        "Authorization"
+      ] = `Bearer ${newAccessToken}`;
+      return newAccessToken;
+    } catch (error) {
+      console.error("Token refresh failed:", error);
+      // Clear all auth data on refresh failure
+      logout();
+      throw new Error("Failed to refresh token. Please log in again.");
+    }
+  }, [refreshToken, logout]);
+
   useEffect(() => {
     const interceptor = axios.interceptors.response.use(
       (response) => response,
@@ -68,12 +78,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         ) {
           originalRequest._retry = true;
           try {
-            await refreshAccessToken();
-            originalRequest.headers[
-              "Authorization"
-            ] = `Bearer ${localStorage.getItem("accessToken")}`;
+            console.log("401 error detected, attempting token refresh...");
+            const newToken = await refreshAccessToken();
+            originalRequest.headers["Authorization"] = `Bearer ${newToken}`;
             return axios(originalRequest);
           } catch (refreshError) {
+            console.error("Token refresh failed in interceptor:", refreshError);
             logout();
             return Promise.reject(refreshError);
           }

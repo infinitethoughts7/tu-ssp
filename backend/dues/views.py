@@ -59,9 +59,68 @@ class AcademicViewSet(viewsets.ModelViewSet):
 
 
 class HostelDuesViewSet(viewsets.ModelViewSet):
-    queryset = HostelDues.objects.all()
+    queryset = HostelDues.objects.select_related('student').all()
     serializer_class = HostelDuesSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [AllowAny]  # Default permission for all actions
+
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]  # Allow any user to list and retrieve
+        else:
+            return [IsAuthenticated(), IsAdminOrStaff()]  # Require authentication for other actions
+
+    def get_queryset(self):
+        """
+        Optimize the queryset by including all related data in a single query
+        """
+        return HostelDues.objects.select_related(
+            'student',
+            'student__user'
+        ).all().order_by('student__roll_number')
+
+    def list(self, request, *args, **kwargs):
+        try:
+            queryset = self.get_queryset()
+            
+            # Group dues by student
+            student_dues = {}
+            for due in queryset:
+                student_id = due.student.id
+                if student_id not in student_dues:
+                    student_dues[student_id] = []
+                student_dues[student_id].append(due)
+
+            # Calculate totals for each student
+            result = []
+            for student_id, dues in student_dues.items():
+                # Serialize individual dues
+                serialized_dues = self.get_serializer(dues, many=True).data
+                
+                # Calculate totals across all years
+                total_mess_bill = sum(due.mess_bill or 0 for due in dues)
+                total_scholarship = sum(due.scholarship or 0 for due in dues)
+                total_deposit = sum(due.deposit or 0 for due in dues)
+                total_due = total_mess_bill - (total_scholarship + total_deposit)
+
+                # Add totals to the first due entry
+                if serialized_dues:
+                    serialized_dues[0]['total_mess_bill'] = total_mess_bill
+                    serialized_dues[0]['total_scholarship'] = total_scholarship
+                    serialized_dues[0]['total_deposit'] = total_deposit
+                    serialized_dues[0]['total_due'] = total_due
+                
+                result.extend(serialized_dues)
+
+            return Response(result)
+        except Exception as e:
+            logger.error(f"Error in list view: {str(e)}")
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
     def update(self, request, *args, **kwargs):
         try:

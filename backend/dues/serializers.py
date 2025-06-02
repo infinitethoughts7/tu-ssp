@@ -18,7 +18,7 @@ class StudentProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = StudentProfile
-        fields = ['roll_number', 'full_name', 'phone_number', 'caste']
+        fields = ['roll_number', 'full_name', 'phone_number', 'caste', 'course']
 
     def get_full_name(self, obj):
         return f"{obj.user.first_name} {obj.user.last_name}".strip()
@@ -75,16 +75,22 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class HostelDuesSerializer(serializers.ModelSerializer):
-    student_name = serializers.SerializerMethodField()
-    student_caste = serializers.CharField(source='student.caste', read_only=True)
-    student_phone = serializers.CharField(source='student.phone_number', read_only=True)
-    student_roll = serializers.CharField(source='student.roll_number', read_only=True)
-    course_name = serializers.CharField(source='student.course', read_only=True)
+    student = StudentProfileSerializer(read_only=True)
+    total_amount = serializers.SerializerMethodField()
+    due_amount = serializers.SerializerMethodField()
 
     class Meta:
         model = HostelDues
-        fields = ['id', 'student', 'student_name', 'student_roll', 'student_caste', 'student_phone', 
-                 'year_of_study', 'mess_bill', 'scholarship', 'deposit', 'remarks', 'course_name']
+        fields = [
+            'id', 'student', 'year_of_study', 'mess_bill', 'scholarship',
+            'deposit', 'remarks', 'total_amount', 'due_amount'
+        ]
 
-    def get_student_name(self, obj):
-        return f"{obj.student.user.first_name} {obj.student.user.last_name}".strip() 
+    def get_total_amount(self, obj):
+        return obj.mess_bill or 0
+
+    def get_due_amount(self, obj):
+        mess_bill = obj.mess_bill or 0
+        scholarship = obj.scholarship or 0
+        deposit = obj.deposit or 0
+        return mess_bill - (scholarship + deposit)

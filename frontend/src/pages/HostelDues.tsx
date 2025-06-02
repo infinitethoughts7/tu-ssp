@@ -5,7 +5,6 @@ import {
   getHostelDues,
   getStaffProfile,
   StaffProfile,
-  searchStudentsByRollNumber,
   updateHostelDue,
 } from "../services/departmentService";
 import {
@@ -22,6 +21,9 @@ import {
   User,
   Phone,
   Mail,
+  Pencil,
+  Save,
+  X,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "../lib/utils";
@@ -52,24 +54,22 @@ import {
 } from "../components/ui/dialog";
 import { COURSE_OPTIONS } from "../types/constants";
 
-interface StudentSearchResponse {
-  course: string;
-  // Add other fields if needed
-}
-
 interface HostelDue {
   id: number;
-  student: number;
-  student_name: string;
-  student_roll: string;
-  student_caste: string;
-  student_phone: string;
+  student: {
+    roll_number: string;
+    full_name: string;
+    phone_number: string;
+    caste: string;
+    course: string;
+  };
   year_of_study: string;
   mess_bill: number;
   scholarship: number;
   deposit: number;
   remarks: string;
-  course_name: string;
+  total_amount: number;
+  due_amount: number;
 }
 
 interface HostelStudentGroup {
@@ -79,8 +79,8 @@ interface HostelStudentGroup {
   caste: string;
   phone_number: string;
   dues: HostelDue[];
-  totalAmount: number;
-  unpaidAmount: number;
+  total_amount: number;
+  due_amount: number;
 }
 
 export default function HostelDues() {
@@ -96,30 +96,9 @@ export default function HostelDues() {
   const [selectedStudent, setSelectedStudent] =
     useState<HostelStudentGroup | null>(null);
   const [showStudentDetails, setShowStudentDetails] = useState(false);
-  const [studentCourses, setStudentCourses] = useState<Record<string, string>>(
-    {}
-  );
   const [editingDue, setEditingDue] = useState<HostelDue | null>(null);
   const [updateLoading, setUpdateLoading] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
-
-  // Function to fetch course for a student
-  const fetchStudentCourse = async (rollNumber: string) => {
-    try {
-      const students = await searchStudentsByRollNumber(rollNumber);
-      if (Array.isArray(students) && students.length > 0) {
-        const student = students[0] as StudentSearchResponse;
-        if (student && student.course) {
-          setStudentCourses((prev) => ({
-            ...prev,
-            [rollNumber]: student.course,
-          }));
-        }
-      }
-    } catch (error) {
-      console.error(`Error fetching course for student ${rollNumber}:`, error);
-    }
-  };
 
   // Function to group hostel dues by student
   const groupHostelDuesByStudent = (
@@ -132,32 +111,26 @@ export default function HostelDues() {
 
     const grouped = dues.reduce(
       (acc: Record<string, HostelStudentGroup>, due) => {
-        if (!due.student_roll) {
+        if (!due.student.roll_number) {
           console.warn("Skipping due with missing roll number:", due);
           return acc;
         }
-
-        const key = due.student_roll;
-
+        const key = due.student.roll_number;
         if (!acc[key]) {
           acc[key] = {
-            roll_numbers: [due.student_roll],
-            name: due.student_name || "N/A",
-            course: due.course_name || "N/A",
-            caste: due.student_caste || "N/A",
-            phone_number: due.student_phone || "N/A",
+            roll_numbers: [due.student.roll_number],
+            name: due.student.full_name || "N/A",
+            course: due.student.course || "N/A",
+            caste: due.student.caste || "N/A",
+            phone_number: due.student.phone_number || "N/A",
             dues: [],
-            totalAmount: 0,
-            unpaidAmount: 0,
+            total_amount: 0,
+            due_amount: 0,
           };
         }
-
         acc[key].dues.push(due);
-        const totalDue =
-          (due.mess_bill || 0) + (due.scholarship || 0) + (due.deposit || 0);
-        acc[key].totalAmount += totalDue;
-        acc[key].unpaidAmount += totalDue;
-
+        acc[key].total_amount += due.total_amount;
+        acc[key].due_amount += due.due_amount;
         return acc;
       },
       {}
@@ -172,11 +145,10 @@ export default function HostelDues() {
       const search = searchTerm.trim().toLowerCase();
       const matchesSearch =
         !search ||
-        (due.student_roll?.toLowerCase() || "").includes(search) ||
-        (due.student_name?.toLowerCase() || "").includes(search);
+        (due.student.roll_number?.toLowerCase() || "").includes(search) ||
+        (due.student.full_name?.toLowerCase() || "").includes(search);
       const matchesCourse =
-        selectedCourse === "all" ||
-        studentCourses[due.student_roll] === selectedCourse;
+        selectedCourse === "all" || due.student.course === selectedCourse;
       return matchesSearch && matchesCourse;
     })
   );
@@ -232,13 +204,12 @@ export default function HostelDues() {
 
         // Fetch staff profile
         const profile = await getStaffProfile();
-        console.log("Staff profile fetched:", profile);
+
         setStaffProfile(profile);
 
         // Fetch hostel dues
         console.log("Fetching hostel dues...");
         const dues = await getHostelDues();
-        console.log("Received hostel dues:", dues);
 
         if (!Array.isArray(dues)) {
           console.error("Invalid hostel dues data received:", dues);
@@ -247,14 +218,6 @@ export default function HostelDues() {
         }
 
         setHostelDues(dues);
-
-        // Fetch courses for all unique students
-        const uniqueRollNumbers = [
-          ...new Set(dues.map((due) => due.student_roll)),
-        ];
-        for (const rollNumber of uniqueRollNumbers) {
-          await fetchStudentCourse(rollNumber);
-        }
 
         setError(null);
       } catch (error) {
@@ -482,11 +445,12 @@ export default function HostelDues() {
                             <div className="text-sm">
                               <div className="flex items-center gap-2 font-medium text-gray-900">
                                 <IndianRupee className="h-4 w-4 text-blue-500" />
-                                Total Amount: ₹{group.totalAmount.toFixed(2)}
+                                Total Mess Bill: ₹
+                                {group.total_amount.toFixed(2)}
                               </div>
                               <div className="flex items-center gap-2 text-red-600 mt-1">
                                 <AlertCircle className="h-4 w-4" />
-                                Total Due: ₹{group.unpaidAmount.toFixed(2)}
+                                Total Due: ₹{group.due_amount.toFixed(2)}
                               </div>
                             </div>
                           </TableCell>
@@ -502,7 +466,6 @@ export default function HostelDues() {
                                       <TableHead>Mess Bill</TableHead>
                                       <TableHead>Scholarship</TableHead>
                                       <TableHead>Deposit</TableHead>
-                                      <TableHead>Total</TableHead>
                                       <TableHead>Remarks</TableHead>
                                       <TableHead>Actions</TableHead>
                                     </TableRow>
@@ -574,12 +537,6 @@ export default function HostelDues() {
                                           )}
                                         </TableCell>
                                         <TableCell>
-                                          ₹
-                                          {due.mess_bill +
-                                            due.scholarship +
-                                            due.deposit}
-                                        </TableCell>
-                                        <TableCell>
                                           {editingDue?.id === due.id ? (
                                             <Input
                                               value={editingDue.remarks}
@@ -605,11 +562,15 @@ export default function HostelDues() {
                                                   handleUpdateDue(editingDue)
                                                 }
                                                 disabled={updateLoading}
+                                                className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200 hover:border-green-300"
                                               >
                                                 {updateLoading ? (
                                                   <Loader2 className="h-4 w-4 animate-spin" />
                                                 ) : (
-                                                  "Save"
+                                                  <>
+                                                    <Save className="h-4 w-4 mr-1" />
+                                                    Save
+                                                  </>
                                                 )}
                                               </Button>
                                               <Button
@@ -619,7 +580,9 @@ export default function HostelDues() {
                                                   setEditingDue(null)
                                                 }
                                                 disabled={updateLoading}
+                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                               >
+                                                <X className="h-4 w-4 mr-1" />
                                                 Cancel
                                               </Button>
                                             </div>
@@ -628,7 +591,9 @@ export default function HostelDues() {
                                               variant="outline"
                                               size="sm"
                                               onClick={() => setEditingDue(due)}
+                                              className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300"
                                             >
+                                              <Pencil className="h-4 w-4 mr-1" />
                                               Edit
                                             </Button>
                                           )}
@@ -689,11 +654,7 @@ export default function HostelDues() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Course</p>
-                    <p className="font-medium">
-                      {COURSE_OPTIONS.find(
-                        (course) => course === selectedStudent.course
-                      ) || selectedStudent.course}
-                    </p>
+                    <p className="font-medium">{selectedStudent.course}</p>
                   </div>
                 </div>
               </div>
