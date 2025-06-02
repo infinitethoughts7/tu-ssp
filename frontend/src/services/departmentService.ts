@@ -19,7 +19,7 @@ export interface AddDueData {
 }
 
 export const getDepartmentDues = async (
-  department: string
+  department?: string
 ): Promise<DepartmentDue[]> => {
   try {
     const accessToken = localStorage.getItem("accessToken");
@@ -43,8 +43,9 @@ export const getDepartmentDues = async (
     }
 
     // For other departments, use the regular dues endpoint
+    const params = department ? { department } : {};
     const response = await axios.get(`${API_BASE_URL}/dues/dues/`, {
-      params: { department },
+      params,
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
@@ -145,29 +146,54 @@ export const addDepartmentDue = async (
 };
 
 export const getStaffProfile = async (): Promise<StaffProfile> => {
-  try {
-    console.log(
-      "Fetching staff profile from:",
-      `${API_BASE_URL}/staff/profile/`
-    );
-    console.log("Using access token:", localStorage.getItem("accessToken"));
+  let accessToken = localStorage.getItem("accessToken") || "";
+  const refreshToken = localStorage.getItem("refreshToken");
 
+  if (!accessToken) {
+    throw new Error("No access token found. Please log in again.");
+  }
+
+  try {
     const response = await axios.get(`${API_BASE_URL}/staff/profile/`, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     });
-
-    console.log("Staff profile response:", response.data);
     return response.data;
-  } catch (error) {
-    console.error("Error fetching staff profile:", error);
-    if (axios.isAxiosError(error)) {
-      console.error("Error details:", {
-        status: error.response?.status,
-        data: error.response?.data,
-        headers: error.response?.headers,
-      });
+  } catch (error: any) {
+    // If 401, try to refresh token
+    if (
+      axios.isAxiosError(error) &&
+      error.response?.status === 401 &&
+      refreshToken
+    ) {
+      try {
+        // Attempt to refresh the token
+        const res = await axios.post(`${API_BASE_URL}/auth/token/refresh/`, {
+          refresh: refreshToken,
+        });
+        accessToken = res.data.access || "";
+        localStorage.setItem("accessToken", accessToken);
+        axios.defaults.headers.common[
+          "Authorization"
+        ] = `Bearer ${accessToken}`;
+        // Retry the original request
+        const retryResponse = await axios.get(
+          `${API_BASE_URL}/staff/profile/`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+        return retryResponse.data;
+      } catch (refreshError) {
+        // Refresh failed, log out
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        window.location.href = "/staff-login";
+        throw new Error("Session expired. Please log in again.");
+      }
     }
     throw error;
   }

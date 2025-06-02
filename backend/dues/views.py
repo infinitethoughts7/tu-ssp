@@ -38,17 +38,16 @@ class FeeStructureViewSet(viewsets.ModelViewSet):
 class AcademicViewSet(viewsets.ModelViewSet):
     queryset = Academic.objects.all()
     serializer_class = AcademicSerializer
-    permission_classes = [AllowAny]  # Allow any user for testing
+    permission_classes = [IsAuthenticated]  # Enforce authentication
 
     def get_queryset(self):
-        # Allow staff to see all, students to see their own, unauthenticated to see all (for GET)
         user = self.request.user
         if not user.is_authenticated:
-            return Academic.objects.all()
+            return Academic.objects.none()  # Unauthenticated users see nothing
         if hasattr(user, 'is_staff') and user.is_staff:
-            return Academic.objects.all()
+            return Academic.objects.all()  # Staff see all
         if hasattr(user, 'is_student') and user.is_student:
-            return Academic.objects.filter(student__user=user)
+            return Academic.objects.filter(student__user=user)  # Student sees only their own
         return Academic.objects.none()
 
     def create(self, request, *args, **kwargs):
@@ -61,25 +60,18 @@ class AcademicViewSet(viewsets.ModelViewSet):
 class HostelDuesViewSet(viewsets.ModelViewSet):
     queryset = HostelDues.objects.select_related('student').all()
     serializer_class = HostelDuesSerializer
-    permission_classes = [AllowAny]  # Default permission for all actions
-
-    def get_permissions(self):
-        """
-        Instantiates and returns the list of permissions that this view requires.
-        """
-        if self.action in ['list', 'retrieve']:
-            return [AllowAny()]  # Allow any user to list and retrieve
-        else:
-            return [IsAuthenticated(), IsAdminOrStaff()]  # Require authentication for other actions
+    permission_classes = [IsAuthenticated]  # Enforce authentication
 
     def get_queryset(self):
-        """
-        Optimize the queryset by including all related data in a single query
-        """
-        return HostelDues.objects.select_related(
-            'student',
-            'student__user'
-        ).all().order_by('student__roll_number')
+        user = self.request.user
+        qs = HostelDues.objects.select_related('student', 'student__user').all()
+        if not user.is_authenticated:
+            return HostelDues.objects.none()
+        if hasattr(user, 'is_staff') and user.is_staff:
+            return qs
+        if hasattr(user, 'is_student') and user.is_student:
+            return qs.filter(student__user=user)
+        return HostelDues.objects.none()
 
     def list(self, request, *args, **kwargs):
         try:
