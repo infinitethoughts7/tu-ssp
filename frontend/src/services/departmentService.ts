@@ -241,9 +241,12 @@ export const updateAcademicDue = async (
   data: { paid_by_govt: number; paid_by_student: number }
 ): Promise<any> => {
   try {
+    const accessToken =
+      localStorage.getItem("staffAccessToken") ||
+      localStorage.getItem("studentAccessToken");
     const response = await api.patch(`/dues/academic-dues/${id}/`, data, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     });
     return response.data;

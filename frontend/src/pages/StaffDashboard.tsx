@@ -1366,7 +1366,8 @@ export default function StaffDashboard() {
                                 : "bg-yellow-100 text-yellow-700"
                             }`}
                           >
-                            {challan.status}
+                            {challan.status.charAt(0).toUpperCase() +
+                              challan.status.slice(1)}
                           </div>
                         </div>
                         <img

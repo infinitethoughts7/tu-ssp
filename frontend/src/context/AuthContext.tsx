@@ -11,13 +11,23 @@ interface ErrorResponse {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const navigate = useNavigate();
+  // Determine user type from URL or localStorage
+  const path = window.location.pathname;
+  const isStaff =
+    path.includes("staff") || localStorage.getItem("userType") === "staff";
   const [user, setUser] = useState<User | null>(() => {
-    const storedUser = localStorage.getItem("userData");
-    return storedUser ? JSON.parse(storedUser) : null;
+    if (isStaff) {
+      const storedUser = localStorage.getItem("staffUserData");
+      return storedUser ? JSON.parse(storedUser) : null;
+    } else {
+      const storedUser = localStorage.getItem("studentUserData");
+      return storedUser ? JSON.parse(storedUser) : null;
+    }
   });
   const [accessToken, setAccessToken] = useState<string | null>(
-    localStorage.getItem("staffAccessToken") ||
-      localStorage.getItem("studentAccessToken") ||
+    (isStaff
+      ? localStorage.getItem("staffAccessToken")
+      : localStorage.getItem("studentAccessToken")) ||
       localStorage.getItem("accessToken")
   );
   const [refreshToken, setRefreshToken] = useState<string | null>(
@@ -28,20 +38,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const logout = useCallback(() => {
     const userType = localStorage.getItem("userType") || "student";
-
     setUser(null);
     setAccessToken(null);
     setRefreshToken(null);
     setError(null);
-
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
-    localStorage.removeItem("userData");
     localStorage.removeItem("userType");
     localStorage.removeItem("department");
     localStorage.removeItem("staffAccessToken");
     localStorage.removeItem("studentAccessToken");
-
+    localStorage.removeItem("staffUserData");
+    localStorage.removeItem("studentUserData");
     delete axios.defaults.headers.common["Authorization"];
     navigate(userType === "staff" ? "/staff-login" : "/student-login");
   }, [navigate]);
@@ -166,12 +174,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setRefreshToken(refresh);
       if (credentials.email) {
         localStorage.setItem("staffAccessToken", access);
+        localStorage.setItem(
+          "staffUserData",
+          JSON.stringify(response.data.profile || {})
+        );
+        // Clear student data on staff login
+        localStorage.removeItem("studentAccessToken");
+        localStorage.removeItem("studentUserData");
+        localStorage.setItem("userType", "staff");
       } else {
         localStorage.setItem("studentAccessToken", access);
+        localStorage.setItem(
+          "studentUserData",
+          JSON.stringify(response.data.profile || {})
+        );
+        // Clear staff data on student login
+        localStorage.removeItem("staffAccessToken");
+        localStorage.removeItem("staffUserData");
+        localStorage.setItem("userType", "student");
       }
       localStorage.setItem("refreshToken", refresh);
       localStorage.setItem("department", department || "");
-      localStorage.setItem("userType", credentials.email ? "staff" : "student");
 
       // Set the Authorization header for future requests
       api.defaults.headers.common["Authorization"] = `Bearer ${access}`;
@@ -180,7 +203,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const profileResponse = await api.get("/profile/");
       const userData = profileResponse.data.profile;
       setUser(userData);
-      localStorage.setItem("userData", JSON.stringify(userData));
+      if (credentials.email) {
+        localStorage.setItem("staffUserData", JSON.stringify(userData));
+      } else {
+        localStorage.setItem("studentUserData", JSON.stringify(userData));
+      }
 
       // Handle navigation
       if (credentials.email) {
