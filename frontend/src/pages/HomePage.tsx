@@ -9,7 +9,7 @@ const HomePage = () => {
       {/* 📸 Background Image */}
       <div className="absolute inset-0 -z-10">
         <img
-          src="/src/assets/images/backgroundImage.png"
+          src="/src/components/ui/assets/tuadmin.jpg"
           alt="Graduation Background"
           className="w-full h-full object-cover opacity-80"
         />
@@ -19,7 +19,11 @@ const HomePage = () => {
       {/* 🏛️ Top Content */}
       <div className="flex flex-col items-center justify-center px-4 pt-24 sm:pt-32 text-center text-white">
         <div className="bg-white/20 p-4 rounded-full backdrop-blur-sm border border-white/30 mb-4">
-          <GraduationCap size={42} strokeWidth={2.5} className="text-white" />
+          <img
+            src="/src/components/ui/assets/Telangana_University_logo.png"
+            alt="Telangana University Logo"
+            className="h-16 w-auto"
+          />
         </div>
 
         <h1 className="text-3xl sm:text-4xl font-bold drop-shadow-md">

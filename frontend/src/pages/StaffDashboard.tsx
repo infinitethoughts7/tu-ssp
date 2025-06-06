@@ -624,6 +624,18 @@ export default function StaffDashboard() {
               <LogOut className="h-4 w-4 mr-2" />
               Logout
             </Button>
+            <Button
+              variant="outline"
+              className="bg-green-600 text-white hover:bg-green-700 ml-2"
+              onClick={() =>
+                window.open(
+                  "https://www.onlinesbi.sbi/sbicollect/payment/listinstitution.htm",
+                  "_blank"
+                )
+              }
+            >
+              Pay Now
+            </Button>
           </div>
         </div>
 

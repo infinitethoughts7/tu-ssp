@@ -184,15 +184,21 @@ const StudentDashboard: React.FC = () => {
     <div className="min-h-screen bg-white">
       <header className="bg-white border-b shadow-sm">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="bg-blue-700 p-3 rounded-xl shadow-md">
-              <School className="h-8 w-8 text-white" />
+          <div className="flex items-center gap-6">
+            <div className="bg-white p-2 rounded-lg shadow-md">
+              <img
+                src="/src/components/ui/assets/Telangana_University_logo.png"
+                alt="Telangana University Logo"
+                className="h-16 w-auto object-contain"
+              />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-blue-800">
+              <h1 className="text-2xl font-bold text-[#4f772d]">
                 Telangana University
               </h1>
-              <p className="text-sm text-gray-500">Excellence in Education</p>
+              <p className="text-sm text-gray-600 font-medium">
+                Student Service Portal
+              </p>
             </div>
           </div>
         </div>
@@ -276,14 +282,14 @@ const StudentDashboard: React.FC = () => {
                   <CreditCard className="h-4 w-4" />
                   Pay Now
                 </Button>
-                <Button
+                {/* <Button
                   variant="outline"
                   className="flex items-center gap-2 w-full sm:w-auto px-4 py-2 sm:px-6 sm:py-2 text-base sm:text-sm"
                   onClick={() => setShowAcademicChallan(true)}
                 >
                   <Upload className="h-4 w-4" />
                   Upload Challan
-                </Button>
+                </Button> */}
               </div>
             </CardContent>
           )}
@@ -423,14 +429,14 @@ const StudentDashboard: React.FC = () => {
                   <CreditCard className="h-4 w-4" />
                   Pay Now
                 </Button>
-                <Button
+                {/* <Button
                   variant="outline"
                   className="flex items-center gap-2 w-full sm:w-auto px-4 py-2 sm:px-6 sm:py-2 text-base sm:text-sm"
                   onClick={() => setShowHostelChallan(true)}
                 >
                   <Upload className="h-4 w-4" />
                   Upload Challan
-                </Button>
+                </Button> */}
               </div>
             </CardContent>
           )}
