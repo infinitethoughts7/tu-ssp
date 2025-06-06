@@ -55,8 +55,8 @@ const StudentLoginPage = () => {
         <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       </div>
 
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="w-full max-w-md border-none shadow-lg px-4 bg-white/90 backdrop-blur-sm">
+      <div className="flex items-center justify-center min-h-screen px-5">
+        <Card className="w-full max-w-md border-none shadow-lg px-4 bg-white/90 backdrop-blur-sm ">
           <CardHeader className="space-y-1">
             <div className="flex justify-center mb-4">
               <img

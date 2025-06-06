@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { User2, Building2, GraduationCap, UsersRound } from "lucide-react";
+import { User2, Building2, UsersRound } from "lucide-react";
 
 const HomePage = () => {
   const navigate = useNavigate();

@@ -13,6 +13,7 @@ import {
   Upload,
   CreditCard,
   CheckCircle,
+  Building2,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import {
@@ -41,6 +42,11 @@ import {
   getChallans,
   Challan,
 } from "../services/challanService";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "../components/ui/popover";
 
 const StudentDashboard: React.FC = () => {
   const { logout, accessToken, user } = useAuth();
@@ -196,27 +202,80 @@ const StudentDashboard: React.FC = () => {
               <h1 className="text-2xl font-bold text-[#4f772d]">
                 Telangana University
               </h1>
-              <p className="text-sm text-gray-600 font-medium">
-                Student Service Portal
-              </p>
             </div>
+          </div>
+          {/* Profile Popover and Logout */}
+          <div className="flex items-center gap-3">
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="flex items-center gap-2 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                  <User className="h-7 w-7 text-white" />
+                  <span className="text-base font-semibold text-white hidden sm:block">
+                    {(user as any)?.user?.first_name}{" "}
+                    {(user as any)?.user?.last_name}
+                  </span>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-auto p-4">
+                <div className="flex flex-col gap-4 min-w-[220px]">
+                  {/* Name */}
+                  <div className="flex items-center gap-3">
+                    <div className="bg-gradient-to-br from-blue-500 to-purple-500 rounded-full p-2 flex items-center justify-center">
+                      <User className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <div className="text-gray-500 text-xs font-medium">
+                        Name
+                      </div>
+                      <div className="text-base font-semibold text-gray-900">
+                        {(user as any)?.user?.first_name}{" "}
+                        {(user as any)?.user?.last_name}
+                      </div>
+                    </div>
+                  </div>
+                  {/* Roll Number */}
+                  <div className="flex items-center gap-3">
+                    <div className="bg-green-500 rounded-full p-2 flex items-center justify-center">
+                      <span className="text-white font-bold text-base">#</span>
+                    </div>
+                    <div>
+                      <div className="text-gray-500 text-xs font-medium">
+                        Roll Number
+                      </div>
+                      <div className="text-base font-semibold text-gray-900">
+                        {(user as any)?.roll_number}
+                      </div>
+                    </div>
+                  </div>
+                  {/* Department */}
+                  <div className="flex items-center gap-3">
+                    <div className="bg-orange-400 rounded-full p-2 flex items-center justify-center">
+                      <Building2 className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <div className="text-gray-500 text-xs font-medium">
+                        Department
+                      </div>
+                      <div className="text-base font-semibold text-gray-900">
+                        {(user as any)?.course}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+            <button
+              onClick={logout}
+              className="flex items-center gap-1 bg-red-100 hover:bg-red-200 text-red-700 font-semibold px-3 py-2 rounded-full transition shadow-sm border border-red-200 focus:outline-none focus:ring-2 focus:ring-red-400"
+              title="Logout"
+            >
+              <LogOut className="h-5 w-5" />
+              <span className="hidden sm:inline">Logout</span>
+            </button>
           </div>
         </div>
       </header>
       <main className="container mx-auto px-6 py-8">
-        {/* Student Profile Section */}
-        <div className="flex flex-col items-center justify-center gap-2 mb-8 p-6 rounded-2xl shadow-xl bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">
-          <span className="text-3xl md:text-4xl font-extrabold text-white tracking-tight drop-shadow-lg text-center">
-            {(user as any)?.user?.first_name?.toUpperCase()}{" "}
-            {(user as any)?.user?.last_name?.toUpperCase()}
-          </span>
-          <span className="text-lg md:text-xl font-semibold text-white/90 drop-shadow text-center">
-            {(user as any)?.roll_number}
-          </span>
-          <span className="text-lg md:text-xl font-semibold text-white/90 drop-shadow text-center">
-            {(user as any)?.course}
-          </span>
-        </div>
         {/* Academic Dues Section */}
         <Card className="border-none shadow-lg bg-white mb-8">
           <CardHeader
@@ -563,16 +622,6 @@ const StudentDashboard: React.FC = () => {
           </div>
         </div>
       </main>
-      <div className="w-full flex justify-end px-6 pb-6">
-        <Button
-          variant="outline"
-          onClick={logout}
-          className="border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-600 px-5 py-2 font-semibold"
-        >
-          <LogOut className="h-4 w-4 mr-2" />
-          Logout
-        </Button>
-      </div>
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
         <DialogContent>
           <DialogHeader>

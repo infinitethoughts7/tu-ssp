@@ -38,4 +38,7 @@ export const COURSE_OPTIONS = [
     "M.Ed.",
     "B.P.Ed.",
   ];
-  
+
+export const buttonColour = {
+    'primary' : '#4f772d'
+}

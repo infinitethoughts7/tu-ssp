@@ -103,16 +103,7 @@ interface HostelDue {
   remarks: string;
 }
 
-interface HostelStudentGroup {
-  roll_numbers: string[];
-  name: string;
-  course: string;
-  caste: string;
-  phone_number: string;
-  dues: HostelDue[];
-  totalAmount: number;
-  unpaidAmount: number;
-}
+
 
 export default function StaffDashboard() {
   const { logout, accessToken } = useAuth();
