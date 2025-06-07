@@ -131,15 +131,6 @@ const StudentLoginPage = () => {
                 </div>
               </div>
 
-              <div className="text-right">
-                <Button
-                  variant="link"
-                  className="text-sm text-blue-600 hover:text-blue-800 p-0 h-auto"
-                >
-                  Forgot Password?
-                </Button>
-              </div>
-
               <Button
                 type="submit"
                 disabled={isLoading}
