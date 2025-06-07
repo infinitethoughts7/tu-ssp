@@ -199,16 +199,19 @@ const StudentDashboard: React.FC = () => {
               />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-[#4f772d]">
+              <h1 className="text-2xl font-bold text-blue-600">
                 Telangana University
               </h1>
+              <p className="text-sm text-gray-900 font-medium mt-1">
+                Student Service Portal
+              </p>
             </div>
           </div>
           {/* Profile Popover and Logout */}
           <div className="flex items-center gap-3">
             <Popover>
               <PopoverTrigger asChild>
-                <button className="flex items-center gap-2 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <button className="flex items-center gap-2 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full p-2 px-5 focus:outline-none focus:ring-2 focus:ring-blue-400">
                   <User className="h-7 w-7 text-white" />
                   <span className="text-base font-semibold text-white hidden sm:block">
                     {(user as any)?.user?.first_name}{" "}
@@ -216,7 +219,7 @@ const StudentDashboard: React.FC = () => {
                   </span>
                 </button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-auto p-4">
+              <PopoverContent align="end" className="w-auto p-6">
                 <div className="flex flex-col gap-4 min-w-[220px]">
                   {/* Name */}
                   <div className="flex items-center gap-3">
@@ -266,7 +269,7 @@ const StudentDashboard: React.FC = () => {
             </Popover>
             <button
               onClick={logout}
-              className="flex items-center gap-1 bg-red-100 hover:bg-red-200 text-red-700 font-semibold px-3 py-2 rounded-full transition shadow-sm border border-red-200 focus:outline-none focus:ring-2 focus:ring-red-400"
+              className="flex items-center gap-1 bg-red-100 hover:bg-red-200 text-red-700 font-semibold px-4 py-2 rounded-full transition shadow-sm border border-red-200 focus:outline-none focus:ring-2 focus:ring-red-400"
               title="Logout"
             >
               <LogOut className="h-5 w-5" />
