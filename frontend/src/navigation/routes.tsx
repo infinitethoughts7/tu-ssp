@@ -4,7 +4,7 @@ import HomePage from "../pages/HomePage";
 import StudentLoginPage from "../pages/StudentLoginPage";
 import StaffLoginPage from "../pages/StaffLoginPage";
 import StudentDashboard from "../pages/StudentDashboard";
-import StaffDashboard from "../pages/StaffDashboard";
+import StaffDashboard from "../pages/AccountsDues";
 import HostelDues from "../pages/HostelDues";
 
 const router = createBrowserRouter([
