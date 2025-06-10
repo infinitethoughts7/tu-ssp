@@ -60,6 +60,46 @@ export function AuthProvider({ children }: AuthProviderProps) {
     navigate(userType === "staff" ? "/staff-login" : "/student-login");
   }, [navigate]);
 
+  // Add useEffect to fetch user profile on mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (accessToken) {
+        try {
+          console.log("Fetching user profile...");
+          const profileEndpoint = isStaff ? "/staff/profile/" : "/profile/";
+          console.log("Using profile endpoint:", profileEndpoint);
+
+          const response = await api.get(profileEndpoint);
+          console.log("Profile response:", response.data);
+
+          // Handle nested profile data structure
+          const profileData = isStaff ? response.data : response.data.profile;
+          console.log("Processed profile data:", profileData);
+
+          setUser(profileData);
+          if (isStaff) {
+            localStorage.setItem("staffUserData", JSON.stringify(profileData));
+          } else {
+            localStorage.setItem(
+              "studentUserData",
+              JSON.stringify(profileData)
+            );
+          }
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+          if (axios.isAxiosError(error)) {
+            console.log("Axios Error Response:", error.response?.data);
+            if (error.response?.status === 401) {
+              logout();
+            }
+          }
+        }
+      }
+    };
+
+    fetchProfile();
+  }, [accessToken, isStaff, logout]);
+
   const refreshAccessToken = useCallback(async () => {
     try {
       console.log("Attempting to refresh token...");
@@ -211,14 +251,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Fetch user profile with the correct endpoint
       const profileEndpoint = credentials.email
         ? "/staff/profile/"
-        : "/student/profile/";
+        : "/profile/";
+      console.log("Fetching profile from:", profileEndpoint);
+
       const profileResponse = await api.get(profileEndpoint, {
         headers: {
           Authorization: `Bearer ${access}`,
         },
       });
 
-      const userData = profileResponse.data;
+      console.log("Profile Response:", profileResponse.data);
+
+      // Handle nested profile data structure
+      const userData = credentials.email
+        ? profileResponse.data
+        : profileResponse.data.profile;
+      console.log("Processed user data:", userData);
+
       setUser(userData);
       if (credentials.email) {
         localStorage.setItem("staffUserData", JSON.stringify(userData));
@@ -256,6 +305,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
       throw error;
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchUserProfile = async () => {
+    try {
+      let response;
+      if (isStaff) {
+        response = await api.get("/staff/profile/");
+      } else {
+        response = await api.get("/profile/");
+      }
+      setUser(response.data);
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      if (axios.isAxiosError(error)) {
+        console.log("Axios Error Response:", error.response?.data);
+        if (error.response?.status === 401) {
+          logout();
+        }
+      }
     }
   };
 
