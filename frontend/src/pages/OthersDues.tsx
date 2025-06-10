@@ -91,6 +91,7 @@ export default function OthersDues() {
       console.log("Staff Profile:", staffProfile);
 
       const department = staffProfile.department;
+
       const category = CATEGORY_MAP[department] || "library";
       const title = TITLE_MAP[department] || "Student Library Dues";
 
