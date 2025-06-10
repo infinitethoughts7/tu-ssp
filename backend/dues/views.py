@@ -2,8 +2,8 @@ from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import FeeStructure, Academic, HostelDues, Challan
-from .serializers import  FeeStructureSerializer, AcademicSerializer, HostelDuesSerializer, ChallanSerializer
+from .models import FeeStructure, Academic, HostelDues, OtherDue
+from .serializers import  FeeStructureSerializer, AcademicSerializer, HostelDuesSerializer, OtherDueSerializer
 from core.permisions.staff_permistion import IsStaffOfDepartment
 
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -127,25 +127,51 @@ class HostelDuesViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-class ChallanViewSet(viewsets.ModelViewSet):
-    queryset = Challan.objects.all()
-    serializer_class = ChallanSerializer
-    permission_classes = [AllowAny]  # Allow any for development/testing
+# class ChallanViewSet(viewsets.ModelViewSet):
+#     queryset = Challan.objects.all()
+#     serializer_class = ChallanSerializer
+#     permission_classes = [AllowAny]  # Allow any for development/testing
+
+#     def get_queryset(self):
+#         user = self.request.user
+#         if not user.is_authenticated:
+#             return Challan.objects.none()  # Unauthenticated users see nothing
+#         if hasattr(user, 'is_staff') and user.is_staff:
+#             return Challan.objects.all()
+#         if hasattr(user, 'is_student') and user.is_student:
+#             return Challan.objects.filter(student__user=user)
+#         return Challan.objects.none()
+
+#     def perform_create(self, serializer):
+#         user = self.request.user
+#         if user.is_authenticated:
+#             serializer.save(uploaded_by=user)
+#         else:
+#             serializer.save()
+
+class OtherDueViewSet(viewsets.ModelViewSet):
+    queryset = OtherDue.objects.all()
+    serializer_class = OtherDueSerializer
+    permission_classes = [IsAuthenticated]
+
+    CATEGORY_MAP = {
+        'librarian': 'library',
+        'sports_incharge': 'sports',
+        'lab_incharge': 'lab',
+    }
 
     def get_queryset(self):
         user = self.request.user
-        if not user.is_authenticated:
-            return Challan.objects.none()  # Unauthenticated users see nothing
-        if hasattr(user, 'is_staff') and user.is_staff:
-            return Challan.objects.all()
-        if hasattr(user, 'is_student') and user.is_student:
-            return Challan.objects.filter(student__user=user)
-        return Challan.objects.none()
+        if not user.is_authenticated or not hasattr(user, 'staff_profile'):
+            return OtherDue.objects.none()
+        staff = user.staff_profile
+        category = self.request.query_params.get('category')
+        # If no category is provided, use the staff's department mapping
+        if not category:
+            category = self.CATEGORY_MAP.get(staff.department, staff.department)
+        queryset = OtherDue.objects.filter(category=category)
+        return queryset
 
     def perform_create(self, serializer):
-        user = self.request.user
-        if user.is_authenticated:
-            serializer.save(uploaded_by=user)
-        else:
-            serializer.save()
+        serializer.save(created_by=self.request.user.staff_profile)
         

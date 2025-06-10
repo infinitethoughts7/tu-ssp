@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import {
@@ -31,10 +31,6 @@ import {
   LogOut,
   IndianRupee,
   Calendar,
-  Receipt,
-  CheckCircle2,
-  XCircle,
-  MessageSquare,
 } from "lucide-react";
 import { format } from "date-fns";
 import { DepartmentDue } from "../types/department";
@@ -73,11 +69,6 @@ import type {
   AcademicStudentGroup,
 } from "../types/staffDashboardTypes";
 import { COURSE_OPTIONS } from "../types/constants";
-import {
-  getChallans,
-  verifyChallan,
-  Challan,
-} from "../services/challanService";
 
 interface StudentProfile {
   id?: number;
@@ -102,8 +93,6 @@ interface HostelDue {
   deposit: number;
   remarks: string;
 }
-
-
 
 export default function StaffDashboard() {
   const { logout, accessToken } = useAuth();
@@ -141,27 +130,6 @@ export default function StaffDashboard() {
   const [dueToUpdate, setDueToUpdate] = useState<AcademicDue | null>(null);
   const [isUpdatingDue, setIsUpdatingDue] = useState(false);
   const [hostelDues, setHostelDues] = useState<HostelDue[]>([]);
-  const [challans, setChallans] = useState<Challan[]>([]);
-  const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
-  const [selectedChallan, setSelectedChallan] = useState<Challan | null>(null);
-  const [searchRoll, setSearchRoll] = useState("");
-  const [searchedStudent, setSearchedStudent] = useState<StudentProfile | null>(
-    null
-  );
-  const [studentChallans, setStudentChallans] = useState<Challan[]>([]);
-  const [isSearchingChallans, setIsSearchingChallans] = useState(false);
-  const [showChallanModal, setShowChallanModal] = useState(false);
-  const [selectedStudentChallans, setSelectedStudentChallans] = useState<
-    Challan[]
-  >([]);
-  const [selectedStudentForChallans, setSelectedStudentForChallans] =
-    useState<StudentProfile | null>(null);
-  const [challanRemarks, setChallanRemarks] = useState<{
-    [key: number]: string;
-  }>({});
-  const [isUpdatingChallan, setIsUpdatingChallan] = useState<{
-    [key: number]: boolean;
-  }>({});
 
   // Function to group dues by student
   const groupDuesByStudent = (dues: DepartmentDue[]) => {
@@ -346,7 +314,6 @@ export default function StaffDashboard() {
       return;
     }
 
-    // If department is hostel or hostel_superintendent, redirect to hostel-dues page
     if (
       storedDepartment.toLowerCase() === "hostel" ||
       storedDepartment.toLowerCase() === "hostel_superintendent"
@@ -359,7 +326,6 @@ export default function StaffDashboard() {
       return;
     }
 
-    // If URL department doesn't match stored department, redirect
     if (
       urlDepartment &&
       urlDepartment.toLowerCase() !== storedDepartment.toLowerCase()
@@ -431,18 +397,6 @@ export default function StaffDashboard() {
     }
   }, [accessToken, logout]);
 
-  useEffect(() => {
-    const fetchChallans = async () => {
-      try {
-        const data = await getChallans("staff");
-        setChallans(data);
-      } catch (error) {
-        console.error("Error fetching challans:", error);
-      }
-    };
-    fetchChallans();
-  }, []);
-
   const getDepartmentIcon = () => {
     const department = localStorage.getItem("department")?.toLowerCase();
     switch (department) {
@@ -481,106 +435,13 @@ export default function StaffDashboard() {
     }
   };
 
-  // Function to handle student selection
   const handleStudentSelect = (student: StudentDetails) => {
     setSelectedStudent(student);
     setShowStudentDetails(true);
   };
 
-  // Handle challan verification
-  const handleVerify = async (
-    id: number,
-    status: "verified" | "rejected",
-    remarks?: string
-  ) => {
-    try {
-      const updatedChallan = await verifyChallan(id, status, remarks);
-      setChallans(challans.map((c) => (c.id === id ? updatedChallan : c)));
-      setIsVerifyModalOpen(false);
-    } catch (error) {
-      console.error("Error verifying challan:", error);
-    }
-  };
-
-  // Handle challan view for verification
-  const handleViewChallan = (challan: Challan) => {
-    setSelectedChallan(challan);
-    setIsVerifyModalOpen(true);
-  };
-
-  const handleViewChallans = (student: StudentProfile) => {
-    const studentChallans = challans.filter(
-      (c) =>
-        c.student &&
-        c.student.roll_number ===
-          (student.roll_numbers?.[0] || student.roll_number)
-    );
-    setSelectedStudentChallans(studentChallans);
-    setSelectedStudentForChallans({
-      id: student.id,
-      full_name: student.name || student.full_name,
-      roll_number: student.roll_numbers?.[0] || student.roll_number,
-      caste: student.caste,
-      phone_number: student.phone_number,
-    });
-    setShowChallanModal(true);
-  };
-
-  const handleChallanStatusUpdate = async (
-    challanId: number,
-    status: "verified" | "rejected",
-    remarks: string
-  ) => {
-    try {
-      setIsUpdatingChallan((prev) => ({ ...prev, [challanId]: true }));
-      const updatedChallan = await verifyChallan(challanId, status, remarks);
-
-      // Update the challan in the local state
-      setSelectedStudentChallans((prev) =>
-        prev.map((c) =>
-          c.id === challanId
-            ? {
-                ...c,
-                status: updatedChallan.status,
-                remarks: updatedChallan.remarks,
-              }
-            : c
-        )
-      );
-
-      // Update the main challans list
-      setChallans((prev) =>
-        prev.map((c) =>
-          c.id === challanId
-            ? {
-                ...c,
-                status: updatedChallan.status,
-                remarks: updatedChallan.remarks,
-              }
-            : c
-        )
-      );
-
-      // Clear remarks for this challan
-      setChallanRemarks((prev) => {
-        const newRemarks = { ...prev };
-        delete newRemarks[challanId];
-        return newRemarks;
-      });
-
-      // Show success message
-      alert(`Challan ${status} successfully!`);
-    } catch (error) {
-      console.error("Error updating challan:", error);
-      alert("Failed to update challan status");
-    } finally {
-      setIsUpdatingChallan((prev) => ({ ...prev, [challanId]: false }));
-    }
-  };
-
   if (!accessToken) {
-    // --- DEVELOPMENT ONLY: Commented out auth check for easier testing ---
-    // return null;
+    return null;
   }
 
   return (
@@ -614,18 +475,6 @@ export default function StaffDashboard() {
             >
               <LogOut className="h-4 w-4 mr-2" />
               Logout
-            </Button>
-            <Button
-              variant="outline"
-              className="bg-green-600 text-white hover:bg-green-700 ml-2"
-              onClick={() =>
-                window.open(
-                  "https://www.onlinesbi.sbi/sbicollect/payment/listinstitution.htm",
-                  "_blank"
-                )
-              }
-            >
-              Pay Now
             </Button>
           </div>
         </div>
@@ -791,7 +640,6 @@ export default function StaffDashboard() {
                       <TableHead>Student Details</TableHead>
                       <TableHead>Course Info</TableHead>
                       <TableHead>Dues Summary</TableHead>
-                      <TableHead>Challans</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -835,51 +683,6 @@ export default function StaffDashboard() {
                               >
                                 {group.name}
                               </Button>
-                              {/* Show verify button for pending academic challan */}
-                              {"user" in group &&
-                                group.user &&
-                                challans
-                                  .filter(
-                                    (c) =>
-                                      c.department === "academic" &&
-                                      c.status === "pending" &&
-                                      c.student &&
-                                      c.student.roll_number ===
-                                        group.roll_numbers[0]
-                                  )
-                                  .map((challan) => (
-                                    <span
-                                      key={challan.id}
-                                      style={{
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        marginLeft: 8,
-                                      }}
-                                    >
-                                      <img
-                                        src={challan.image}
-                                        alt="Challan"
-                                        style={{
-                                          width: 40,
-                                          height: 40,
-                                          objectFit: "cover",
-                                          borderRadius: 4,
-                                          border: "1px solid #ddd",
-                                          marginRight: 8,
-                                        }}
-                                      />
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="ml-2"
-                                        onClick={() =>
-                                          handleViewChallan(challan)
-                                        }
-                                      >
-                                        Verify
-                                      </Button>
-                                    </span>
-                                  ))}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -900,52 +703,6 @@ export default function StaffDashboard() {
                                 Total Due: ₹{group.unpaidAmount.toFixed(2)}
                               </div>
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            {challans.some(
-                              (c) =>
-                                c.student &&
-                                c.student.roll_number ===
-                                  group.roll_numbers[0] &&
-                                c.status === "pending"
-                            ) ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="flex items-center gap-2 text-blue-600 border-blue-200 hover:bg-blue-50"
-                                onClick={() =>
-                                  handleViewChallans(
-                                    group as unknown as StudentProfile
-                                  )
-                                }
-                              >
-                                <Receipt className="h-4 w-4" />
-                                View Challans
-                              </Button>
-                            ) : challans.some(
-                                (c) =>
-                                  c.student &&
-                                  c.student.roll_number ===
-                                    group.roll_numbers[0]
-                              ) ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="flex items-center gap-2 text-gray-600 border-gray-200 hover:bg-gray-50"
-                                onClick={() =>
-                                  handleViewChallans(
-                                    group as unknown as StudentProfile
-                                  )
-                                }
-                              >
-                                <Receipt className="h-4 w-4" />
-                                View History
-                              </Button>
-                            ) : (
-                              <span className="text-gray-400 text-sm">
-                                No challans
-                              </span>
-                            )}
                           </TableCell>
                         </TableRow>
                         {expandedRows.has(group.roll_numbers[0]) && (
@@ -981,7 +738,6 @@ export default function StaffDashboard() {
                                   <TableBody>
                                     {showAcademicDues
                                       ? (() => {
-                                          // Get only the first due for each unique year
                                           const seenYears = new Set<string>();
                                           const uniqueDues = (
                                             group as AcademicStudentGroup
@@ -1263,206 +1019,6 @@ export default function StaffDashboard() {
                 </div>
               </div>
             )}
-          </DialogContent>
-        </Dialog>
-
-        {/* Verify Challan Modal */}
-        <Dialog open={isVerifyModalOpen} onOpenChange={setIsVerifyModalOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Verify Challan</DialogTitle>
-            </DialogHeader>
-            {selectedChallan && (
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  const formData = new FormData(e.currentTarget);
-                  const status = formData.get("status") as
-                    | "verified"
-                    | "rejected";
-                  const remarks = formData.get("remarks") as string;
-                  try {
-                    await verifyChallan(selectedChallan.id, status, remarks);
-                    alert(`Challan updated! Challan marked as ${status}.`);
-                    setIsVerifyModalOpen(false);
-                    // Refresh challans
-                    const data = await getChallans();
-                    setChallans(data);
-                  } catch (error) {
-                    alert("Failed to update challan.");
-                  }
-                }}
-              >
-                <p>
-                  <b>Amount:</b> ₹{selectedChallan.amount}
-                </p>
-                <img
-                  src={selectedChallan.image}
-                  alt="Challan"
-                  className="max-w-full max-h-64 rounded border"
-                />
-                <p>
-                  <b>Remarks:</b> {selectedChallan.remarks || "-"}
-                </p>
-                <select
-                  name="status"
-                  required
-                  defaultValue={selectedChallan.status}
-                  className="mt-2 mb-2"
-                >
-                  <option value="verified">Verify</option>
-                  <option value="rejected">Reject</option>
-                </select>
-                <Input
-                  type="text"
-                  name="remarks"
-                  placeholder="Remarks"
-                  className="mb-2"
-                />
-                <div className="flex gap-2 mt-2">
-                  <Button type="submit">Submit</Button>
-                  <Button
-                    type="button"
-                    onClick={() => setIsVerifyModalOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {/* Student Challans Modal */}
-        <Dialog open={showChallanModal} onOpenChange={setShowChallanModal}>
-          <DialogContent className="sm:max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Student Challans</DialogTitle>
-              <DialogDescription>
-                View all challans for {selectedStudentForChallans?.full_name} (
-                {selectedStudentForChallans?.roll_number})
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              {selectedStudentChallans.length === 0 ? (
-                <div className="text-center py-4 text-gray-500">
-                  No challans found for this student.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {selectedStudentChallans.map((challan) => (
-                    <Card key={challan.id} className="overflow-hidden">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <Receipt className="h-5 w-5 text-blue-600" />
-                            <span className="font-medium">
-                              ₹{challan.amount}
-                            </span>
-                          </div>
-                          <div
-                            className={`px-2 py-1 rounded text-xs ${
-                              challan.status === "verified"
-                                ? "bg-green-100 text-green-700"
-                                : challan.status === "rejected"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-yellow-100 text-yellow-700"
-                            }`}
-                          >
-                            {challan.status.charAt(0).toUpperCase() +
-                              challan.status.slice(1)}
-                          </div>
-                        </div>
-                        <img
-                          src={challan.image}
-                          alt="Challan"
-                          className="w-full h-48 object-cover rounded-md mb-2"
-                        />
-                        <div className="text-sm text-gray-600 mb-3">
-                          <p>
-                            <span className="font-medium">Department:</span>{" "}
-                            {challan.department}
-                          </p>
-                          <p>
-                            <span className="font-medium">Remarks:</span>{" "}
-                            {challan.remarks || "-"}
-                          </p>
-                          <p>
-                            <span className="font-medium">Uploaded:</span>{" "}
-                            {new Date(challan.uploaded_at).toLocaleDateString()}
-                          </p>
-                        </div>
-
-                        {challan.status === "pending" && (
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-2">
-                              <MessageSquare className="h-4 w-4 text-gray-500" />
-                              <Input
-                                placeholder="Add remarks..."
-                                value={challanRemarks[challan.id] || ""}
-                                onChange={(e) =>
-                                  setChallanRemarks((prev) => ({
-                                    ...prev,
-                                    [challan.id]: e.target.value,
-                                  }))
-                                }
-                                className="flex-1"
-                              />
-                            </div>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="flex-1 bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
-                                onClick={() =>
-                                  handleChallanStatusUpdate(
-                                    challan.id,
-                                    "verified",
-                                    challanRemarks[challan.id] || ""
-                                  )
-                                }
-                                disabled={isUpdatingChallan[challan.id]}
-                              >
-                                {isUpdatingChallan[challan.id] ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <>
-                                    <CheckCircle2 className="h-4 w-4 mr-1" />
-                                    Verify
-                                  </>
-                                )}
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="flex-1 bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
-                                onClick={() =>
-                                  handleChallanStatusUpdate(
-                                    challan.id,
-                                    "rejected",
-                                    challanRemarks[challan.id] || ""
-                                  )
-                                }
-                                disabled={isUpdatingChallan[challan.id]}
-                              >
-                                {isUpdatingChallan[challan.id] ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <>
-                                    <XCircle className="h-4 w-4 mr-1" />
-                                    Reject
-                                  </>
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </div>
           </DialogContent>
         </Dialog>
       </div>

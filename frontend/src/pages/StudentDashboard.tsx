@@ -43,6 +43,16 @@ const StudentDashboard: React.FC = () => {
   const [showAcademic, setShowAcademic] = useState(false);
   const [showHostel, setShowHostel] = useState(false);
 
+  // Filter academic dues to only show one entry per year (remove duplicates)
+  const uniqueAcademicDues = React.useMemo(() => {
+    const seenYears = new Set();
+    return academicDues.filter((due: any) => {
+      if (seenYears.has(due.academic_year_label)) return false;
+      seenYears.add(due.academic_year_label);
+      return true;
+    });
+  }, [academicDues]);
+
   useEffect(() => {
     const getDues = async () => {
       if (!accessToken) {
@@ -223,7 +233,7 @@ const StudentDashboard: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {academicDues.map((due: any) => (
+                  {uniqueAcademicDues.map((due: any) => (
                     <TableRow key={due.id}>
                       <TableCell>{due.academic_year_label}</TableCell>
                       <TableCell>₹{due.fee_structure?.tuition_fee}</TableCell>

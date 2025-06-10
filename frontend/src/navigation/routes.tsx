@@ -6,6 +6,7 @@ import StaffLoginPage from "../pages/StaffLoginPage";
 import StudentDashboard from "../pages/StudentDashboard";
 import StaffDashboard from "../pages/AccountsDues";
 import HostelDues from "../pages/HostelDues";
+import OthersDues from "../pages/OthersDues";
 
 const router = createBrowserRouter([
   {
@@ -53,6 +54,14 @@ const router = createBrowserRouter([
     element: (
       <AuthProvider>
         <HostelDues />
+      </AuthProvider>
+    ),
+  },
+  {
+    path: "/others-dues",
+    element: (
+      <AuthProvider>
+        <OthersDues />
       </AuthProvider>
     ),
   },
