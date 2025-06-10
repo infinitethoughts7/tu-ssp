@@ -19,7 +19,9 @@ import {
   DialogDescription,
 } from "../components/ui/dialog";
 import { Search, Plus, Briefcase, LogOut } from "lucide-react";
+import api from "../services/api";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 // TypeScript types
 
@@ -41,14 +43,20 @@ type OtherDue = {
   created_at: string;
 };
 
-const CATEGORY_MAP: Record<string, string> = {
+const CATEGORY_MAP: { [key: string]: string } = {
   librarian: "library",
   sports_incharge: "sports",
   lab_incharge: "lab",
 };
 
+const TITLE_MAP: { [key: string]: string } = {
+  librarian: "Student Library Dues",
+  sports_incharge: "Student Sports Dues",
+  lab_incharge: "Student Lab Dues",
+};
+
 export default function OthersDues() {
-  const { logout } = useAuth();
+  const { logout, accessToken } = useAuth();
   const [dues, setDues] = useState<OtherDue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,10 +69,14 @@ export default function OthersDues() {
   });
   const [staffProfile, setStaffProfile] = useState<StaffProfile | null>(null);
   const [category, setCategory] = useState("");
+  const [pageTitle, setPageTitle] = useState("Other Dues Dashboard");
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchStaffProfile();
-  }, []);
+    if (accessToken) {
+      fetchStaffProfile();
+    }
+  }, [accessToken]);
 
   useEffect(() => {
     if (category) {
@@ -74,24 +86,33 @@ export default function OthersDues() {
 
   const fetchStaffProfile = async () => {
     try {
-      const res = await axios.get("/api/staff/profile/");
-      setStaffProfile(res.data);
-      const dept = res.data.department;
-      const mappedCategory = CATEGORY_MAP[dept] || dept;
-      setCategory(mappedCategory);
-    } catch (err) {
-      setStaffProfile(null);
-      setError("Failed to load staff profile");
+      const response = await api.get("/staff/profile/");
+      const staffProfile = response.data;
+      console.log("Staff Profile:", staffProfile);
+
+      const department = staffProfile.department;
+      const category = CATEGORY_MAP[department] || "library";
+      const title = TITLE_MAP[department] || "Student Library Dues";
+
+      setCategory(category);
+      setPageTitle(title);
+      setStaffProfile(staffProfile);
+    } catch (error) {
+      console.error("Error fetching staff profile:", error);
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        navigate("/staff-login");
+      }
     }
   };
 
   const fetchDues = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`/api/dues/other-dues/?category=${category}`);
+      const res = await api.get(`/dues/other-dues/?category=${category}`);
       setDues(res.data);
       setError(null);
     } catch (err) {
+      console.error("Error fetching dues:", err);
       setError("Failed to fetch dues");
     } finally {
       setLoading(false);
@@ -100,7 +121,7 @@ export default function OthersDues() {
 
   const handleAddDue = async () => {
     try {
-      await axios.post("/api/dues/other-dues/", {
+      await api.post("/dues/other-dues/", {
         student: newDue.student_roll_number,
         category: category,
         amount: newDue.amount,
@@ -110,6 +131,7 @@ export default function OthersDues() {
       setNewDue({ student_roll_number: "", amount: "", remark: "" });
       fetchDues();
     } catch (err) {
+      console.error("Error adding due:", err);
       alert("Failed to add due");
     }
   };
@@ -180,9 +202,7 @@ export default function OthersDues() {
           </Card>
         )}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Other Dues Dashboard
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-900">{pageTitle}</h1>
           <div className="flex items-center space-x-4">
             <Button
               variant="outline"
@@ -269,7 +289,7 @@ export default function OthersDues() {
               onSubmit={async (e) => {
                 e.preventDefault();
                 try {
-                  await axios.post("/api/dues/other-dues/", {
+                  await api.post("/dues/other-dues/", {
                     student: newDue.student_roll_number,
                     amount: newDue.amount,
                     remark: newDue.remark,
@@ -282,6 +302,7 @@ export default function OthersDues() {
                   });
                   fetchDues();
                 } catch (err) {
+                  console.error("Error adding due:", err);
                   alert("Failed to add due");
                 }
               }}

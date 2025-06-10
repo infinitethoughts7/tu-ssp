@@ -15,6 +15,9 @@ urlpatterns = [
     # - For staff: department, designation, personal details
     path('profile/', views.UserProfileView.as_view(), name='user-profile'),
     
+    # Staff profile endpoint
     path('staff/profile/', views.staff_profile, name='staff-profile'),
+    
+    # Student search endpoint
     path('students/search/', views.search_students, name='search-students'),
 ] 

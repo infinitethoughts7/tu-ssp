@@ -102,7 +102,7 @@ class OtherDue(models.Model):
     student = models.ForeignKey(
         StudentProfile, on_delete=models.CASCADE, related_name='other_dues', null=True, blank=True
     )
-    department = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
     amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     remark = models.TextField(blank=True, null=True)
     created_by = models.ForeignKey(
@@ -112,10 +112,10 @@ class OtherDue(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('student', 'department')
+        unique_together = ('student', 'category')
 
     def __str__(self):
-        return f"{self.student} - {self.department} - {self.amount}"
+        return f"{self.student} - {self.category} - {self.amount}"
 
 
     

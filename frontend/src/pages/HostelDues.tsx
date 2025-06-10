@@ -29,6 +29,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import {
+  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -171,9 +172,22 @@ export default function HostelDues() {
       // Close the editing state
       setEditingDue(null);
     } catch (error) {
-      setUpdateError(
-        error instanceof Error ? error.message : "Failed to update due"
-      );
+      console.error("Error updating hostel due:", error);
+      if (error instanceof Error) {
+        if (
+          error.message.includes("session has expired") ||
+          error.message.includes("Please log in again")
+        ) {
+          // Clear tokens and redirect to login
+          localStorage.removeItem("staffAccessToken");
+          localStorage.removeItem("refreshToken");
+          navigate("/staff-login");
+        } else {
+          setUpdateError(error.message);
+        }
+      } else {
+        setUpdateError("Failed to update due");
+      }
     } finally {
       setUpdateLoading(false);
     }

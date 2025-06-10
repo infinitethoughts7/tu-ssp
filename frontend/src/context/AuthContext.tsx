@@ -9,6 +9,12 @@ interface ErrorResponse {
   error: string;
 }
 
+interface LoginCredentials {
+  email: string;
+  password: string;
+  userType: "staff" | "student";
+}
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const navigate = useNavigate();
   // Determine user type from URL or localStorage
@@ -57,13 +63,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const refreshAccessToken = useCallback(async () => {
     try {
       console.log("Attempting to refresh token...");
-      const response = await api.post("/auth/token/refresh/", {
+      const response = await api.post("/auth/refresh/", {
         refresh: refreshToken,
       });
       const newAccessToken = response.data.access;
       console.log("Token refresh successful");
+
+      // Store token based on user type
+      const userType = localStorage.getItem("userType") || "student";
+      if (userType === "staff") {
+        localStorage.setItem("staffAccessToken", newAccessToken);
+      } else {
+        localStorage.setItem("studentAccessToken", newAccessToken);
+      }
+
       setAccessToken(newAccessToken);
-      localStorage.setItem("accessToken", newAccessToken);
       // Update axios default headers
       api.defaults.headers.common["Authorization"] = `Bearer ${newAccessToken}`;
       return newAccessToken;
@@ -115,7 +129,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const studentToken = localStorage.getItem("studentAccessToken");
       if (!staffToken && !studentToken && refreshToken) {
         try {
-          const res = await api.post("/auth/token/refresh/", {
+          const res = await api.post("/auth/refresh/", {
             refresh: refreshToken,
           });
           if (localStorage.getItem("userType") === "staff") {
@@ -157,7 +171,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.log("API Endpoint:", endpoint);
 
       const response = await api.post(endpoint, credentials);
-
       console.log("Full Login Response:", response);
       console.log("Response Data:", response.data);
 
@@ -166,42 +179,46 @@ export function AuthProvider({ children }: AuthProviderProps) {
         throw new Error("Invalid response from server");
       }
 
-      const { access, refresh, department, redirect_to } = response.data;
+      const { access, refresh, department } = response.data;
+      console.log("Extracted data:", { department });
 
-      console.log("Extracted data:", { department, redirect_to });
-
-      setAccessToken(access);
-      setRefreshToken(refresh);
+      // Store tokens and set authorization header
       if (credentials.email) {
         localStorage.setItem("staffAccessToken", access);
-        localStorage.setItem(
-          "staffUserData",
-          JSON.stringify(response.data.profile || {})
-        );
+        localStorage.setItem("refreshToken", refresh);
+        localStorage.setItem("userType", "staff");
+        localStorage.setItem("department", department);
         // Clear student data on staff login
         localStorage.removeItem("studentAccessToken");
         localStorage.removeItem("studentUserData");
-        localStorage.setItem("userType", "staff");
+        // Set the Authorization header for future requests
+        api.defaults.headers.common["Authorization"] = `Bearer ${access}`;
+        setAccessToken(access);
+        setRefreshToken(refresh);
       } else {
         localStorage.setItem("studentAccessToken", access);
-        localStorage.setItem(
-          "studentUserData",
-          JSON.stringify(response.data.profile || {})
-        );
+        localStorage.setItem("refreshToken", refresh);
+        localStorage.setItem("userType", "student");
         // Clear staff data on student login
         localStorage.removeItem("staffAccessToken");
         localStorage.removeItem("staffUserData");
-        localStorage.setItem("userType", "student");
+        // Set the Authorization header for future requests
+        api.defaults.headers.common["Authorization"] = `Bearer ${access}`;
+        setAccessToken(access);
+        setRefreshToken(refresh);
       }
-      localStorage.setItem("refreshToken", refresh);
-      localStorage.setItem("department", department || "");
 
-      // Set the Authorization header for future requests
-      api.defaults.headers.common["Authorization"] = `Bearer ${access}`;
+      // Fetch user profile with the correct endpoint
+      const profileEndpoint = credentials.email
+        ? "/staff/profile/"
+        : "/student/profile/";
+      const profileResponse = await api.get(profileEndpoint, {
+        headers: {
+          Authorization: `Bearer ${access}`,
+        },
+      });
 
-      // Fetch user profile
-      const profileResponse = await api.get("/profile/");
-      const userData = profileResponse.data.profile;
+      const userData = profileResponse.data;
       setUser(userData);
       if (credentials.email) {
         localStorage.setItem("staffUserData", JSON.stringify(userData));
@@ -209,18 +226,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
         localStorage.setItem("studentUserData", JSON.stringify(userData));
       }
 
-      // Handle navigation
+      // Handle navigation based on department
       if (credentials.email) {
-        // For staff login, use redirect_to if provided, otherwise use department
-        if (redirect_to) {
-          // Remove trailing slash if present
-          const cleanPath = redirect_to.replace(/\/$/, "");
-          console.log("Navigating to clean path:", cleanPath);
-          navigate(cleanPath);
-        } else if (department) {
-          navigate(`/dashboard/${department}`);
-        } else {
-          navigate("/staff-dashboard");
+        switch (department) {
+          case "librarian":
+          case "sports_incharge":
+          case "lab_incharge":
+            navigate("/others-dues");
+            break;
+          case "hostel_superintendent":
+            navigate("/hostel-dues");
+            break;
+          case "accounts":
+            navigate("/accounts-dues");
+            break;
+          default:
+            console.warn(`Unknown department: ${department}`);
+            navigate("/staff-login");
         }
       } else {
         navigate("/student-dashboard");
@@ -229,13 +251,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.error("Login Error Details:", error);
       if (axios.isAxiosError(error)) {
         console.error("Axios Error Response:", error.response?.data);
-        console.error("Axios Error Status:", error.response?.status);
       }
-      const axiosError = error as AxiosError<ErrorResponse>;
-      const errorMessage =
-        axiosError.response?.data?.error ||
-        "Login failed. Please check your credentials.";
-      setError(errorMessage);
+      setError("Login failed. Please check your credentials.");
       throw error;
     } finally {
       setIsLoading(false);

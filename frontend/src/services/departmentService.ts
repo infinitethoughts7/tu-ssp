@@ -2,6 +2,24 @@ import api from "./api";
 import { isAxiosError } from "axios";
 import { DepartmentDue } from "../types/department";
 
+export interface HostelDue {
+  id: number;
+  student: {
+    roll_number: string;
+    full_name: string;
+    phone_number: string;
+    caste: string;
+    course: string;
+  };
+  year_of_study: string;
+  mess_bill: number;
+  scholarship: number;
+  deposit: number;
+  remarks: string;
+  total_amount: number;
+  due_amount: number;
+}
+
 export interface StaffProfile {
   name: string;
   designation: string;
@@ -316,35 +334,58 @@ export const getHostelDues = async (): Promise<any[]> => {
 export const updateHostelDue = async (
   dueId: number,
   data: {
-    mess_bill?: number;
-    scholarship?: number;
-    deposit?: number;
-    remarks?: string;
+    mess_bill: number;
+    scholarship: number;
+    deposit: number;
+    remarks: string;
   }
-): Promise<any> => {
-  try {
-    const accessToken = localStorage.getItem("accessToken");
-    if (!accessToken) {
-      throw new Error("No access token found. Please log in again.");
-    }
+): Promise<HostelDue> => {
+  const accessToken = localStorage.getItem("staffAccessToken");
+  const refreshToken = localStorage.getItem("refreshToken");
 
-    const response = await api.patch(`/dues/hostel-dues/${dueId}/`, data, {
+  if (!accessToken) {
+    throw new Error("No access token found. Please log in again.");
+  }
+
+  try {
+    const response = await api.put(`/dues/hostel-dues/${dueId}/`, data, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
     });
-
     return response.data;
-  } catch (error) {
-    console.error("Error updating hostel due:", error);
-    if (isAxiosError(error)) {
-      if (error.response?.status === 401) {
-        localStorage.removeItem("accessToken");
-        throw new Error("Your session has expired. Please log in again.");
+  } catch (error: any) {
+    // If 401, try to refresh token
+    if (isAxiosError(error) && error.response?.status === 401 && refreshToken) {
+      try {
+        // Attempt to refresh the token
+        const res = await api.post(`/auth/token/refresh/`, {
+          refresh: refreshToken,
+        });
+        const newAccessToken = res.data.access;
+        localStorage.setItem("staffAccessToken", newAccessToken);
+        api.defaults.headers.common[
+          "Authorization"
+        ] = `Bearer ${newAccessToken}`;
+
+        // Retry the original request with new token
+        const retryResponse = await api.put(
+          `/dues/hostel-dues/${dueId}/`,
+          data,
+          {
+            headers: {
+              Authorization: `Bearer ${newAccessToken}`,
+            },
+          }
+        );
+        return retryResponse.data;
+      } catch (refreshError) {
+        // Refresh failed, log out
+        localStorage.removeItem("staffAccessToken");
+        localStorage.removeItem("refreshToken");
+        window.location.href = "/staff-login";
+        throw new Error("Session expired. Please log in again.");
       }
-      throw new Error(
-        error.response?.data?.error || "Failed to update hostel due"
-      );
     }
     throw error;
   }

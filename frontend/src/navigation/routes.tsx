@@ -4,7 +4,7 @@ import HomePage from "../pages/HomePage";
 import StudentLoginPage from "../pages/StudentLoginPage";
 import StaffLoginPage from "../pages/StaffLoginPage";
 import StudentDashboard from "../pages/StudentDashboard";
-import StaffDashboard from "../pages/AccountsDues";
+import AccountsDues from "../pages/AccountsDues";
 import HostelDues from "../pages/HostelDues";
 import OthersDues from "../pages/OthersDues";
 
@@ -42,10 +42,10 @@ const router = createBrowserRouter([
     ),
   },
   {
-    path: "/dashboard/:department",
+    path: "/accounts-dues",
     element: (
       <AuthProvider>
-        <StaffDashboard />
+        <AccountsDues />
       </AuthProvider>
     ),
   },
