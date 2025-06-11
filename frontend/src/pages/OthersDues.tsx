@@ -60,7 +60,11 @@ type StaffProfile = {
 type OtherDue = {
   id: number;
   student_name: string;
-  student: string;
+  student: {
+    id: number;
+    roll_number: string;
+  };
+  student_course: string;
   category: string;
   amount: number;
   remark: string;
@@ -77,9 +81,9 @@ type StudentSuggestion = {
 };
 
 const CATEGORY_MAP: { [key: string]: string } = {
-  librarian: "library",
-  sports_incharge: "sports",
-  lab_incharge: "lab",
+  librarian: "librarian",
+  sports_incharge: "sports_incharge",
+  lab_incharge: "lab_incharge",
 };
 
 const TITLE_MAP: { [key: string]: string } = {
@@ -167,14 +171,13 @@ export default function OthersDues() {
       console.log("Searching with query:", query); // Debug log
 
       try {
-        // Use the roll number directly in the URL path
-        const response = await api.get(`/students/${query.trim()}/`);
+        // Use the search endpoint instead of direct roll number lookup
+        const response = await api.get(`/students/search/?q=${query.trim()}`);
 
         console.log("Search response:", response.data); // Debug log
 
-        if (response.data) {
-          // Convert single student response to array format
-          setStudentSuggestions([response.data]);
+        if (response.data && Array.isArray(response.data)) {
+          setStudentSuggestions(response.data);
         } else {
           setStudentSuggestions([]);
         }
@@ -222,18 +225,24 @@ export default function OthersDues() {
     if (!selectedStudent) return;
 
     try {
-      await api.post("/dues/other-dues/", {
-        student: selectedStudent.roll_number,
+      const requestData = {
+        student_roll_number: selectedStudent.roll_number,
         category: category,
-        amount: newDue.amount,
-        remark: newDue.remark,
-      });
+        amount: parseFloat(newDue.amount),
+        remark: newDue.remark || "",
+      };
+      console.log("Sending request data:", requestData); // Debug log
+      const response = await api.post("/dues/other-dues/", requestData);
+      console.log("Response:", response.data); // Debug log
       setShowAddDueModal(false);
       setNewDue({ student_roll_number: "", amount: "", remark: "" });
       setSelectedStudent(null);
       fetchDues();
     } catch (err) {
       console.error("Error adding due:", err);
+      if (axios.isAxiosError(err)) {
+        console.error("Error response data:", err.response?.data); // Debug log
+      }
       alert("Failed to add due");
     }
   };
@@ -256,7 +265,8 @@ export default function OthersDues() {
     return (
       !search ||
       (due.student_name && due.student_name.toLowerCase().includes(search)) ||
-      (due.student && due.student.toLowerCase().includes(search))
+      (due.student?.roll_number &&
+        due.student.roll_number.toLowerCase().includes(search))
     );
   });
 
@@ -398,21 +408,19 @@ export default function OthersDues() {
                   <TableHeader>
                     <TableRow className="bg-blue-50">
                       <TableHead>Student</TableHead>
-                      <TableHead>Category</TableHead>
+                      <TableHead>Course</TableHead>
                       <TableHead>Amount</TableHead>
                       <TableHead>Remark</TableHead>
-                      <TableHead>Assigned By</TableHead>
                       <TableHead>Date</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredDues.map((due) => (
                       <TableRow key={due.id}>
-                        <TableCell>{due.student_name || due.student}</TableCell>
-                        <TableCell>{due.category}</TableCell>
+                        <TableCell>{due.student_name}</TableCell>
+                        <TableCell>{due.student_course || "-"}</TableCell>
                         <TableCell>₹{due.amount}</TableCell>
                         <TableCell>{due.remark}</TableCell>
-                        <TableCell>{due.created_by_name}</TableCell>
                         <TableCell>
                           {new Date(due.created_at).toLocaleDateString()}
                         </TableCell>

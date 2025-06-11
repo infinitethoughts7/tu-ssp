@@ -172,6 +172,21 @@ class OtherDueViewSet(viewsets.ModelViewSet):
         queryset = OtherDue.objects.filter(category=category)
         return queryset
 
+    def create(self, request, *args, **kwargs):
+        try:
+            logger.info(f"Creating other due with data: {request.data}")
+            # Ensure category is set from staff's department if not provided
+            if 'category' not in request.data:
+                staff = request.user.staff_profile
+                request.data['category'] = self.CATEGORY_MAP.get(staff.department, staff.department)
+            return super().create(request, *args, **kwargs)
+        except Exception as e:
+            logger.error(f"Error creating other due: {str(e)}")
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user.staff_profile)
         

@@ -125,11 +125,25 @@ class HostelDuesSerializer(serializers.ModelSerializer):
 class OtherDueSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='student.user.get_full_name', read_only=True)
     created_by_name = serializers.CharField(source='created_by.user.get_full_name', read_only=True)
+    student_roll_number = serializers.CharField(write_only=True, required=True)
+    student_course = serializers.CharField(source='student.course', read_only=True)
 
     class Meta:
         model = OtherDue
         fields = [
-            'id', 'student', 'student_name', 'category', 'amount', 'remark',
-            'created_by', 'created_by_name', 'created_at', 'updated_at'
+            'id', 'student', 'student_roll_number', 'student_name', 'student_course',
+            'category', 'amount', 'remark', 'created_by', 'created_by_name',
+            'created_at', 'updated_at'
         ]
-        read_only_fields = ['created_at', 'updated_at', 'created_by_name', 'student_name']
+        read_only_fields = ['created_at', 'updated_at', 'created_by_name', 'student_name', 'student', 'student_course']
+
+    def create(self, validated_data):
+        student_roll = validated_data.pop('student_roll_number')
+        try:
+            student = StudentProfile.objects.get(roll_number=student_roll)
+            validated_data['student'] = student
+        except StudentProfile.DoesNotExist:
+            raise serializers.ValidationError({
+                'student_roll_number': f'No student found with roll number: {student_roll}'
+            })
+        return super().create(validated_data)
