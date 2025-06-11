@@ -191,20 +191,17 @@ class OtherDueViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         try:
             user = self.request.user
-            logger.info(f"Getting other dues for user: {user.username}")
-            
-            if hasattr(user, 'staffprofile'):
-                logger.info("User is staff, returning all dues")
-                return OtherDue.objects.all()
-            
+            logger.info(f"[OtherDueViewSet] User: {user}, id: {user.id}, username: {user.username}")
             if hasattr(user, 'studentprofile'):
                 student = user.studentprofile
-                logger.info(f"User is student with roll number: {student.roll_number}")
-                queryset = OtherDue.objects.filter(student=student)
-                logger.info(f"Found {queryset.count()} dues for student")
-                return queryset
-            
-            logger.warning(f"User {user.username} has no profile")
+                logger.info(f"[OtherDueViewSet] StudentProfile: {student}, id: {student.id}, roll_number: {student.roll_number}")
+                dues_qs = OtherDue.objects.filter(student=student)
+                logger.info(f"[OtherDueViewSet] Found {dues_qs.count()} dues for student {student.roll_number}: {list(dues_qs.values())}")
+                return dues_qs
+            if hasattr(user, 'staffprofile'):
+                logger.info("[OtherDueViewSet] User is staff, returning all dues")
+                return OtherDue.objects.all()
+            logger.warning(f"[OtherDueViewSet] User {user.username} has no profile")
             return OtherDue.objects.none()
         except Exception as e:
             logger.error(f"Error in get_queryset: {str(e)}", exc_info=True)

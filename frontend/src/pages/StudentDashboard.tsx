@@ -440,21 +440,28 @@ const StudentDashboard: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {hostelDues.map((due: any) => (
-                    <TableRow key={due.id}>
-                      <TableCell>{due.year_of_study}</TableCell>
-                      <TableCell>
-                        ₹{due.mess_bill?.toLocaleString() || "0"}
-                      </TableCell>
-                      <TableCell>
-                        ₹{due.scholarship?.toLocaleString() || "0"}
-                      </TableCell>
-                      <TableCell>
-                        ₹{due.deposit?.toLocaleString() || "0"}
-                      </TableCell>
-                      <TableCell>{due.remarks || "No remarks"}</TableCell>
-                    </TableRow>
-                  ))}
+                  {hostelDues
+                    .filter(
+                      (due: any) =>
+                        due.student?.roll_number
+                          ? due.student.roll_number === userProfile.roll_number
+                          : true // fallback: show if no student info
+                    )
+                    .map((due: any) => (
+                      <TableRow key={due.id}>
+                        <TableCell>{due.year_of_study}</TableCell>
+                        <TableCell>
+                          ₹{due.mess_bill?.toLocaleString() || "0"}
+                        </TableCell>
+                        <TableCell>
+                          ₹{due.scholarship?.toLocaleString() || "0"}
+                        </TableCell>
+                        <TableCell>
+                          ₹{due.deposit?.toLocaleString() || "0"}
+                        </TableCell>
+                        <TableCell>{due.remarks || "No remarks"}</TableCell>
+                      </TableRow>
+                    ))}
                 </TableBody>
               </Table>
               <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 mt-4 w-full">
