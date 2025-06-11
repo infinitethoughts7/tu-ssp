@@ -94,6 +94,11 @@ interface HostelDue {
   remarks: string;
 }
 
+interface AcademicDuesResponse {
+  results: AcademicDue[];
+  total_due_amount: number;
+}
+
 export default function StaffDashboard() {
   const { logout, accessToken } = useAuth();
   const navigate = useNavigate();
@@ -182,58 +187,74 @@ export default function StaffDashboard() {
 
   // Function to group academic dues by student
   const groupAcademicDuesByStudent = (dues: AcademicDue[]) => {
-    if (!Array.isArray(dues)) {
-      console.error("Invalid academic dues data:", dues);
+    console.log("Grouping academic dues:", dues);
+
+    if (!dues) {
+      console.error("Academic dues data is undefined or null");
       return [];
     }
 
-    const grouped = dues.reduce((acc: Record<string, any>, due) => {
-      // Skip if student is undefined
-      if (!due.student) {
-        console.warn("Skipping academic due with missing student:", due);
-        return acc;
-      }
+    if (!Array.isArray(dues)) {
+      console.error(
+        "Invalid academic dues data: Expected array but got",
+        typeof dues
+      );
+      return [];
+    }
 
-      const key = due.student.roll_number;
-      if (!key) {
-        console.warn("Skipping academic due with missing roll number:", due);
-        return acc;
-      }
-
-      if (!acc[key]) {
-        acc[key] = {
-          roll_numbers: [due.student.roll_number],
-          name: due.student.full_name || "N/A",
-          course: due.fee_structure?.course_name || "N/A",
-          phone_number: due.student.phone_number || "N/A",
-          caste: due.student.caste || "N/A",
-          dues: [],
-          totalAmount: 0,
-          unpaidAmount: 0,
-        };
-      }
-
-      acc[key].dues.push(due);
-      return acc;
-    }, {} as Record<string, any>);
-
-    // For each group, sum only unique years for totalAmount and unpaidAmount
-    Object.values(grouped).forEach((group: any) => {
-      const seenYears = new Set<string>();
-      group.totalAmount = 0;
-      group.unpaidAmount = 0;
-      group.dues.forEach((due: AcademicDue) => {
-        if (!seenYears.has(due.academic_year_label)) {
-          group.totalAmount += due.total_amount || 0;
-          if (due.payment_status === "Unpaid") {
-            group.unpaidAmount += due.unpaid_amount || 0;
-          }
-          seenYears.add(due.academic_year_label);
+    try {
+      const grouped = dues.reduce((acc: Record<string, any>, due) => {
+        // Validate due object structure
+        if (!due || typeof due !== "object") {
+          console.warn("Invalid due object:", due);
+          return acc;
         }
-      });
-    });
 
-    return Object.values(grouped);
+        // Skip if student is undefined or invalid
+        if (!due.student || typeof due.student !== "object") {
+          console.warn(
+            "Skipping academic due with invalid student object:",
+            due
+          );
+          return acc;
+        }
+
+        const key = due.student.roll_number;
+        if (!key || typeof key !== "string") {
+          console.warn("Skipping academic due with invalid roll number:", due);
+          return acc;
+        }
+
+        if (!acc[key]) {
+          acc[key] = {
+            roll_numbers: [due.student.roll_number],
+            name: due.student.full_name || "Unknown",
+            course: due.fee_structure?.course_name || "N/A",
+            caste: due.student.caste || "N/A",
+            phone_number: due.student.phone_number || "N/A",
+            dues: [],
+            totalAmount: 0,
+            unpaidAmount: 0,
+            user: due.student,
+          };
+        }
+
+        acc[key].dues.push(due);
+        acc[key].totalAmount += due.total_amount || 0;
+        if (due.payment_status === "Unpaid") {
+          acc[key].unpaidAmount += due.unpaid_amount || 0;
+        }
+
+        return acc;
+      }, {} as Record<string, any>);
+
+      const result = Object.values(grouped);
+      console.log("Grouped academic dues result:", result);
+      return result;
+    } catch (error) {
+      console.error("Error grouping academic dues:", error);
+      return [];
+    }
   };
 
   // Unified filter for both department and academic dues
@@ -343,9 +364,20 @@ export default function StaffDashboard() {
       setLoading(true);
       if (department === "accounts") {
         getAcademicDues()
-          .then((dues) => {
-            setAcademicDues(dues);
+          .then((response: AcademicDuesResponse) => {
+            // Handle the API response format
+            if (response && response.results) {
+              setAcademicDues(response.results);
+            } else {
+              console.error("Invalid academic dues response format:", response);
+              setAcademicDues([]);
+            }
             setShowAcademicDues(true);
+          })
+          .catch((error) => {
+            console.error("Failed to fetch academic dues:", error);
+            setError("Failed to fetch academic dues. Please try again later.");
+            setAcademicDues([]);
           })
           .finally(() => setLoading(false));
       } else {
@@ -998,8 +1030,8 @@ export default function StaffDashboard() {
                           paid_by_student: dueToUpdate.paid_by_student || 0,
                         });
                         // Refresh academic dues
-                        const dues = await getAcademicDues();
-                        setAcademicDues(dues);
+                        const response = await getAcademicDues();
+                        setAcademicDues(response.results);
                         setShowUpdateDueModal(false);
                       } catch (err) {
                         alert("Failed to update due.");

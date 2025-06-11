@@ -1,6 +1,7 @@
 import api from "./api";
 import { isAxiosError } from "axios";
 import { DepartmentDue } from "../types/department";
+import { AcademicDue } from "../types/staffDashboardTypes";
 
 export interface HostelDue {
   id: number;
@@ -34,6 +35,11 @@ export interface AddDueData {
   due_date: string;
   description: string;
   department: string;
+}
+
+export interface AcademicDuesResponse {
+  results: AcademicDue[];
+  total_due_amount: number;
 }
 
 export const getDepartmentDues = async (
@@ -227,19 +233,34 @@ export const searchStudentsByRollNumber = async (
   }
 };
 
-export const getAcademicDues = async (): Promise<any[]> => {
+export const getAcademicDues = async (): Promise<AcademicDuesResponse> => {
   try {
     const accessToken =
-      localStorage.getItem("studentAccessToken") ||
-      localStorage.getItem("staffAccessToken");
-    const response = await api.get(`/dues/academic-dues/`, {
+      localStorage.getItem("staffAccessToken") ||
+      localStorage.getItem("studentAccessToken");
+    if (!accessToken) {
+      throw new Error("No access token found. Please log in again.");
+    }
+
+    const response = await api.get("/dues/academic-dues/", {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
     });
+
     return response.data;
   } catch (error) {
     console.error("Error fetching academic dues:", error);
+    if (isAxiosError(error)) {
+      if (error.response?.status === 401) {
+        // Clear the invalid token
+        localStorage.removeItem("studentAccessToken");
+        localStorage.removeItem("staffAccessToken");
+        throw new Error("Your session has expired. Please log in again.");
+      } else if (error.response?.status === 403) {
+        throw new Error("You don't have permission to view academic dues");
+      }
+    }
     throw error;
   }
 };

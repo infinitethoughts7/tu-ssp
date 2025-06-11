@@ -150,11 +150,12 @@ export default function OthersDues() {
     setLoading(true);
     try {
       const res = await api.get(`/dues/other-dues/?category=${category}`);
-      setDues(res.data);
+      setDues(Array.isArray(res.data) ? res.data : []);
       setError(null);
     } catch (err) {
       console.error("Error fetching dues:", err);
       setError("Failed to fetch dues");
+      setDues([]);
     } finally {
       setLoading(false);
     }
@@ -260,15 +261,18 @@ export default function OthersDues() {
     }
   };
 
-  const filteredDues = dues.filter((due) => {
-    const search = searchTerm.trim().toLowerCase();
-    return (
-      !search ||
-      (due.student_name && due.student_name.toLowerCase().includes(search)) ||
-      (due.student?.roll_number &&
-        due.student.roll_number.toLowerCase().includes(search))
-    );
-  });
+  const filteredDues = Array.isArray(dues)
+    ? dues.filter((due) => {
+        const search = searchTerm.trim().toLowerCase();
+        return (
+          !search ||
+          (due.student_name &&
+            due.student_name.toLowerCase().includes(search)) ||
+          (due.student?.roll_number &&
+            due.student.roll_number.toLowerCase().includes(search))
+        );
+      })
+    : [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
