@@ -95,6 +95,18 @@ const StudentDashboard: React.FC = () => {
     );
   }, [uniqueAcademicDues]);
 
+  // Calculate total hostel due by summing due_amounts for the current student
+  const totalHostelDue = React.useMemo(() => {
+    return hostelDues
+      .filter(
+        (due: any) => due.student?.roll_number === userProfile.roll_number
+      )
+      .reduce((sum, due) => sum + (due.due_amount || 0), 0);
+  }, [hostelDues, userProfile.roll_number]);
+
+  // Sum both for total outstanding
+  const totalOutstanding = totalAcademicDue + totalHostelDue;
+
   const fetchOtherDues = async () => {
     try {
       console.log("Fetching other dues...");
@@ -294,7 +306,7 @@ const StudentDashboard: React.FC = () => {
         {/* Profile Card */}
         <Card className="border-none shadow-lg bg-white mb-8">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-4">
                 <Avatar className="h-16 w-16">
                   <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white text-xl">
@@ -313,10 +325,10 @@ const StudentDashboard: React.FC = () => {
                   <p className="text-gray-600">{userProfile?.course}</p>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-right sm:text-right">
                 <p className="text-sm text-gray-500">Total Outstanding</p>
                 <p className="text-3xl font-bold text-red-600">
-                  ₹{totalDues.grand_total}
+                  ₹{totalOutstanding.toLocaleString()}
                 </p>
               </div>
             </div>
