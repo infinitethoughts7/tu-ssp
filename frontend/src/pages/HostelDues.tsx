@@ -97,6 +97,9 @@ export default function HostelDues() {
   const [editingDue, setEditingDue] = useState<HostelDue | null>(null);
   const [updateLoading, setUpdateLoading] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [showMessBillDialog, setShowMessBillDialog] = useState(false);
+  const [messBillAmount, setMessBillAmount] = useState("");
+  const [messBillDate, setMessBillDate] = useState("");
 
   // Function to group hostel dues by student
   const groupHostelDuesByStudent = (
@@ -268,15 +271,69 @@ export default function HostelDues() {
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            onClick={logout}
-            className="hover:bg-red-50 hover:text-red-600 hover:border-red-200"
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
+          <div className="flex items-center space-x-4">
+            <Button
+              onClick={() => setShowMessBillDialog(true)}
+              className="bg-gradient-to-r from-purple-500 to-blue-500 text-white font-semibold px-5 py-2 rounded-lg shadow hover:from-blue-600 hover:to-purple-600 transition-all duration-200"
+            >
+              Monthly Mess Bill
+            </Button>
+            <Button
+              variant="outline"
+              onClick={logout}
+              className="hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </div>
         </div>
+
+        {/* Monthly Mess Bill Dialog */}
+        <Dialog open={showMessBillDialog} onOpenChange={setShowMessBillDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Monthly Mess Bill</DialogTitle>
+              <DialogDescription>
+                Enter the mess bill amount and date for this month.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Amount
+                </label>
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="Enter amount"
+                  value={messBillAmount}
+                  onChange={(e) => setMessBillAmount(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date
+                </label>
+                <Input
+                  type="date"
+                  value={messBillDate}
+                  onChange={(e) => setMessBillDate(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <Button
+                  onClick={() => setShowMessBillDialog(false)}
+                  className="bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold px-6 py-2 rounded-lg shadow hover:from-purple-600 hover:to-blue-600 transition-all duration-200"
+                >
+                  Submit
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {error && (
           <Card className="mb-6 border-red-200 bg-red-50">
