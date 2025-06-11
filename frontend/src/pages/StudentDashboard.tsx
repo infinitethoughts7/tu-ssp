@@ -422,7 +422,19 @@ const StudentDashboard: React.FC = () => {
               <div className="text-right">
                 <p className="text-sm text-gray-500">Total Due</p>
                 <p className="text-xl font-bold text-red-600">
-                  ₹{totalDues.hostel_total}
+                  {(() => {
+                    const myHostelDue = hostelDues.find(
+                      (due: any) =>
+                        due.student?.roll_number === userProfile.roll_number
+                    );
+                    if (
+                      myHostelDue &&
+                      typeof myHostelDue.total_hostel_due === "number"
+                    ) {
+                      return `₹${myHostelDue.total_hostel_due.toLocaleString()}`;
+                    }
+                    return `₹${totalDues.hostel_total}`;
+                  })()}
                 </p>
               </div>
             </div>

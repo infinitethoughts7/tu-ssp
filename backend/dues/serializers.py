@@ -78,12 +78,13 @@ class HostelDuesSerializer(serializers.ModelSerializer):
     student = StudentProfileSerializer(read_only=True)
     total_amount = serializers.SerializerMethodField()
     due_amount = serializers.SerializerMethodField()
+    total_hostel_due = serializers.SerializerMethodField()
 
     class Meta:
         model = HostelDues
         fields = [
             'id', 'student', 'year_of_study', 'mess_bill', 'scholarship',
-            'deposit', 'remarks', 'total_amount', 'due_amount'
+            'deposit', 'remarks', 'total_amount', 'due_amount', 'total_hostel_due'
         ]
 
     def get_total_amount(self, obj):
@@ -94,6 +95,14 @@ class HostelDuesSerializer(serializers.ModelSerializer):
         scholarship = obj.scholarship or 0
         deposit = obj.deposit or 0
         return mess_bill - (scholarship + deposit)
+
+    def get_total_hostel_due(self, obj):
+        # Sum due_amount for all hostel dues for this student
+        if not obj.student:
+            return 0
+        dues = obj.__class__.objects.filter(student=obj.student)
+        total_due = sum((due.mess_bill or 0) - ((due.scholarship or 0) + (due.deposit or 0)) for due in dues)
+        return total_due
 
 # class ChallanSerializer(serializers.ModelSerializer):
 #     student_roll_number = serializers.CharField(write_only=True, required=True)
