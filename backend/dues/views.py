@@ -153,51 +153,82 @@ class OtherDueViewSet(viewsets.ModelViewSet):
     serializer_class = OtherDueSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        user = self.request.user
-        logger.info(f"Getting other dues for user: {user.username}")
-        logger.info(f"User type: {type(user)}")
-        logger.info(f"User attributes: {dir(user)}")
-        
-        # For staff users, return all dues
-        if hasattr(user, 'staffprofile'):
-            logger.info("User is staff, returning all dues")
-            return OtherDue.objects.all()
-        
-        # For student users, return only their dues
+    def get_total_dues(self, student):
         try:
-            # Try to get student profile directly
-            student = StudentProfile.objects.get(user=user)
-            logger.info(f"Found student profile with roll number: {student.roll_number}")
+            # Get academic dues
+            academic_dues = Academic.objects.filter(student=student)
+            academic_total = sum(due.due_amount or 0 for due in academic_dues)
+
+            # Get hostel dues
+            hostel_dues = HostelDues.objects.filter(student=student)
+            hostel_total = sum((due.mess_bill or 0) - ((due.scholarship or 0) + (due.deposit or 0)) for due in hostel_dues)
+
+            # Get other dues by category
+            other_dues = OtherDue.objects.filter(student=student)
+            library_total = sum(due.amount or 0 for due in other_dues.filter(category='librarian'))
+            lab_total = sum(due.amount or 0 for due in other_dues.filter(category='lab_incharge'))
+            sports_total = sum(due.amount or 0 for due in other_dues.filter(category='sports_incharge'))
+
+            return {
+                'academic_total': academic_total,
+                'hostel_total': hostel_total,
+                'library_total': library_total,
+                'lab_total': lab_total,
+                'sports_total': sports_total,
+                'grand_total': academic_total + hostel_total + library_total + lab_total + sports_total
+            }
+        except Exception as e:
+            logger.error(f"Error calculating total dues: {str(e)}")
+            return {
+                'academic_total': 0,
+                'hostel_total': 0,
+                'library_total': 0,
+                'lab_total': 0,
+                'sports_total': 0,
+                'grand_total': 0
+            }
+
+    def get_queryset(self):
+        try:
+            user = self.request.user
+            logger.info(f"Getting other dues for user: {user.username}")
             
-            # Get all dues for this student
-            queryset = OtherDue.objects.filter(
-                Q(student=student) |  # Match by student object
-                Q(student__roll_number=student.roll_number)  # Match by roll number
-            ).select_related('student', 'created_by')
+            if hasattr(user, 'staffprofile'):
+                logger.info("User is staff, returning all dues")
+                return OtherDue.objects.all()
             
-            logger.info(f"Found {queryset.count()} dues for student")
+            if hasattr(user, 'studentprofile'):
+                student = user.studentprofile
+                logger.info(f"User is student with roll number: {student.roll_number}")
+                queryset = OtherDue.objects.filter(student=student)
+                logger.info(f"Found {queryset.count()} dues for student")
+                return queryset
             
-            # Log the actual dues found
-            for due in queryset:
-                logger.info(f"Due found - ID: {due.id}, Category: {due.category}, Amount: {due.amount}, Student: {due.student.roll_number}")
-            
-            return queryset
-            
-        except StudentProfile.DoesNotExist:
-            logger.warning(f"No student profile found for user {user.username}")
+            logger.warning(f"User {user.username} has no profile")
             return OtherDue.objects.none()
         except Exception as e:
-            logger.error(f"Error getting student profile: {str(e)}")
-            return OtherDue.objects.none()
+            logger.error(f"Error in get_queryset: {str(e)}", exc_info=True)
+            raise
 
     def list(self, request, *args, **kwargs):
         try:
             queryset = self.get_queryset()
             serializer = self.get_serializer(queryset, many=True)
-            logger.info(f"Returning {len(serializer.data)} dues in response")
-            logger.info(f"Serialized data: {serializer.data}")
-            return Response(serializer.data)
+            
+            # Get total dues if user is a student
+            total_dues = {}
+            if hasattr(request.user, 'studentprofile'):
+                student = request.user.studentprofile
+                total_dues = self.get_total_dues(student)
+            
+            response_data = {
+                'dues': serializer.data,
+                'total_dues': total_dues
+            }
+            
+            logger.info(f"Returning response with {len(serializer.data)} dues")
+            return Response(response_data)
+            
         except Exception as e:
             logger.error(f"Error in list view: {str(e)}")
             return Response(

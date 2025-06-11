@@ -38,9 +38,20 @@ import {
   PopoverContent,
 } from "../components/ui/popover";
 import axios from "axios";
+import { Avatar, AvatarFallback } from "../components/ui/avatar";
+
+interface UserProfile {
+  user: {
+    first_name: string;
+    last_name: string;
+  };
+  roll_number: string;
+  course: string;
+}
 
 const StudentDashboard: React.FC = () => {
   const { logout, accessToken, user } = useAuth();
+  const userProfile = user as unknown as UserProfile;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [academicDues, setAcademicDues] = useState<any[]>([]);
@@ -51,6 +62,14 @@ const StudentDashboard: React.FC = () => {
   const [showLibrary, setShowLibrary] = useState(false);
   const [showLab, setShowLab] = useState(false);
   const [showSports, setShowSports] = useState(false);
+  const [totalDues, setTotalDues] = useState({
+    academic_total: 0,
+    hostel_total: 0,
+    library_total: 0,
+    lab_total: 0,
+    sports_total: 0,
+    grand_total: 0,
+  });
 
   // Add logging for user profile
   useEffect(() => {
@@ -76,24 +95,14 @@ const StudentDashboard: React.FC = () => {
 
       const response = await api.get("/dues/other-dues/");
       console.log("Other dues response:", response.data);
-      console.log("Response status:", response.status);
-      console.log("Response headers:", response.headers);
 
-      if (response.data && Array.isArray(response.data)) {
-        // Group dues by category
-        const groupedDues = response.data.reduce((acc, due) => {
-          if (!acc[due.category]) {
-            acc[due.category] = [];
-          }
-          acc[due.category].push(due);
-          return acc;
-        }, {});
-
-        console.log("Grouped dues:", groupedDues);
-        console.log("Setting otherDues state with:", response.data);
-        setOtherDues(response.data);
-      } else {
-        console.warn("Response data is not an array:", response.data);
+      if (
+        response.data &&
+        response.data.dues &&
+        Array.isArray(response.data.dues)
+      ) {
+        setOtherDues(response.data.dues);
+        setTotalDues(response.data.total_dues);
       }
     } catch (error) {
       console.error("Error fetching other dues:", error);
@@ -200,8 +209,8 @@ const StudentDashboard: React.FC = () => {
                 <button className="flex items-center gap-2 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full p-2 px-5 focus:outline-none focus:ring-2 focus:ring-blue-400">
                   <User className="h-7 w-7 text-white" />
                   <span className="text-base font-semibold text-white hidden sm:block">
-                    {(user as any)?.user?.first_name}{" "}
-                    {(user as any)?.user?.last_name}
+                    {userProfile?.user?.first_name}{" "}
+                    {userProfile?.user?.last_name}
                   </span>
                 </button>
               </PopoverTrigger>
@@ -217,8 +226,8 @@ const StudentDashboard: React.FC = () => {
                         Name
                       </div>
                       <div className="text-base font-semibold text-gray-900">
-                        {(user as any)?.user?.first_name}{" "}
-                        {(user as any)?.user?.last_name}
+                        {userProfile?.user?.first_name}{" "}
+                        {userProfile?.user?.last_name}
                       </div>
                     </div>
                   </div>
@@ -232,7 +241,7 @@ const StudentDashboard: React.FC = () => {
                         Roll Number
                       </div>
                       <div className="text-base font-semibold text-gray-900">
-                        {(user as any)?.roll_number}
+                        {userProfile?.roll_number}
                       </div>
                     </div>
                   </div>
@@ -246,7 +255,7 @@ const StudentDashboard: React.FC = () => {
                         Department
                       </div>
                       <div className="text-base font-semibold text-gray-900">
-                        {(user as any)?.course}
+                        {userProfile?.course}
                       </div>
                     </div>
                   </div>
@@ -265,24 +274,64 @@ const StudentDashboard: React.FC = () => {
         </div>
       </header>
       <main className="container mx-auto px-6 py-8">
+        {/* Profile Card */}
+        <Card className="border-none shadow-lg bg-white mb-8">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white text-xl">
+                    {userProfile?.user?.first_name?.[0]}
+                    {userProfile?.user?.last_name?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {userProfile?.user?.first_name}{" "}
+                    {userProfile?.user?.last_name}
+                  </h2>
+                  <p className="text-gray-600">
+                    Roll No: {userProfile?.roll_number}
+                  </p>
+                  <p className="text-gray-600">{userProfile?.course}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-500">Total Outstanding</p>
+                <p className="text-3xl font-bold text-red-600">
+                  ₹{totalDues.grand_total}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Academic Dues Section */}
         <Card className="border-none shadow-lg bg-white mb-8">
           <CardHeader
             onClick={() => setShowAcademic((prev) => !prev)}
             className="cursor-pointer select-none"
           >
-            <div className="flex items-center gap-3">
-              <div className="bg-blue-700 p-2 rounded-lg shadow-md">
-                <School className="h-5 w-5 text-white" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-blue-700 p-2 rounded-lg shadow-md">
+                  <School className="h-5 w-5 text-white" />
+                </div>
+                <CardTitle className="text-gray-800 flex items-center gap-2">
+                  Academic Dues
+                  {showAcademic ? (
+                    <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-200" />
+                  ) : (
+                    <ChevronRight className="h-5 w-5 text-gray-500 transition-transform duration-200" />
+                  )}
+                </CardTitle>
               </div>
-              <CardTitle className="text-gray-800 flex items-center gap-2">
-                Academic Dues
-                {showAcademic ? (
-                  <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-200" />
-                ) : (
-                  <ChevronRight className="h-5 w-5 text-gray-500 transition-transform duration-200" />
-                )}
-              </CardTitle>
+              <div className="text-right">
+                <p className="text-sm text-gray-500">Total Due</p>
+                <p className="text-xl font-bold text-red-600">
+                  ₹{totalDues.academic_total}
+                </p>
+              </div>
             </div>
           </CardHeader>
           {showAcademic && (
@@ -304,12 +353,28 @@ const StudentDashboard: React.FC = () => {
                   {uniqueAcademicDues.map((due: any) => (
                     <TableRow key={due.id}>
                       <TableCell>{due.academic_year_label}</TableCell>
-                      <TableCell>₹{due.fee_structure?.tuition_fee}</TableCell>
-                      <TableCell>₹{due.fee_structure?.special_fee}</TableCell>
-                      <TableCell>₹{due.fee_structure?.exam_fee}</TableCell>
-                      <TableCell>₹{due.paid_by_govt}</TableCell>
-                      <TableCell>₹{due.paid_by_student}</TableCell>
-                      <TableCell>₹{due.due_amount}</TableCell>
+                      <TableCell>
+                        ₹
+                        {due.fee_structure?.tuition_fee?.toLocaleString() ||
+                          "0"}
+                      </TableCell>
+                      <TableCell>
+                        ₹
+                        {due.fee_structure?.special_fee?.toLocaleString() ||
+                          "0"}
+                      </TableCell>
+                      <TableCell>
+                        ₹{due.fee_structure?.exam_fee?.toLocaleString() || "0"}
+                      </TableCell>
+                      <TableCell>
+                        ₹{due.paid_by_govt?.toLocaleString() || "0"}
+                      </TableCell>
+                      <TableCell>
+                        ₹{due.paid_by_student?.toLocaleString() || "0"}
+                      </TableCell>
+                      <TableCell>
+                        ₹{due.due_amount?.toLocaleString() || "0"}
+                      </TableCell>
                       <TableCell>
                         {due.payment_status === "Unpaid" ? (
                           <span className="text-red-600 font-semibold">
@@ -335,23 +400,31 @@ const StudentDashboard: React.FC = () => {
           )}
         </Card>
         {/* Hostel Dues Section */}
-        <Card className="border-none shadow-lg bg-white">
+        <Card className="border-none shadow-lg bg-white mb-8">
           <CardHeader
             onClick={() => setShowHostel((prev) => !prev)}
             className="cursor-pointer select-none"
           >
-            <div className="flex items-center gap-3">
-              <div className="bg-purple-700 p-2 rounded-lg shadow-md">
-                <Home className="h-5 w-5 text-white" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-purple-700 p-2 rounded-lg shadow-md">
+                  <Home className="h-5 w-5 text-white" />
+                </div>
+                <CardTitle className="text-gray-800 flex items-center gap-2">
+                  Hostel Dues
+                  {showHostel ? (
+                    <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-200" />
+                  ) : (
+                    <ChevronRight className="h-5 w-5 text-gray-500 transition-transform duration-200" />
+                  )}
+                </CardTitle>
               </div>
-              <CardTitle className="text-gray-800 flex items-center gap-2">
-                Hostel Dues
-                {showHostel ? (
-                  <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-200" />
-                ) : (
-                  <ChevronRight className="h-5 w-5 text-gray-500 transition-transform duration-200" />
-                )}
-              </CardTitle>
+              <div className="text-right">
+                <p className="text-sm text-gray-500">Total Due</p>
+                <p className="text-xl font-bold text-red-600">
+                  ₹{totalDues.hostel_total}
+                </p>
+              </div>
             </div>
           </CardHeader>
           {showHostel && (
@@ -370,10 +443,16 @@ const StudentDashboard: React.FC = () => {
                   {hostelDues.map((due: any) => (
                     <TableRow key={due.id}>
                       <TableCell>{due.year_of_study}</TableCell>
-                      <TableCell>₹{due.mess_bill}</TableCell>
-                      <TableCell>₹{due.scholarship}</TableCell>
-                      <TableCell>₹{due.deposit}</TableCell>
-                      <TableCell>{due.remarks}</TableCell>
+                      <TableCell>
+                        ₹{due.mess_bill?.toLocaleString() || "0"}
+                      </TableCell>
+                      <TableCell>
+                        ₹{due.scholarship?.toLocaleString() || "0"}
+                      </TableCell>
+                      <TableCell>
+                        ₹{due.deposit?.toLocaleString() || "0"}
+                      </TableCell>
+                      <TableCell>{due.remarks || "No remarks"}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -389,23 +468,31 @@ const StudentDashboard: React.FC = () => {
         </Card>
 
         {/* Library Dues Section */}
-        <Card className="border-none shadow-lg bg-white mt-8">
+        <Card className="border-none shadow-lg bg-white mb-8">
           <CardHeader
             onClick={() => setShowLibrary((prev) => !prev)}
             className="cursor-pointer select-none"
           >
-            <div className="flex items-center gap-3">
-              <div className="bg-blue-600 p-2 rounded-lg shadow-md">
-                <BookOpen className="h-5 w-5 text-white" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-blue-600 p-2 rounded-lg shadow-md">
+                  <BookOpen className="h-5 w-5 text-white" />
+                </div>
+                <CardTitle className="text-gray-800 flex items-center gap-2">
+                  Library Dues
+                  {showLibrary ? (
+                    <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-200" />
+                  ) : (
+                    <ChevronRight className="h-5 w-5 text-gray-500 transition-transform duration-200" />
+                  )}
+                </CardTitle>
               </div>
-              <CardTitle className="text-gray-800 flex items-center gap-2">
-                Library Dues
-                {showLibrary ? (
-                  <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-200" />
-                ) : (
-                  <ChevronRight className="h-5 w-5 text-gray-500 transition-transform duration-200" />
-                )}
-              </CardTitle>
+              <div className="text-right">
+                <p className="text-sm text-gray-500">Total Due</p>
+                <p className="text-xl font-bold text-red-600">
+                  ₹{totalDues.library_total}
+                </p>
+              </div>
             </div>
           </CardHeader>
           {showLibrary && (
@@ -424,13 +511,17 @@ const StudentDashboard: React.FC = () => {
                     .filter((due) => due.category === "librarian")
                     .map((due, index) => (
                       <TableRow key={index}>
-                        <TableCell>₹{due.amount || 0}</TableCell>
+                        <TableCell>
+                          ₹{due.amount?.toLocaleString() || "0"}
+                        </TableCell>
                         <TableCell>{due.remark || "No library dues"}</TableCell>
                         <TableCell>
-                          {new Date(due.created_at).toLocaleDateString()}
+                          {due.created_at
+                            ? new Date(due.created_at).toLocaleDateString()
+                            : "-"}
                         </TableCell>
                         <TableCell>
-                          {due.amount > 0 ? (
+                          {due.amount && due.amount > 0 ? (
                             <span className="text-red-600 font-semibold">
                               Unpaid
                             </span>
@@ -468,23 +559,31 @@ const StudentDashboard: React.FC = () => {
         </Card>
 
         {/* Lab Dues Section */}
-        <Card className="border-none shadow-lg bg-white mt-8">
+        <Card className="border-none shadow-lg bg-white mb-8">
           <CardHeader
             onClick={() => setShowLab((prev) => !prev)}
             className="cursor-pointer select-none"
           >
-            <div className="flex items-center gap-3">
-              <div className="bg-purple-600 p-2 rounded-lg shadow-md">
-                <Beaker className="h-5 w-5 text-white" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-purple-600 p-2 rounded-lg shadow-md">
+                  <Beaker className="h-5 w-5 text-white" />
+                </div>
+                <CardTitle className="text-gray-800 flex items-center gap-2">
+                  Lab Dues
+                  {showLab ? (
+                    <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-200" />
+                  ) : (
+                    <ChevronRight className="h-5 w-5 text-gray-500 transition-transform duration-200" />
+                  )}
+                </CardTitle>
               </div>
-              <CardTitle className="text-gray-800 flex items-center gap-2">
-                Lab Dues
-                {showLab ? (
-                  <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-200" />
-                ) : (
-                  <ChevronRight className="h-5 w-5 text-gray-500 transition-transform duration-200" />
-                )}
-              </CardTitle>
+              <div className="text-right">
+                <p className="text-sm text-gray-500">Total Due</p>
+                <p className="text-xl font-bold text-red-600">
+                  ₹{totalDues.lab_total}
+                </p>
+              </div>
             </div>
           </CardHeader>
           {showLab && (
@@ -503,13 +602,17 @@ const StudentDashboard: React.FC = () => {
                     .filter((due) => due.category === "lab_incharge")
                     .map((due, index) => (
                       <TableRow key={index}>
-                        <TableCell>₹{due.amount || 0}</TableCell>
+                        <TableCell>
+                          ₹{due.amount?.toLocaleString() || "0"}
+                        </TableCell>
                         <TableCell>{due.remark || "No lab dues"}</TableCell>
                         <TableCell>
-                          {new Date(due.created_at).toLocaleDateString()}
+                          {due.created_at
+                            ? new Date(due.created_at).toLocaleDateString()
+                            : "-"}
                         </TableCell>
                         <TableCell>
-                          {due.amount > 0 ? (
+                          {due.amount && due.amount > 0 ? (
                             <span className="text-red-600 font-semibold">
                               Unpaid
                             </span>
@@ -547,23 +650,31 @@ const StudentDashboard: React.FC = () => {
         </Card>
 
         {/* Sports Dues Section */}
-        <Card className="border-none shadow-lg bg-white mt-8">
+        <Card className="border-none shadow-lg bg-white mb-8">
           <CardHeader
             onClick={() => setShowSports((prev) => !prev)}
             className="cursor-pointer select-none"
           >
-            <div className="flex items-center gap-3">
-              <div className="bg-yellow-600 p-2 rounded-lg shadow-md">
-                <Trophy className="h-5 w-5 text-white" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-yellow-600 p-2 rounded-lg shadow-md">
+                  <Trophy className="h-5 w-5 text-white" />
+                </div>
+                <CardTitle className="text-gray-800 flex items-center gap-2">
+                  Sports Dues
+                  {showSports ? (
+                    <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-200" />
+                  ) : (
+                    <ChevronRight className="h-5 w-5 text-gray-500 transition-transform duration-200" />
+                  )}
+                </CardTitle>
               </div>
-              <CardTitle className="text-gray-800 flex items-center gap-2">
-                Sports Dues
-                {showSports ? (
-                  <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-200" />
-                ) : (
-                  <ChevronRight className="h-5 w-5 text-gray-500 transition-transform duration-200" />
-                )}
-              </CardTitle>
+              <div className="text-right">
+                <p className="text-sm text-gray-500">Total Due</p>
+                <p className="text-xl font-bold text-red-600">
+                  ₹{totalDues.sports_total}
+                </p>
+              </div>
             </div>
           </CardHeader>
           {showSports && (
@@ -582,13 +693,17 @@ const StudentDashboard: React.FC = () => {
                     .filter((due) => due.category === "sports_incharge")
                     .map((due, index) => (
                       <TableRow key={index}>
-                        <TableCell>₹{due.amount || 0}</TableCell>
+                        <TableCell>
+                          ₹{due.amount?.toLocaleString() || "0"}
+                        </TableCell>
                         <TableCell>{due.remark || "No sports dues"}</TableCell>
                         <TableCell>
-                          {new Date(due.created_at).toLocaleDateString()}
+                          {due.created_at
+                            ? new Date(due.created_at).toLocaleDateString()
+                            : "-"}
                         </TableCell>
                         <TableCell>
-                          {due.amount > 0 ? (
+                          {due.amount && due.amount > 0 ? (
                             <span className="text-red-600 font-semibold">
                               Unpaid
                             </span>
