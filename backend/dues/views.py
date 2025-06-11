@@ -150,43 +150,61 @@ class HostelDuesViewSet(viewsets.ModelViewSet):
 #             serializer.save()
 
 class OtherDueViewSet(viewsets.ModelViewSet):
-    queryset = OtherDue.objects.all()
     serializer_class = OtherDueSerializer
     permission_classes = [IsAuthenticated]
 
-    CATEGORY_MAP = {
-        'librarian': 'library',
-        'sports_incharge': 'sports',
-        'lab_incharge': 'lab',
-    }
-
     def get_queryset(self):
         user = self.request.user
-        if not user.is_authenticated or not hasattr(user, 'staff_profile'):
-            return OtherDue.objects.none()
-        staff = user.staff_profile
-        category = self.request.query_params.get('category')
-        # If no category is provided, use the staff's department mapping
-        if not category:
-            category = self.CATEGORY_MAP.get(staff.department, staff.department)
-        queryset = OtherDue.objects.filter(category=category)
-        return queryset
-
-    def create(self, request, *args, **kwargs):
+        logger.info(f"Getting other dues for user: {user.username}")
+        logger.info(f"User type: {type(user)}")
+        logger.info(f"User attributes: {dir(user)}")
+        
+        # For staff users, return all dues
+        if hasattr(user, 'staffprofile'):
+            logger.info("User is staff, returning all dues")
+            return OtherDue.objects.all()
+        
+        # For student users, return only their dues
         try:
-            logger.info(f"Creating other due with data: {request.data}")
-            # Ensure category is set from staff's department if not provided
-            if 'category' not in request.data:
-                staff = request.user.staff_profile
-                request.data['category'] = self.CATEGORY_MAP.get(staff.department, staff.department)
-            return super().create(request, *args, **kwargs)
+            # Try to get student profile directly
+            student = StudentProfile.objects.get(user=user)
+            logger.info(f"Found student profile with roll number: {student.roll_number}")
+            
+            # Get all dues for this student
+            queryset = OtherDue.objects.filter(
+                Q(student=student) |  # Match by student object
+                Q(student__roll_number=student.roll_number)  # Match by roll number
+            ).select_related('student', 'created_by')
+            
+            logger.info(f"Found {queryset.count()} dues for student")
+            
+            # Log the actual dues found
+            for due in queryset:
+                logger.info(f"Due found - ID: {due.id}, Category: {due.category}, Amount: {due.amount}, Student: {due.student.roll_number}")
+            
+            return queryset
+            
+        except StudentProfile.DoesNotExist:
+            logger.warning(f"No student profile found for user {user.username}")
+            return OtherDue.objects.none()
         except Exception as e:
-            logger.error(f"Error creating other due: {str(e)}")
+            logger.error(f"Error getting student profile: {str(e)}")
+            return OtherDue.objects.none()
+
+    def list(self, request, *args, **kwargs):
+        try:
+            queryset = self.get_queryset()
+            serializer = self.get_serializer(queryset, many=True)
+            logger.info(f"Returning {len(serializer.data)} dues in response")
+            logger.info(f"Serialized data: {serializer.data}")
+            return Response(serializer.data)
+        except Exception as e:
+            logger.error(f"Error in list view: {str(e)}")
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user.staff_profile)
+        serializer.save(created_by=self.request.user.staffprofile)
         

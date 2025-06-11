@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { getAcademicDues, getHostelDues } from "../services/departmentService";
+import api from "../services/api";
 import { useAuth } from "../context/useAuth";
 import {
   School,
@@ -12,6 +13,9 @@ import {
   ChevronRight,
   CreditCard,
   Building2,
+  BookOpen,
+  Beaker,
+  Trophy,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import {
@@ -33,6 +37,7 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "../components/ui/popover";
+import axios from "axios";
 
 const StudentDashboard: React.FC = () => {
   const { logout, accessToken, user } = useAuth();
@@ -40,8 +45,18 @@ const StudentDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [academicDues, setAcademicDues] = useState<any[]>([]);
   const [hostelDues, setHostelDues] = useState<any[]>([]);
+  const [otherDues, setOtherDues] = useState<any[]>([]);
   const [showAcademic, setShowAcademic] = useState(false);
   const [showHostel, setShowHostel] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
+  const [showLab, setShowLab] = useState(false);
+  const [showSports, setShowSports] = useState(false);
+
+  // Add logging for user profile
+  useEffect(() => {
+    console.log("Current user:", user);
+    console.log("Access token:", accessToken);
+  }, [user, accessToken]);
 
   // Filter academic dues to only show one entry per year (remove duplicates)
   const uniqueAcademicDues = React.useMemo(() => {
@@ -53,6 +68,51 @@ const StudentDashboard: React.FC = () => {
     });
   }, [academicDues]);
 
+  const fetchOtherDues = async () => {
+    try {
+      console.log("Fetching other dues...");
+      console.log("Current user profile:", user);
+      console.log("Making API call to /dues/other-dues/");
+
+      const response = await api.get("/dues/other-dues/");
+      console.log("Other dues response:", response.data);
+      console.log("Response status:", response.status);
+      console.log("Response headers:", response.headers);
+
+      if (response.data && Array.isArray(response.data)) {
+        // Group dues by category
+        const groupedDues = response.data.reduce((acc, due) => {
+          if (!acc[due.category]) {
+            acc[due.category] = [];
+          }
+          acc[due.category].push(due);
+          return acc;
+        }, {});
+
+        console.log("Grouped dues:", groupedDues);
+        console.log("Setting otherDues state with:", response.data);
+        setOtherDues(response.data);
+      } else {
+        console.warn("Response data is not an array:", response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching other dues:", error);
+      if (axios.isAxiosError(error)) {
+        console.error("Error details:", {
+          status: error.response?.status,
+          data: error.response?.data,
+          headers: error.response?.headers,
+          message: error.message,
+          config: {
+            url: error.config?.url,
+            method: error.config?.method,
+            headers: error.config?.headers,
+          },
+        });
+      }
+    }
+  };
+
   useEffect(() => {
     const getDues = async () => {
       if (!accessToken) {
@@ -61,12 +121,15 @@ const StudentDashboard: React.FC = () => {
         return;
       }
       try {
+        console.log("Starting to fetch all dues...");
         const academicData = await getAcademicDues();
         setAcademicDues(academicData);
         const hostelData = await getHostelDues();
         setHostelDues(hostelData);
+        await fetchOtherDues();
         setError(null);
-      } catch {
+      } catch (error) {
+        console.error("Error in getDues:", error);
         setError("Failed to fetch dues. Please try again later.");
       } finally {
         setLoading(false);
@@ -74,6 +137,11 @@ const StudentDashboard: React.FC = () => {
     };
     getDues();
   }, [accessToken]);
+
+  // Add console log to check otherDues state
+  useEffect(() => {
+    console.log("Current otherDues state:", otherDues);
+  }, [otherDues]);
 
   if (loading) {
     return (
@@ -308,6 +376,243 @@ const StudentDashboard: React.FC = () => {
                       <TableCell>{due.remarks}</TableCell>
                     </TableRow>
                   ))}
+                </TableBody>
+              </Table>
+              <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 mt-4 w-full">
+                <Button className="bg-blue-600 text-white flex items-center gap-2 w-full sm:w-auto px-4 py-2 sm:px-6 sm:py-2 text-base sm:text-sm">
+                  <CreditCard className="h-4 w-4" />
+                  Pay Now
+                </Button>
+              </div>
+            </CardContent>
+          )}
+        </Card>
+
+        {/* Library Dues Section */}
+        <Card className="border-none shadow-lg bg-white mt-8">
+          <CardHeader
+            onClick={() => setShowLibrary((prev) => !prev)}
+            className="cursor-pointer select-none"
+          >
+            <div className="flex items-center gap-3">
+              <div className="bg-blue-600 p-2 rounded-lg shadow-md">
+                <BookOpen className="h-5 w-5 text-white" />
+              </div>
+              <CardTitle className="text-gray-800 flex items-center gap-2">
+                Library Dues
+                {showLibrary ? (
+                  <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-200" />
+                ) : (
+                  <ChevronRight className="h-5 w-5 text-gray-500 transition-transform duration-200" />
+                )}
+              </CardTitle>
+            </div>
+          </CardHeader>
+          {showLibrary && (
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50/50">
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Remark</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {otherDues
+                    .filter((due) => due.category === "librarian")
+                    .map((due, index) => (
+                      <TableRow key={index}>
+                        <TableCell>₹{due.amount || 0}</TableCell>
+                        <TableCell>{due.remark || "No library dues"}</TableCell>
+                        <TableCell>
+                          {new Date(due.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          {due.amount > 0 ? (
+                            <span className="text-red-600 font-semibold">
+                              Unpaid
+                            </span>
+                          ) : (
+                            <span className="text-green-600 font-semibold">
+                              No Dues
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  {otherDues.filter((due) => due.category === "librarian")
+                    .length === 0 && (
+                    <TableRow>
+                      <TableCell>₹0</TableCell>
+                      <TableCell>No library dues</TableCell>
+                      <TableCell>-</TableCell>
+                      <TableCell>
+                        <span className="text-green-600 font-semibold">
+                          No Dues
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+              <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 mt-4 w-full">
+                <Button className="bg-blue-600 text-white flex items-center gap-2 w-full sm:w-auto px-4 py-2 sm:px-6 sm:py-2 text-base sm:text-sm">
+                  <CreditCard className="h-4 w-4" />
+                  Pay Now
+                </Button>
+              </div>
+            </CardContent>
+          )}
+        </Card>
+
+        {/* Lab Dues Section */}
+        <Card className="border-none shadow-lg bg-white mt-8">
+          <CardHeader
+            onClick={() => setShowLab((prev) => !prev)}
+            className="cursor-pointer select-none"
+          >
+            <div className="flex items-center gap-3">
+              <div className="bg-purple-600 p-2 rounded-lg shadow-md">
+                <Beaker className="h-5 w-5 text-white" />
+              </div>
+              <CardTitle className="text-gray-800 flex items-center gap-2">
+                Lab Dues
+                {showLab ? (
+                  <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-200" />
+                ) : (
+                  <ChevronRight className="h-5 w-5 text-gray-500 transition-transform duration-200" />
+                )}
+              </CardTitle>
+            </div>
+          </CardHeader>
+          {showLab && (
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50/50">
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Remark</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {otherDues
+                    .filter((due) => due.category === "lab_incharge")
+                    .map((due, index) => (
+                      <TableRow key={index}>
+                        <TableCell>₹{due.amount || 0}</TableCell>
+                        <TableCell>{due.remark || "No lab dues"}</TableCell>
+                        <TableCell>
+                          {new Date(due.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          {due.amount > 0 ? (
+                            <span className="text-red-600 font-semibold">
+                              Unpaid
+                            </span>
+                          ) : (
+                            <span className="text-green-600 font-semibold">
+                              No Dues
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  {otherDues.filter((due) => due.category === "lab_incharge")
+                    .length === 0 && (
+                    <TableRow>
+                      <TableCell>₹0</TableCell>
+                      <TableCell>No lab dues</TableCell>
+                      <TableCell>-</TableCell>
+                      <TableCell>
+                        <span className="text-green-600 font-semibold">
+                          No Dues
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+              <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 mt-4 w-full">
+                <Button className="bg-blue-600 text-white flex items-center gap-2 w-full sm:w-auto px-4 py-2 sm:px-6 sm:py-2 text-base sm:text-sm">
+                  <CreditCard className="h-4 w-4" />
+                  Pay Now
+                </Button>
+              </div>
+            </CardContent>
+          )}
+        </Card>
+
+        {/* Sports Dues Section */}
+        <Card className="border-none shadow-lg bg-white mt-8">
+          <CardHeader
+            onClick={() => setShowSports((prev) => !prev)}
+            className="cursor-pointer select-none"
+          >
+            <div className="flex items-center gap-3">
+              <div className="bg-yellow-600 p-2 rounded-lg shadow-md">
+                <Trophy className="h-5 w-5 text-white" />
+              </div>
+              <CardTitle className="text-gray-800 flex items-center gap-2">
+                Sports Dues
+                {showSports ? (
+                  <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-200" />
+                ) : (
+                  <ChevronRight className="h-5 w-5 text-gray-500 transition-transform duration-200" />
+                )}
+              </CardTitle>
+            </div>
+          </CardHeader>
+          {showSports && (
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50/50">
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Remark</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {otherDues
+                    .filter((due) => due.category === "sports_incharge")
+                    .map((due, index) => (
+                      <TableRow key={index}>
+                        <TableCell>₹{due.amount || 0}</TableCell>
+                        <TableCell>{due.remark || "No sports dues"}</TableCell>
+                        <TableCell>
+                          {new Date(due.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          {due.amount > 0 ? (
+                            <span className="text-red-600 font-semibold">
+                              Unpaid
+                            </span>
+                          ) : (
+                            <span className="text-green-600 font-semibold">
+                              No Dues
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  {otherDues.filter((due) => due.category === "sports_incharge")
+                    .length === 0 && (
+                    <TableRow>
+                      <TableCell>₹0</TableCell>
+                      <TableCell>No sports dues</TableCell>
+                      <TableCell>-</TableCell>
+                      <TableCell>
+                        <span className="text-green-600 font-semibold">
+                          No Dues
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
               <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 mt-4 w-full">
