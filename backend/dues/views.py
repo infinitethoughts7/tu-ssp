@@ -38,7 +38,7 @@ class FeeStructureViewSet(viewsets.ModelViewSet):
 class AcademicViewSet(viewsets.ModelViewSet):
     queryset = Academic.objects.all()
     serializer_class = AcademicSerializer
-    permission_classes = [IsAuthenticated]  # Enforce authentication
+    permission_classes = [AllowAny]  # Enforce authentication
 
     def get_queryset(self):
         user = self.request.user
@@ -54,6 +54,15 @@ class AcademicViewSet(viewsets.ModelViewSet):
         if not request.user.is_authenticated:
             return Response({'detail': 'Authentication required for POST.'}, status=status.HTTP_401_UNAUTHORIZED)
         return super().create(request, *args, **kwargs)
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        total_due_amount = sum(item['due_amount'] for item in serializer.data if item['due_amount'] is not None)
+        return Response({
+            'results': serializer.data,
+            'total_due_amount': total_due_amount
+        })
 
 
 

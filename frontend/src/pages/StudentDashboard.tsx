@@ -87,6 +87,14 @@ const StudentDashboard: React.FC = () => {
     });
   }, [academicDues]);
 
+  // Calculate total academic due by summing unpaid_amounts
+  const totalAcademicDue = React.useMemo(() => {
+    return uniqueAcademicDues.reduce(
+      (sum, due) => sum + (due.unpaid_amount || 0),
+      0
+    );
+  }, [uniqueAcademicDues]);
+
   const fetchOtherDues = async () => {
     try {
       console.log("Fetching other dues...");
@@ -132,7 +140,16 @@ const StudentDashboard: React.FC = () => {
       try {
         console.log("Starting to fetch all dues...");
         const academicData = await getAcademicDues();
-        setAcademicDues(academicData);
+        if (
+          academicData &&
+          typeof academicData === "object" &&
+          "results" in academicData &&
+          Array.isArray(academicData.results)
+        ) {
+          setAcademicDues(academicData.results);
+        } else if (Array.isArray(academicData)) {
+          setAcademicDues(academicData);
+        }
         const hostelData = await getHostelDues();
         setHostelDues(hostelData);
         await fetchOtherDues();
@@ -329,7 +346,7 @@ const StudentDashboard: React.FC = () => {
               <div className="text-right">
                 <p className="text-sm text-gray-500">Total Due</p>
                 <p className="text-xl font-bold text-red-600">
-                  ₹{totalDues.academic_total}
+                  ₹{totalAcademicDue.toLocaleString()}
                 </p>
               </div>
             </div>
@@ -508,9 +525,7 @@ const StudentDashboard: React.FC = () => {
               </div>
               <div className="text-right">
                 <p className="text-sm text-gray-500">Total Due</p>
-                <p className="text-xl font-bold text-red-600">
-                  ₹{totalDues.library_total}
-                </p>
+                <p className="text-xl font-bold text-red-600">₹0</p>
               </div>
             </div>
           </CardHeader>
@@ -599,9 +614,7 @@ const StudentDashboard: React.FC = () => {
               </div>
               <div className="text-right">
                 <p className="text-sm text-gray-500">Total Due</p>
-                <p className="text-xl font-bold text-red-600">
-                  ₹{totalDues.lab_total}
-                </p>
+                <p className="text-xl font-bold text-red-600">₹0</p>
               </div>
             </div>
           </CardHeader>
@@ -690,9 +703,7 @@ const StudentDashboard: React.FC = () => {
               </div>
               <div className="text-right">
                 <p className="text-sm text-gray-500">Total Due</p>
-                <p className="text-xl font-bold text-red-600">
-                  ₹{totalDues.sports_total}
-                </p>
+                <p className="text-xl font-bold text-red-600">₹0</p>
               </div>
             </div>
           </CardHeader>

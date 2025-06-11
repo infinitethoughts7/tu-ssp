@@ -29,6 +29,7 @@ class AcademicSerializer(serializers.ModelSerializer):
     due_amount = serializers.SerializerMethodField()
     total_amount = serializers.SerializerMethodField()
     unpaid_amount = serializers.SerializerMethodField()
+    total_due_amount = serializers.SerializerMethodField()
 
     class Meta:
         model = Academic
@@ -44,6 +45,7 @@ class AcademicSerializer(serializers.ModelSerializer):
             'due_amount',
             'total_amount',
             'unpaid_amount',
+            'total_due_amount',
         ]
 
     def get_due_amount(self, obj):
@@ -67,6 +69,12 @@ class AcademicSerializer(serializers.ModelSerializer):
         paid_govt = obj.paid_by_govt or 0
         exam = obj.fee_structure.exam_fee or 0
         return (tuition + special + exam) - (paid_student + paid_govt)
+
+    def get_total_due_amount(self, obj):
+        if not obj.student:
+            return 0
+        dues = obj.__class__.objects.filter(student=obj.student)
+        return sum(self.get_due_amount(due) for due in dues)
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
