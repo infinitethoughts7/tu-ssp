@@ -8,13 +8,13 @@ const api = axios.create({
 // Add a request interceptor to add the auth token to requests
 api.interceptors.request.use(
   (config) => {
-    const userType = localStorage.getItem("userType") || "student";
-    const token = localStorage.getItem(
-      userType === "staff" ? "staffAccessToken" : "studentAccessToken"
-    );
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Always prefer staffAccessToken if it exists
+    const staffToken = localStorage.getItem("staffAccessToken");
+    const studentToken = localStorage.getItem("studentAccessToken");
+    if (staffToken) {
+      config.headers.Authorization = `Bearer ${staffToken}`;
+    } else if (studentToken) {
+      config.headers.Authorization = `Bearer ${studentToken}`;
     }
     return config;
   },

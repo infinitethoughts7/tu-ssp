@@ -238,5 +238,12 @@ class OtherDueViewSet(viewsets.ModelViewSet):
             )
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user.staffprofile)
+        user = self.request.user
+        staff_profile = getattr(user, 'staff_profile', None)
+        print(f"User: {user}, StaffProfile: {staff_profile}")
+        if staff_profile is not None:
+            serializer.save(created_by=staff_profile)
+        else:
+            from rest_framework import serializers
+            raise serializers.ValidationError("Only staff can assign dues. (No staff_profile found for user)")
         
