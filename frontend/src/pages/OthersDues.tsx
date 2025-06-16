@@ -80,22 +80,8 @@ type StudentSuggestion = {
   course: string;
 };
 
-const CATEGORY_MAP: { [key: string]: string } = {
-  librarian: "librarian",
-  sports_incharge: "sports_incharge",
-  lab_incharge: "lab_incharge",
-};
-
-const TITLE_MAP: { [key: string]: string } = {
-  librarian: "Student Library Dues",
-  sports_incharge: "Student Sports Dues",
-  lab_incharge: "Student Lab Dues",
-};
-
 export default function OthersDues() {
   const { logout, accessToken } = useAuth();
-  const [dues, setDues] = useState<OtherDue[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddDueModal, setShowAddDueModal] = useState(false);
@@ -107,6 +93,8 @@ export default function OthersDues() {
   const [staffProfile, setStaffProfile] = useState<StaffProfile | null>(null);
   const [category, setCategory] = useState("");
   const [pageTitle, setPageTitle] = useState("Other Dues Dashboard");
+  const [dues, setDues] = useState<OtherDue[]>([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const [studentSuggestions, setStudentSuggestions] = useState<
     StudentSuggestion[]
@@ -114,6 +102,17 @@ export default function OthersDues() {
   const [open, setOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] =
     useState<StudentSuggestion | null>(null);
+
+  const TITLE_MAP: { [key: string]: string } = {
+    librarian: "Student Library Dues",
+    sports_incharge: "Student Sports Dues",
+    lab_incharge: "Student Lab Dues",
+  };
+  const CATEGORY_MAP: { [key: string]: string } = {
+    librarian: "librarian",
+    sports_incharge: "sports_incharge",
+    lab_incharge: "lab_incharge",
+  };
 
   useEffect(() => {
     if (accessToken) {
@@ -374,22 +373,6 @@ export default function OthersDues() {
             </CardContent>
           </Card>
         )}
-
-        {/* Add this after the Staff Profile Card and before the Search and Dues Card */}
-        <div className="mb-6 flex gap-4">
-          <label className="font-medium text-gray-700">
-            Select Dues Category:
-          </label>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="border rounded px-3 py-1"
-          >
-            <option value="librarian">Library Dues</option>
-            <option value="sports_incharge">Sports Dues</option>
-            <option value="lab_incharge">Lab Dues</option>
-          </select>
-        </div>
 
         {/* Search and Dues Card */}
         <Card className="border-none shadow-lg bg-white">
