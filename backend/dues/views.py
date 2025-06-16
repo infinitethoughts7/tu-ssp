@@ -160,7 +160,7 @@ class HostelDuesViewSet(viewsets.ModelViewSet):
 
 class OtherDueViewSet(viewsets.ModelViewSet):
     serializer_class = OtherDueSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get_total_dues(self, student):
         try:
@@ -200,18 +200,13 @@ class OtherDueViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         try:
             user = self.request.user
-            logger.info(f"[OtherDueViewSet] User: {user}, id: {user.id}, username: {user.username}")
+            category = self.request.query_params.get('category')
+            qs = OtherDue.objects.all()
             if hasattr(user, 'studentprofile'):
-                student = user.studentprofile
-                logger.info(f"[OtherDueViewSet] StudentProfile: {student}, id: {student.id}, roll_number: {student.roll_number}")
-                dues_qs = OtherDue.objects.filter(student=student)
-                logger.info(f"[OtherDueViewSet] Found {dues_qs.count()} dues for student {student.roll_number}: {list(dues_qs.values())}")
-                return dues_qs
-            if hasattr(user, 'staffprofile'):
-                logger.info("[OtherDueViewSet] User is staff, returning all dues")
-                return OtherDue.objects.all()
-            logger.warning(f"[OtherDueViewSet] User {user.username} has no profile")
-            return OtherDue.objects.none()
+                qs = qs.filter(student=user.studentprofile)
+            if category:
+                qs = qs.filter(category=category)
+            return qs
         except Exception as e:
             logger.error(f"Error in get_queryset: {str(e)}", exc_info=True)
             raise

@@ -127,6 +127,10 @@ export default function OthersDues() {
     }
   }, [category]);
 
+  useEffect(() => {
+    setPageTitle(TITLE_MAP[category] || "Other Dues Dashboard");
+  }, [category]);
+
   const fetchStaffProfile = async () => {
     try {
       const response = await api.get("/staff/profile/");
@@ -150,7 +154,8 @@ export default function OthersDues() {
     setLoading(true);
     try {
       const res = await api.get(`/dues/other-dues/?category=${category}`);
-      setDues(Array.isArray(res.data) ? res.data : []);
+      console.log("Fetched dues data:", res.data); // Debug log
+      setDues(Array.isArray(res.data.dues) ? res.data.dues : []);
       setError(null);
     } catch (err) {
       console.error("Error fetching dues:", err);
@@ -274,6 +279,8 @@ export default function OthersDues() {
       })
     : [];
 
+  console.log("Dues to be displayed:", filteredDues); // Debug log before rendering table
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="max-w-7xl mx-auto p-6">
@@ -302,14 +309,6 @@ export default function OthersDues() {
             Logout
           </Button>
         </div>
-
-        {error && (
-          <Card className="mb-6 border-red-200 bg-red-50">
-            <CardContent className="p-4 flex items-center text-red-700">
-              {error}
-            </CardContent>
-          </Card>
-        )}
 
         {/* Staff Profile Card */}
         {staffProfile ? (
@@ -375,6 +374,22 @@ export default function OthersDues() {
             </CardContent>
           </Card>
         )}
+
+        {/* Add this after the Staff Profile Card and before the Search and Dues Card */}
+        <div className="mb-6 flex gap-4">
+          <label className="font-medium text-gray-700">
+            Select Dues Category:
+          </label>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="border rounded px-3 py-1"
+          >
+            <option value="librarian">Library Dues</option>
+            <option value="sports_incharge">Sports Dues</option>
+            <option value="lab_incharge">Lab Dues</option>
+          </select>
+        </div>
 
         {/* Search and Dues Card */}
         <Card className="border-none shadow-lg bg-white">
