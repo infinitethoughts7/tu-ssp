@@ -69,7 +69,7 @@ class AcademicViewSet(viewsets.ModelViewSet):
 class HostelDuesViewSet(viewsets.ModelViewSet):
     queryset = HostelDues.objects.select_related('student').all()
     serializer_class = HostelDuesSerializer
-    permission_classes = [IsAuthenticated]  # Enforce authentication
+    permission_classes = [IsAuthenticated]  
 
     def get_queryset(self):
         user = self.request.user
@@ -160,7 +160,7 @@ class HostelDuesViewSet(viewsets.ModelViewSet):
 
 class OtherDueViewSet(viewsets.ModelViewSet):
     serializer_class = OtherDueSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get_total_dues(self, student):
         try:
