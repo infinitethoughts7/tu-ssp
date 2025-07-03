@@ -50,7 +50,7 @@ const StaffLoginPage = () => {
       {/* Background Image */}
       <div className="absolute inset-0 -z-10">
         <img
-          src="/src/components/ui/assets/tuadmin.jpg"
+          src="/assets/tuadmin.jpg"
           alt="Background"
           className="w-full h-full object-cover opacity-80"
         />
@@ -62,7 +62,7 @@ const StaffLoginPage = () => {
           <CardHeader className="space-y-1">
             <div className="flex justify-center mb-4">
               <img
-                src="/src/components/ui/assets/Telangana_University_logo.png"
+                src="/assets/Telangana_University_logo.png"
                 alt="Telangana University Logo"
                 className="h-16 w-auto"
               />

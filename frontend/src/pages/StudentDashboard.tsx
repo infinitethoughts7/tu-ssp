@@ -217,7 +217,7 @@ const StudentDashboard: React.FC = () => {
           <div className="flex items-center gap-6">
             <div className="bg-white p-2 rounded-lg shadow-md">
               <img
-                src="/src/components/ui/assets/Telangana_University_logo.png"
+                src="/assets/Telangana_University_logo.png"
                 alt="Telangana University Logo"
                 className="h-16 w-auto object-contain"
               />
