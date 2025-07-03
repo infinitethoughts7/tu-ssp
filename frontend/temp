@@ -1,3 +1,0 @@
-import api from './services/api';
-const accessToken = localStorage.getItem('accessToken');
-if (accessToken) { api.defaults.headers.common['Authorization'] = ; }
