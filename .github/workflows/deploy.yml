@@ -6,14 +6,46 @@ on:
       - main  
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
-
+    
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
-
-    - name: SSH to EC2 and deploy
+      uses: actions/checkout@v4
+      
+    # Build frontend on GitHub Actions (not EC2)
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+        
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm ci
+        
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm run build:prod
+        
+    # Deploy built frontend to EC2
+    - name: Deploy frontend build
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_SSH_KEY }}
+        port: 22
+        source: "frontend/dist/*"
+        target: "/home/ubuntu/tu-ssp/frontend/"
+        strip_components: 2
+        rm: true
+        
+    # Deploy backend and restart services
+    - name: Deploy backend to EC2
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.EC2_HOST }}
@@ -21,22 +53,27 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
           cd /home/ubuntu/tu-ssp
-          git pull
-
+          
+          # Pull latest code
+          git pull origin main
+          
           # Backend setup
           cd backend
           source venv/bin/activate
           pip install -r requirements.txt
+          
+          # Run migrations (not database dump)
           python manage.py migrate
+          
+          # Collect static files
           python manage.py collectstatic --noinput
-
-          # Import DB dump into Postgres
-          PGPASSWORD=${{ secrets.DB_PASSWORD }} psql -U tussp_user -d tussp_db -h localhost -f /home/ubuntu/local_db_dump.sql
-
-          # Frontend setup
-          cd ../frontend
-          npm install
-          npm run build
-
-          # Restart backend service
+          
+          # Restart services
           sudo systemctl restart gunicorn
+          sudo systemctl reload nginx
+          
+    # Health check
+    - name: Health check
+      run: |
+        sleep 10
+        curl -f http://${{ secrets.EC2_HOST }}/ || exit 1
