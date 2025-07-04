@@ -47,7 +47,6 @@ INSTALLED_APPS = [
     'core',
     'django_filters',
     'dues',
-    'debug_toolbar',
 ]
 
 MIDDLEWARE = [
@@ -59,7 +58,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
+
 ]
 CORS_ALLOW_ALL_ORIGINS = True 
 
