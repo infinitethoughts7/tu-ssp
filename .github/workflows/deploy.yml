@@ -42,7 +42,7 @@ jobs:
         source: "frontend/dist/*"
         target: "/home/ubuntu/tu-ssp/frontend/"
         strip_components: 2
-        rm: true
+        rm: false
         
     # Deploy backend and restart services
     - name: Deploy backend to EC2
