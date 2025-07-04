@@ -134,9 +134,10 @@ function mulberry32(seed: number) {
   };
 }
 
+const years = Array.from({ length: 17 }, (_, i) => 2024 - i);
+
 const generateStudentData = (): StudentDataItem[] => {
   const data: StudentDataItem[] = [];
-  const years = Array.from({ length: 17 }, (_, i) => 2008 + i);
   // Store unique student count per year and due student count per year
   const uniqueStudentsPerYear: Record<number, number> = {};
   const dueStudentsPerYear: Record<number, number> = {};
@@ -298,8 +299,6 @@ const StudentDuesDashboard = () => {
   const [selectedDepartment, setSelectedDepartment] = useState("All");
   const [selectedCourse, setSelectedCourse] = useState("All");
   const [studentData] = useState<StudentDataItem[]>(generateStudentData());
-
-  const years = Array.from({ length: 17 }, (_, i) => 2008 + i);
 
   const filteredData = useMemo(() => {
     return studentData.filter((item) => {
@@ -700,65 +699,77 @@ const StudentDuesDashboard = () => {
           </Card>
         </div>
 
-        {/* Yearly Trends */}
+        {/* Yearly Trends Table */}
         <Card className="bg-white border-0 shadow-lg">
           <CardHeader className="bg-gradient-to-r from-slate-800 to-slate-900 text-white">
-            <CardTitle className="text-xl">
-              Yearly Collection Trends (in Millions)
-            </CardTitle>
+            <CardTitle className="text-xl">Yearly Collection Summary</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <ResponsiveContainer width="100%" height={400}>
-              <LineChart data={yearlyTrendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="year" tick={{ fill: "#64748b" }} />
-                <YAxis tick={{ fill: "#64748b" }} />
-                <Tooltip
-                  formatter={(value: any, name: string) => [
-                    name === "collectionRate"
-                      ? `${Number(value).toFixed(1)}%`
-                      : `₹${Number(value).toFixed(1)}M`,
-                    name === "totalAmount"
-                      ? "Total"
-                      : name === "collectedAmount"
-                      ? "Collected"
-                      : name === "duesAmount"
-                      ? "Dues"
-                      : "Collection Rate",
-                  ]}
-                  contentStyle={{
-                    backgroundColor: "#f8fafc",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "8px",
-                    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="totalAmount"
-                  stroke="#8b5cf6"
-                  strokeWidth={3}
-                  name="totalAmount"
-                  dot={{ fill: "#8b5cf6", strokeWidth: 2, r: 4 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="collectedAmount"
-                  stroke="#10b981"
-                  strokeWidth={3}
-                  name="collectedAmount"
-                  dot={{ fill: "#10b981", strokeWidth: 2, r: 4 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="duesAmount"
-                  stroke="#f59e0b"
-                  strokeWidth={3}
-                  name="duesAmount"
-                  dot={{ fill: "#f59e0b", strokeWidth: 2, r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b-2 border-slate-200">
+                    <th className="text-left p-3 font-semibold text-gray-700">
+                      Academic Year
+                    </th>
+                    <th className="text-right p-3 font-semibold text-gray-700">
+                      Total Amount
+                    </th>
+                    <th className="text-right p-3 font-semibold text-gray-700">
+                      Collected Amount
+                    </th>
+                    <th className="text-right p-3 font-semibold text-gray-700">
+                      Dues Amount
+                    </th>
+                    <th className="text-right p-3 font-semibold text-gray-700">
+                      Collection Rate
+                    </th>
+                    <th className="text-right p-3 font-semibold text-gray-700">
+                      Due %
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {yearlyTrendData.map((yearData, index) => (
+                    <tr
+                      key={yearData.year}
+                      className={index % 2 === 0 ? "bg-slate-50" : "bg-white"}
+                    >
+                      <td className="p-3 font-medium text-gray-800">
+                        {yearData.year}
+                      </td>
+                      <td className="p-3 text-right text-gray-700">
+                        {formatCurrency(yearData.totalAmount * 1000000)}
+                      </td>
+                      <td className="p-3 text-right text-emerald-700 font-semibold">
+                        {formatCurrency(yearData.collectedAmount * 1000000)}
+                      </td>
+                      <td className="p-3 text-right text-red-700 font-semibold">
+                        {formatCurrency(yearData.duesAmount * 1000000)}
+                      </td>
+                      <td className="p-3 text-right">
+                        <Badge
+                          className={
+                            yearData.collectionRate >= 80
+                              ? "bg-green-100 text-green-800"
+                              : yearData.collectionRate >= 60
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-red-100 text-red-800"
+                          }
+                        >
+                          {yearData.collectionRate.toFixed(1)}%
+                        </Badge>
+                      </td>
+                      <td className="p-3 text-right">
+                        <Badge className="bg-red-100 text-red-800">
+                          {(100 - yearData.collectionRate).toFixed(1)}%
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
 
@@ -790,6 +801,9 @@ const StudentDuesDashboard = () => {
                     <th className="text-right p-3 font-semibold text-gray-700">
                       Collection %
                     </th>
+                    <th className="text-right p-3 font-semibold text-gray-700">
+                      Due %
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -818,10 +832,17 @@ const StudentDuesDashboard = () => {
                           className={
                             dept.collectionRate >= 80
                               ? "bg-green-100 text-green-800"
-                              : "bg-yellow-100 text-yellow-800"
+                              : dept.collectionRate >= 60
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-red-100 text-red-800"
                           }
                         >
                           {dept.collectionRate.toFixed(1)}%
+                        </Badge>
+                      </td>
+                      <td className="p-3 text-right">
+                        <Badge className="bg-red-100 text-red-800">
+                          {(100 - dept.collectionRate).toFixed(1)}%
                         </Badge>
                       </td>
                     </tr>
