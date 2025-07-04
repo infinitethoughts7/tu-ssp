@@ -275,23 +275,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
         localStorage.setItem("studentUserData", JSON.stringify(userData));
       }
 
-      // Handle navigation based on department
+      // Handle navigation based on department and email
       if (credentials.email) {
-        switch (department) {
-          case "librarian":
-          case "sports_incharge":
-          case "lab_incharge":
-            navigate("/others-dues");
-            break;
-          case "hostel_superintendent":
-            navigate("/hostel-dues");
-            break;
-          case "accounts":
-            navigate("/accounts-dues");
-            break;
-          default:
-            console.warn(`Unknown department: ${department}`);
-            navigate("/staff-login");
+        // Special case for principal
+        if (credentials.email === "principal@tu.in") {
+          navigate("/total-dues-dashboard");
+        } else {
+          switch (department) {
+            case "librarian":
+            case "sports_incharge":
+            case "lab_incharge":
+              navigate("/others-dues");
+              break;
+            case "hostel_superintendent":
+              navigate("/hostel-dues");
+              break;
+            case "accounts":
+              navigate("/accounts-dues");
+              break;
+            default:
+              console.warn(`Unknown department: ${department}`);
+              navigate("/staff-login");
+          }
         }
       } else {
         navigate("/student-dashboard");

@@ -73,6 +73,9 @@ const StaffLoginPage = () => {
             <CardDescription className="text-center text-gray-600">
               Welcome back! Please login to access the staff portal
             </CardDescription>
+            <div className="text-center text-xs text-gray-500 mt-2">
+              Principal: principal@tu.in / tu@123
+            </div>
           </CardHeader>
           <CardContent>
             {error && (
