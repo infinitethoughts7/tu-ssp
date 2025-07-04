@@ -3,7 +3,7 @@ name: Deploy TU-SSP to EC2
 on:
   push:
     branches:
-      - main  # adjust if your deployment branch is different
+      - main  
 
 jobs:
   deploy:
@@ -16,17 +16,27 @@ jobs:
     - name: SSH to EC2 and deploy
       uses: appleboy/ssh-action@v1.0.0
       with:
-        host: 51.21.200.136  # your EC2 IP
+        host: ${{ secrets.EC2_HOST }}
         username: ubuntu
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
           cd /home/ubuntu/tu-ssp
           git pull
+
+          # Backend setup
           cd backend
           source venv/bin/activate
           pip install -r requirements.txt
           python manage.py migrate
           python manage.py collectstatic --noinput
+
+          # Import DB dump into Postgres
+          PGPASSWORD=${{ secrets.DB_PASSWORD }} psql -U tussp_user -d tussp_db -h localhost -f /home/ubuntu/local_db_dump.sql
+
+          # Frontend setup
+          cd ../frontend
+          npm install
+          npm run build
+
+          # Restart backend service
           sudo systemctl restart gunicorn
-
-
