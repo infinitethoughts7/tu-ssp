@@ -150,7 +150,7 @@ export default function StaffDashboard() {
         return acc;
       }
 
-      const key = due.student_details.user.roll_number;
+      const key = due.student_details.user.username;
       if (!key) {
         console.warn("Skipping due with missing roll number:", due);
         return acc;
@@ -158,7 +158,7 @@ export default function StaffDashboard() {
 
       if (!acc[key]) {
         acc[key] = {
-          roll_numbers: [due.student_details.user.roll_number],
+          roll_numbers: [due.student_details.user.username],
           name: `${due.student_details.user.first_name || ""} ${
             due.student_details.user.last_name || ""
           }`.trim(),
@@ -296,7 +296,7 @@ export default function StaffDashboard() {
         const search = searchTerm.trim().toLowerCase();
         const matchesSearch =
           !search ||
-          (due.student_details.user.roll_number?.toLowerCase() || "").includes(
+          (due.student_details.user.username?.toLowerCase() || "").includes(
             search
           ) ||
           (
