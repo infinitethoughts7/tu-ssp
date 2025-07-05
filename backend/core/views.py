@@ -166,9 +166,9 @@ def search_students(request):
         return Response({'error': 'Search query is required'}, status=400)
     
     try:
-        # Search by roll number or name
+        # Search by roll number (username) or name
         students = StudentProfile.objects.filter(
-            Q(roll_number__icontains=query) |
+            Q(user__username__icontains=query) |
             Q(user__first_name__icontains=query) |
             Q(user__last_name__icontains=query)
         )[:5]  # Limit to 5 results
@@ -176,7 +176,7 @@ def search_students(request):
         results = []
         for student in students:
             results.append({
-                'roll_number': student.roll_number,
+                'roll_number': student.user.username,
                 'name': f"{student.user.first_name} {student.user.last_name}",
                 'course': student.course,
                 'caste': student.caste,

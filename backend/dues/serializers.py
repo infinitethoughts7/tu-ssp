@@ -15,6 +15,7 @@ class FeeStructureSerializer(serializers.ModelSerializer):
 
 class StudentProfileSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
+    roll_number = serializers.CharField(source='user.username')
 
     class Meta:
         model = StudentProfile
@@ -149,7 +150,7 @@ class OtherDueSerializer(serializers.ModelSerializer):
         model = OtherDue
         fields = [
             'id', 'student', 'student_roll_number', 'student_name', 'student_course',
-            'category', 'amount', 'remark', 'created_by', 'created_by_name',
+            'department', 'amount', 'remark', 'created_by', 'created_by_name',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at', 'created_by_name', 'student_name', 'student', 'student_course']
@@ -157,7 +158,7 @@ class OtherDueSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         student_roll = validated_data.pop('student_roll_number')
         try:
-            student = StudentProfile.objects.get(roll_number=student_roll)
+            student = StudentProfile.objects.get(user__username=student_roll)
             validated_data['student'] = student
         except StudentProfile.DoesNotExist:
             raise serializers.ValidationError({

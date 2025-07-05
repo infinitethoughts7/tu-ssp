@@ -7,6 +7,7 @@ export interface StaffProfile {
 export interface User {
   id: number;
   email: string | null;
+  username: string;
   first_name: string;
   last_name: string;
   is_staff: boolean;
@@ -14,7 +15,6 @@ export interface User {
   staff_profile?: StaffProfile;
   student_profile?: {
     id: number;
-    roll_number: string;
     course: string;
     course_duration: string;
     caste: string;

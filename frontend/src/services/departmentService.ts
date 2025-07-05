@@ -6,7 +6,7 @@ import { AcademicDue } from "../types/staffDashboardTypes";
 export interface HostelDue {
   id: number;
   student: {
-    roll_number: string;
+    roll_number: string; // This comes from user.username in the backend
     full_name: string;
     phone_number: string;
     caste: string;

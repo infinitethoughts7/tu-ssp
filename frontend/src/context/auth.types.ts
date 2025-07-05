@@ -3,7 +3,7 @@ import { ReactNode } from "react";
 export interface User {
   id: number;
   email?: string;
-  roll_number?: string;
+  username?: string; // This contains the roll number for students
   name: string;
   user_type: "student" | "staff";
 }

@@ -95,7 +95,6 @@ class CustomUserManager(BaseUserManager):
         
         user = self.model(
             email=email,
-            roll_number=roll_number,
             **extra_fields
         )
         user.set_password(password)
@@ -111,7 +110,6 @@ class CustomUserManager(BaseUserManager):
 class User(AbstractUser):
     username = models.CharField(max_length=150, unique=True)  # Keep username field
     email = models.EmailField(unique=True, null=True, blank=True)
-    roll_number = models.CharField(max_length=20, unique=True, null=True, blank=True)
     is_student = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
 
@@ -140,7 +138,6 @@ class StaffProfile(models.Model):
 
 class StudentProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student_profile')
-    roll_number = models.CharField(max_length=20, unique=True)
     caste = models.CharField(max_length=10, choices=CASTE_CHOICES)
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
     phone_number = models.CharField(max_length=15)
@@ -149,4 +146,4 @@ class StudentProfile(models.Model):
     year_of_study = models.CharField(max_length=10, choices=DURATION_CHOICES)
     is_hostel = models.BooleanField(default=False)
     def __str__(self):
-        return f"{self.user.username} - {self.roll_number}"
+        return f"{self.user.username}"

@@ -44,8 +44,8 @@ interface UserProfile {
   user: {
     first_name: string;
     last_name: string;
+    username: string; // This contains the roll number
   };
-  roll_number: string;
   course: string;
 }
 
@@ -99,10 +99,10 @@ const StudentDashboard: React.FC = () => {
   const totalHostelDue = React.useMemo(() => {
     return hostelDues
       .filter(
-        (due: any) => due.student?.roll_number === userProfile.roll_number
+        (due: any) => due.student?.roll_number === userProfile.user.username
       )
       .reduce((sum, due) => sum + (due.due_amount || 0), 0);
-  }, [hostelDues, userProfile.roll_number]);
+  }, [hostelDues, userProfile.user.username]);
 
   // Sum both for total outstanding
   const totalOutstanding = totalAcademicDue + totalHostelDue;
@@ -270,7 +270,7 @@ const StudentDashboard: React.FC = () => {
                         Roll Number
                       </div>
                       <div className="text-base font-semibold text-gray-900">
-                        {userProfile?.roll_number}
+                        {userProfile?.user?.username}
                       </div>
                     </div>
                   </div>
@@ -320,7 +320,7 @@ const StudentDashboard: React.FC = () => {
                     {userProfile?.user?.last_name}
                   </h2>
                   <p className="text-gray-600">
-                    Roll No: {userProfile?.roll_number}
+                    Roll No: {userProfile?.user?.username}
                   </p>
                   <p className="text-gray-600">{userProfile?.course}</p>
                 </div>
@@ -454,7 +454,7 @@ const StudentDashboard: React.FC = () => {
                   {(() => {
                     const myHostelDue = hostelDues.find(
                       (due: any) =>
-                        due.student?.roll_number === userProfile.roll_number
+                        due.student?.roll_number === userProfile.user.username
                     );
                     if (
                       myHostelDue &&
@@ -485,7 +485,8 @@ const StudentDashboard: React.FC = () => {
                     .filter(
                       (due: any) =>
                         due.student?.roll_number
-                          ? due.student.roll_number === userProfile.roll_number
+                          ? due.student.roll_number ===
+                            userProfile.user.username
                           : true // fallback: show if no student info
                     )
                     .map((due: any) => (

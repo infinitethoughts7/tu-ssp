@@ -5,7 +5,7 @@ export interface DepartmentDue {
     user: {
       id: number;
       email: string | null;
-      roll_number: string;
+      username: string; // This contains the roll number
       is_student: boolean;
       is_staff: boolean;
       first_name: string;
