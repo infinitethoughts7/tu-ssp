@@ -72,10 +72,7 @@ const StudentDashboard: React.FC = () => {
   });
 
   // Add logging for user profile
-  useEffect(() => {
-    console.log("Current user:", user);
-    console.log("Access token:", accessToken);
-  }, [user, accessToken]);
+  useEffect(() => {}, [user, accessToken]);
 
   // Filter academic dues to only show one entry per year (remove duplicates)
   const uniqueAcademicDues = React.useMemo(() => {
@@ -109,12 +106,7 @@ const StudentDashboard: React.FC = () => {
 
   const fetchOtherDues = async () => {
     try {
-      console.log("Fetching other dues...");
-      console.log("Current user profile:", user);
-      console.log("Making API call to /dues/other-dues/");
-
       const response = await api.get("/dues/other-dues/");
-      console.log("Other dues response:", response.data);
 
       if (
         response.data &&
@@ -125,7 +117,6 @@ const StudentDashboard: React.FC = () => {
         setTotalDues(response.data.total_dues);
       }
     } catch (error) {
-      console.error("Error fetching other dues:", error);
       if (axios.isAxiosError(error)) {
         console.error("Error details:", {
           status: error.response?.status,
@@ -555,7 +546,7 @@ const StudentDashboard: React.FC = () => {
                 </TableHeader>
                 <TableBody>
                   {otherDues
-                    .filter((due) => due.category === "librarian")
+                    .filter((due) => due.department === "librarian")
                     .map((due, index) => (
                       <TableRow key={index}>
                         <TableCell>
@@ -580,7 +571,7 @@ const StudentDashboard: React.FC = () => {
                         </TableCell>
                       </TableRow>
                     ))}
-                  {otherDues.filter((due) => due.category === "librarian")
+                  {otherDues.filter((due) => due.department === "librarian")
                     .length === 0 && (
                     <TableRow>
                       <TableCell>₹0</TableCell>
@@ -644,7 +635,7 @@ const StudentDashboard: React.FC = () => {
                 </TableHeader>
                 <TableBody>
                   {otherDues
-                    .filter((due) => due.category === "lab_incharge")
+                    .filter((due) => due.department === "lab_incharge")
                     .map((due, index) => (
                       <TableRow key={index}>
                         <TableCell>
@@ -669,7 +660,7 @@ const StudentDashboard: React.FC = () => {
                         </TableCell>
                       </TableRow>
                     ))}
-                  {otherDues.filter((due) => due.category === "lab_incharge")
+                  {otherDues.filter((due) => due.department === "lab_incharge")
                     .length === 0 && (
                     <TableRow>
                       <TableCell>₹0</TableCell>
@@ -733,7 +724,7 @@ const StudentDashboard: React.FC = () => {
                 </TableHeader>
                 <TableBody>
                   {otherDues
-                    .filter((due) => due.category === "sports_incharge")
+                    .filter((due) => due.department === "sports_incharge")
                     .map((due, index) => (
                       <TableRow key={index}>
                         <TableCell>
@@ -758,8 +749,9 @@ const StudentDashboard: React.FC = () => {
                         </TableCell>
                       </TableRow>
                     ))}
-                  {otherDues.filter((due) => due.category === "sports_incharge")
-                    .length === 0 && (
+                  {otherDues.filter(
+                    (due) => due.department === "sports_incharge"
+                  ).length === 0 && (
                     <TableRow>
                       <TableCell>₹0</TableCell>
                       <TableCell>No sports dues</TableCell>

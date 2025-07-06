@@ -91,7 +91,7 @@ export default function OthersDues() {
     remark: "",
   });
   const [staffProfile, setStaffProfile] = useState<StaffProfile | null>(null);
-  const [category, setCategory] = useState("");
+  const [department, setDepartment] = useState("");
   const [pageTitle, setPageTitle] = useState("Other Dues Dashboard");
   const [dues, setDues] = useState<OtherDue[]>([]);
   const [loading, setLoading] = useState(true);
@@ -121,24 +121,24 @@ export default function OthersDues() {
   }, [accessToken]);
 
   useEffect(() => {
-    if (category) {
+    if (department) {
       fetchDues();
     }
-  }, [category]);
+  }, [department]);
 
   useEffect(() => {
-    setPageTitle(TITLE_MAP[category] || "Other Dues Dashboard");
-  }, [category]);
+    setPageTitle(TITLE_MAP[department] || "Other Dues Dashboard");
+  }, [department]);
 
   const fetchStaffProfile = async () => {
     try {
       const response = await api.get("/staff/profile/");
       const staffProfile = response.data;
-      const department = staffProfile.department;
-      const category = CATEGORY_MAP[department] || "library";
-      const title = TITLE_MAP[department] || "Student Library Dues";
+      const dept = staffProfile.department;
+      const deptKey = CATEGORY_MAP[dept] || "library";
+      const title = TITLE_MAP[dept] || "Student Library Dues";
 
-      setCategory(category);
+      setDepartment(deptKey);
       setPageTitle(title);
       setStaffProfile(staffProfile);
     } catch (error) {
@@ -151,7 +151,7 @@ export default function OthersDues() {
   const fetchDues = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/dues/other-dues/?category=${category}`);
+      const res = await api.get(`/dues/other-dues/?department=${department}`);
       setDues(Array.isArray(res.data.dues) ? res.data.dues : []);
       setError(null);
     } catch (err) {
@@ -204,7 +204,7 @@ export default function OthersDues() {
     try {
       const requestData = {
         student_roll_number: selectedStudent.roll_number,
-        category: category,
+        department: department,
         amount: parseFloat(newDue.amount),
         remark: newDue.remark || "",
       };
@@ -221,7 +221,7 @@ export default function OthersDues() {
   };
 
   const getDepartmentIcon = () => {
-    switch (category) {
+    switch (department) {
       case "library":
         return <BookOpen className="h-6 w-6 text-blue-600" />;
       case "sports":
