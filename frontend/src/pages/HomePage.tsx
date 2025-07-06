@@ -27,7 +27,7 @@ const HomePage = () => {
         </div>
 
         <h1 className="text-3xl sm:text-4xl font-bold drop-shadow-md">
-          Telangana Universit
+          Telangana University
         </h1>
         <p className="text-lg sm:text-2xl text-white/90 mb-10 mt-2 drop-shadow-sm">
           Student Service Portal
