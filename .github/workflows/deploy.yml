@@ -46,18 +46,17 @@ jobs:
             rm -rf /home/ubuntu/tu-ssp/frontend/dist
             mkdir -p /home/ubuntu/tu-ssp/frontend/dist
             
-      # Deploy built frontend to EC2 - FIXED VERSION
-      - name: Deploy frontend build
-        uses: appleboy/scp-action@v0.1.4
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          port: 22
-          source: "frontend/dist/*"
-          target: "/home/ubuntu/tu-ssp/frontend/dist/"
-          strip_components: 0
-          rm: false
+      # Deploy built frontend to EC2 - Using rsync instead
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          
+      - name: Deploy frontend build with rsync
+        run: |
+          rsync -avz --delete frontend/dist/ ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/tu-ssp/frontend/dist/
           
       # Verify deployment
       - name: Verify frontend deployment
