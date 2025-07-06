@@ -55,8 +55,8 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           source: "frontend/dist/*"
-          target: "/home/ubuntu/tu-ssp/frontend/"
-          strip_components: 2
+          target: "/home/ubuntu/tu-ssp/frontend/dist/"
+          strip_components: 0
           rm: false
           
       # Verify deployment
