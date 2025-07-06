@@ -1,9 +1,10 @@
+import os
 from django.core.management.base import BaseCommand
 from django.contrib.auth.hashers import make_password
 from core.models import User, StaffProfile
 
 class Command(BaseCommand):
-    help = 'Create principal user with email principal@tu.in and password tu@123'
+    help = 'Create principal user with email principal@tu.in and default password'
 
     def handle(self, *args, **options):
         try:
@@ -15,10 +16,11 @@ class Command(BaseCommand):
                 return
 
             # Create the principal user
+            default_password = os.getenv('PRINCIPAL_DEFAULT_PASSWORD', 'changeme123')
             principal_user = User.objects.create(
                 username='principal@tu.in',
                 email='principal@tu.in',
-                password=make_password('tu@123'),
+                password=make_password(default_password),
                 is_staff=True,
                 is_superuser=False,
                 first_name='Principal',
@@ -36,7 +38,7 @@ class Command(BaseCommand):
 
             self.stdout.write(
                 self.style.SUCCESS(
-                    f'Successfully created principal user with email: principal@tu.in and password: tu@123'
+                    f'Successfully created principal user with email: principal@tu.in'
                 )
             )
             self.stdout.write(
