@@ -1,18 +1,15 @@
 name: Deploy TU-SSP to EC2
-
 on:
   push:
     branches:
       - main
-
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
+        
       # Build frontend on GitHub (plenty of memory)
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -20,17 +17,23 @@ jobs:
           node-version: "18"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
-
+          
       - name: Install frontend dependencies
         run: |
           cd frontend
           npm ci
-
+          
       - name: Build frontend
         run: |
           cd frontend
           npm run build:prod
-
+          
+      # Debug: Check what was built
+      - name: Debug - Check built files
+        run: |
+          echo "Built files:"
+          ls -la frontend/dist/
+          
       # Prepare EC2 for deployment
       - name: Prepare EC2 for deployment
         uses: appleboy/ssh-action@v1.0.0
@@ -42,8 +45,8 @@ jobs:
             # Create fresh dist directory
             rm -rf /home/ubuntu/tu-ssp/frontend/dist
             mkdir -p /home/ubuntu/tu-ssp/frontend/dist
-
-      # Deploy built frontend to EC2
+            
+      # Deploy built frontend to EC2 - FIXED VERSION
       - name: Deploy frontend build
         uses: appleboy/scp-action@v0.1.4
         with:
@@ -52,10 +55,23 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           source: "frontend/dist/*"
-          target: "/home/ubuntu/tu-ssp/frontend/"
-          strip_components: 2
-          rm: false # Safe since we cleared the directory above
-
+          target: "/home/ubuntu/tu-ssp/frontend/dist/"
+          strip_components: 0
+          rm: false
+          
+      # Verify deployment
+      - name: Verify frontend deployment
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "Files in dist folder:"
+            ls -la /home/ubuntu/tu-ssp/frontend/dist/
+            echo "Checking if index.html exists:"
+            test -f /home/ubuntu/tu-ssp/frontend/dist/index.html && echo "index.html found" || echo "index.html NOT found"
+            
       # Deploy backend and restart services
       - name: Deploy backend to EC2
         uses: appleboy/ssh-action@v1.0.0
@@ -65,32 +81,34 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd /home/ubuntu/tu-ssp
-
+            
             # Pull latest code
             git pull origin main
-
+            
             # Backend setup (no npm install here!)
             cd backend
             source venv/bin/activate
             pip install -r requirements.txt
-
-            # Backup database before migrations (safety measure)
-            echo "Creating database backup..."
-            sudo -u postgres pg_dump tu_ssp > /home/ubuntu/tu-ssp/backup_$(date +%Y%m%d_%H%M%S).sql
-
-            # Run migrations BEFORE deploying new code
-            echo "Running database migrations..."
+            
+            # Run migrations
             python manage.py migrate
-
+            
             # Collect static files
             python manage.py collectstatic --noinput
-
+            
             # Restart services
             sudo systemctl restart gunicorn
             sudo systemctl reload nginx
-
-      # Optional: Health check (remove if still causing issues)
+            
+      # Health check with better error handling
       - name: Health check
         run: |
           sleep 15
-          curl -f http://${{ secrets.EC2_HOST }}/ || echo "Health check failed, but deployment completed"
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.EC2_HOST }}/)
+          echo "HTTP response code: $response"
+          if [ "$response" = "200" ]; then
+            echo "✅ Deployment successful!"
+          else
+            echo "❌ Health check failed with HTTP $response"
+            exit 1
+          fi
