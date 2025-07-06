@@ -418,9 +418,15 @@ export default function OthersDues() {
               className="space-y-4"
             >
               <div className="flex flex-col space-y-2">
-                <label className="text-sm font-medium">Student</label>
+                <label
+                  htmlFor="student_roll_number"
+                  className="text-sm font-medium"
+                >
+                  Student
+                </label>
                 <div className="relative">
                   <Input
+                    id="student_roll_number"
                     type="text"
                     placeholder="Enter student roll number..."
                     value={newDue.student_roll_number}
@@ -469,8 +475,11 @@ export default function OthersDues() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Amount</label>
+                  <label htmlFor="amount" className="text-sm font-medium">
+                    Amount
+                  </label>
                   <Input
+                    id="amount"
                     type="number"
                     placeholder="Enter amount"
                     value={newDue.amount}
@@ -481,10 +490,11 @@ export default function OthersDues() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">
+                  <label htmlFor="remark" className="text-sm font-medium">
                     Remark (optional)
                   </label>
                   <Input
+                    id="remark"
                     placeholder="Enter remark"
                     value={newDue.remark}
                     onChange={(e) =>
