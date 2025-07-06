@@ -26,19 +26,14 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (credentials: LoginCredentials) => {
     try {
-      console.log("Attempting login with credentials:", credentials);
       const endpoint =
         credentials.userType === "staff"
           ? "/auth/staff/login/"
           : "/auth/student/login/";
-      console.log("API Endpoint:", endpoint);
 
       const response = await api.post(endpoint, credentials);
-      console.log("Full Login Response:", response);
-      console.log("Response Data:", response.data);
 
       const { access, refresh, department } = response.data;
-      console.log("Extracted data:", { department });
 
       // Store tokens
       localStorage.setItem(
@@ -66,7 +61,6 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             navigate("/accounts-dues");
             break;
           default:
-            console.warn(`Unknown department: ${department}`);
             navigate("/staff-login");
         }
       } else {
@@ -76,7 +70,6 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(response.data);
       return response.data;
     } catch (error) {
-      console.error("Login error:", error);
       throw error;
     }
   };

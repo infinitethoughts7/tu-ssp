@@ -65,16 +65,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const fetchProfile = async () => {
       if (accessToken) {
         try {
-          console.log("Fetching user profile...");
           const profileEndpoint = isStaff ? "/staff/profile/" : "/profile/";
-          console.log("Using profile endpoint:", profileEndpoint);
 
           const response = await api.get(profileEndpoint);
-          console.log("Profile response:", response.data);
 
           // Handle nested profile data structure
           const profileData = isStaff ? response.data : response.data.profile;
-          console.log("Processed profile data:", profileData);
 
           setUser(profileData);
           if (isStaff) {
@@ -86,9 +82,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             );
           }
         } catch (error) {
-          console.error("Error fetching user profile:", error);
           if (axios.isAxiosError(error)) {
-            console.log("Axios Error Response:", error.response?.data);
             if (error.response?.status === 401) {
               logout();
             }
@@ -102,12 +96,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const refreshAccessToken = useCallback(async () => {
     try {
-      console.log("Attempting to refresh token...");
       const response = await api.post("/auth/refresh/", {
         refresh: refreshToken,
       });
       const newAccessToken = response.data.access;
-      console.log("Token refresh successful");
 
       // Store token based on user type
       const userType = localStorage.getItem("userType") || "student";
@@ -122,7 +114,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       api.defaults.headers.common["Authorization"] = `Bearer ${newAccessToken}`;
       return newAccessToken;
     } catch (error) {
-      console.error("Token refresh failed:", error);
       // Clear all auth data on refresh failure
       logout();
       throw new Error("Failed to refresh token. Please log in again.");
@@ -142,12 +133,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         ) {
           originalRequest._retry = true;
           try {
-            console.log("401 error detected, attempting token refresh...");
             const newToken = await refreshAccessToken();
             originalRequest.headers["Authorization"] = `Bearer ${newToken}`;
             return axios(originalRequest);
           } catch (refreshError) {
-            console.error("Token refresh failed in interceptor:", refreshError);
             logout();
             return Promise.reject(refreshError);
           }
@@ -204,23 +193,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         ? "/auth/staff/login/"
         : "/auth/student/login/";
 
-      console.log("Attempting login with credentials:", {
-        ...credentials,
-        password: "***",
-      });
-      console.log("API Endpoint:", endpoint);
-
       const response = await api.post(endpoint, credentials);
-      console.log("Full Login Response:", response);
-      console.log("Response Data:", response.data);
 
       if (!response.data.access || !response.data.refresh) {
-        console.error("Missing tokens in response:", response.data);
         throw new Error("Invalid response from server");
       }
 
       const { access, refresh, department } = response.data;
-      console.log("Extracted data:", { department });
 
       // Store tokens and set authorization header
       if (credentials.email) {
@@ -252,7 +231,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const profileEndpoint = credentials.email
         ? "/staff/profile/"
         : "/profile/";
-      console.log("Fetching profile from:", profileEndpoint);
 
       const profileResponse = await api.get(profileEndpoint, {
         headers: {
@@ -260,13 +238,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         },
       });
 
-      console.log("Profile Response:", profileResponse.data);
-
       // Handle nested profile data structure
       const userData = credentials.email
         ? profileResponse.data
         : profileResponse.data.profile;
-      console.log("Processed user data:", userData);
 
       setUser(userData);
       if (credentials.email) {
@@ -294,7 +269,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
               navigate("/accounts-dues");
               break;
             default:
-              console.warn(`Unknown department: ${department}`);
               navigate("/staff-login");
           }
         }
@@ -302,9 +276,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         navigate("/student-dashboard");
       }
     } catch (error) {
-      console.error("Login Error Details:", error);
       if (axios.isAxiosError(error)) {
-        console.error("Axios Error Response:", error.response?.data);
+        if (error.response?.status === 401) {
+          logout();
+        }
       }
       setError("Login failed. Please check your credentials.");
       throw error;
@@ -323,9 +298,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
       setUser(response.data);
     } catch (error) {
-      console.error("Error fetching user profile:", error);
       if (axios.isAxiosError(error)) {
-        console.log("Axios Error Response:", error.response?.data);
         if (error.response?.status === 401) {
           logout();
         }

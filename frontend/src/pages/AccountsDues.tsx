@@ -139,20 +139,17 @@ export default function StaffDashboard() {
   // Function to group dues by student
   const groupDuesByStudent = (dues: DepartmentDue[]) => {
     if (!Array.isArray(dues)) {
-      console.error("Invalid dues data:", dues);
       return [];
     }
 
     const grouped = dues.reduce((acc, due) => {
       // Skip if student_details or user is undefined
       if (!due.student_details?.user) {
-        console.warn("Skipping due with missing student details:", due);
         return acc;
       }
 
       const key = due.student_details.user.username;
       if (!key) {
-        console.warn("Skipping due with missing roll number:", due);
         return acc;
       }
 
@@ -187,18 +184,11 @@ export default function StaffDashboard() {
 
   // Function to group academic dues by student
   const groupAcademicDuesByStudent = (dues: AcademicDue[]) => {
-    console.log("Grouping academic dues:", dues);
-
     if (!dues) {
-      console.error("Academic dues data is undefined or null");
       return [];
     }
 
     if (!Array.isArray(dues)) {
-      console.error(
-        "Invalid academic dues data: Expected array but got",
-        typeof dues
-      );
       return [];
     }
 
@@ -206,22 +196,16 @@ export default function StaffDashboard() {
       const grouped = dues.reduce((acc: Record<string, any>, due) => {
         // Validate due object structure
         if (!due || typeof due !== "object") {
-          console.warn("Invalid due object:", due);
           return acc;
         }
 
         // Skip if student is undefined or invalid
         if (!due.student || typeof due.student !== "object") {
-          console.warn(
-            "Skipping academic due with invalid student object:",
-            due
-          );
           return acc;
         }
 
         const key = due.student.roll_number;
         if (!key || typeof key !== "string") {
-          console.warn("Skipping academic due with invalid roll number:", due);
           return acc;
         }
 
@@ -249,10 +233,8 @@ export default function StaffDashboard() {
       }, {} as Record<string, any>);
 
       const result = Object.values(grouped);
-      console.log("Grouped academic dues result:", result);
       return result;
     } catch (error) {
-      console.error("Error grouping academic dues:", error);
       return [];
     }
   };
@@ -266,7 +248,6 @@ export default function StaffDashboard() {
     if (showAcademicDues) {
       // Academic dues
       if (!Array.isArray(academicDues)) {
-        console.error("Invalid academic dues data:", academicDues);
         return [];
       }
       let filtered = academicDues.filter((due) => {
@@ -288,7 +269,6 @@ export default function StaffDashboard() {
     } else {
       // Department dues
       if (!Array.isArray(departmentDues)) {
-        console.error("Invalid department dues data:", departmentDues);
         return [];
       }
       let filtered = departmentDues.filter((due) => {
@@ -322,15 +302,8 @@ export default function StaffDashboard() {
   const filteredGroups = filterAndGroupDues();
 
   useEffect(() => {
-    console.log("StaffDashboard - Checking auth state:", {
-      hasAccessToken: !!accessToken,
-      urlDepartment,
-      storedDepartment: localStorage.getItem("department"),
-    });
-
     const storedDepartment = localStorage.getItem("department");
     if (!storedDepartment) {
-      console.log("No department found in localStorage");
       navigate("/staff-login");
       return;
     }
@@ -339,10 +312,6 @@ export default function StaffDashboard() {
       storedDepartment.toLowerCase() === "hostel" ||
       storedDepartment.toLowerCase() === "hostel_superintendent"
     ) {
-      console.log(
-        "Redirecting to hostel dues page for department:",
-        storedDepartment
-      );
       navigate("/hostel-dues", { replace: true });
       return;
     }
@@ -351,7 +320,6 @@ export default function StaffDashboard() {
       urlDepartment &&
       urlDepartment.toLowerCase() !== storedDepartment.toLowerCase()
     ) {
-      console.log(`Redirecting to correct department: ${storedDepartment}`);
       navigate(`/dashboard/${storedDepartment.toLowerCase()}`, {
         replace: true,
       });
@@ -369,13 +337,11 @@ export default function StaffDashboard() {
             if (response && response.results) {
               setAcademicDues(response.results);
             } else {
-              console.error("Invalid academic dues response format:", response);
               setAcademicDues([]);
             }
             setShowAcademicDues(true);
           })
           .catch((error) => {
-            console.error("Failed to fetch academic dues:", error);
             setError("Failed to fetch academic dues. Please try again later.");
             setAcademicDues([]);
           })
@@ -394,13 +360,10 @@ export default function StaffDashboard() {
   useEffect(() => {
     const fetchStaffProfile = async () => {
       try {
-        console.log("Starting to fetch staff profile...");
         const profile = await getStaffProfile();
-        console.log("Staff profile fetched successfully:", profile);
         setStaffProfile(profile);
         setError(null);
       } catch (error) {
-        console.error("Error in fetchStaffProfile:", error);
         if (axios.isAxiosError(error)) {
           if (error.response?.status === 403) {
             setError("You do not have permission to view this profile");
@@ -421,10 +384,8 @@ export default function StaffDashboard() {
     };
 
     if (accessToken) {
-      console.log("Access token exists, fetching profile");
       fetchStaffProfile();
     } else {
-      console.log("No access token, skipping profile fetch");
       setError("Please log in to view your profile");
     }
   }, [accessToken, logout]);

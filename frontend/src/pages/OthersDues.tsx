@@ -142,7 +142,6 @@ export default function OthersDues() {
       setPageTitle(title);
       setStaffProfile(staffProfile);
     } catch (error) {
-      console.error("Error fetching staff profile:", error);
       if (axios.isAxiosError(error) && error.response?.status === 401) {
         navigate("/staff-login");
       }
@@ -153,11 +152,9 @@ export default function OthersDues() {
     setLoading(true);
     try {
       const res = await api.get(`/dues/other-dues/?category=${category}`);
-      console.log("Fetched dues data:", res.data); // Debug log
       setDues(Array.isArray(res.data.dues) ? res.data.dues : []);
       setError(null);
     } catch (err) {
-      console.error("Error fetching dues:", err);
       setError("Failed to fetch dues");
       setDues([]);
     } finally {
@@ -173,13 +170,9 @@ export default function OthersDues() {
         return;
       }
 
-      console.log("Searching with query:", query); // Debug log
-
       try {
         // Use the search endpoint instead of direct roll number lookup
         const response = await api.get(`/students/search/?q=${query.trim()}`);
-
-        console.log("Search response:", response.data); // Debug log
 
         if (response.data && Array.isArray(response.data)) {
           setStudentSuggestions(response.data);
@@ -187,27 +180,7 @@ export default function OthersDues() {
           setStudentSuggestions([]);
         }
       } catch (error) {
-        console.error("Error fetching student suggestions:", error);
         setStudentSuggestions([]);
-
-        // Enhanced error logging
-        if (axios.isAxiosError(error)) {
-          console.log("Error details:", {
-            status: error.response?.status,
-            statusText: error.response?.statusText,
-            data: error.response?.data,
-            config: {
-              url: error.config?.url,
-              method: error.config?.method,
-            },
-          });
-
-          if (error.response?.status === 404) {
-            console.log("Student not found. Please check the roll number.");
-          } else if (error.response?.status === 400) {
-            console.log("Invalid roll number format. Please try again.");
-          }
-        }
       }
     }, 500),
     []
@@ -215,7 +188,6 @@ export default function OthersDues() {
 
   // Update the input handler
   const handleStudentSearch = (value: string) => {
-    console.log("Input value:", value); // Debug log
     setNewDue({ ...newDue, student_roll_number: value });
     setOpen(true);
     if (value.trim()) {
@@ -236,17 +208,13 @@ export default function OthersDues() {
         amount: parseFloat(newDue.amount),
         remark: newDue.remark || "",
       };
-      console.log("Sending request data:", requestData); // Debug log
       const response = await api.post("/dues/other-dues/", requestData);
-      console.log("Response:", response.data); // Debug log
       setShowAddDueModal(false);
       setNewDue({ student_roll_number: "", amount: "", remark: "" });
       setSelectedStudent(null);
       fetchDues();
     } catch (err) {
-      console.error("Error adding due:", err);
       if (axios.isAxiosError(err)) {
-        console.error("Error response data:", err.response?.data); // Debug log
       }
       alert("Failed to add due");
     }
@@ -277,8 +245,6 @@ export default function OthersDues() {
         );
       })
     : [];
-
-  console.log("Dues to be displayed:", filteredDues); // Debug log before rendering table
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -468,7 +434,6 @@ export default function OthersDues() {
                           key={student.roll_number}
                           className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                           onClick={() => {
-                            console.log("Selected student:", student); // Debug log
                             setSelectedStudent(student);
                             setNewDue({
                               ...newDue,
