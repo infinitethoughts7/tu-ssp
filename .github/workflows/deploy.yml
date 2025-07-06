@@ -60,17 +60,17 @@ jobs:
           rm: false
           
       # Verify deployment
-      - name: Verify frontend deployment
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            echo "Files in dist folder:"
-            ls -la /home/ubuntu/tu-ssp/frontend/dist/
-            echo "Checking if index.html exists:"
-            test -f /home/ubuntu/tu-ssp/frontend/dist/index.html && echo "index.html found" || echo "index.html NOT found"
+      - name: Deploy frontend build
+  uses: appleboy/scp-action@v0.1.4
+  with:
+    host: ${{ secrets.EC2_HOST }}
+    username: ubuntu
+    key: ${{ secrets.EC2_SSH_KEY }}
+    port: 22
+    source: "frontend/dist/*"
+    target: "/home/ubuntu/tu-ssp/frontend/"
+    strip_components: 2  # Change back to 2
+    rm: false
             
       # Deploy backend and restart services
       - name: Deploy backend to EC2
