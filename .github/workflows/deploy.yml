@@ -89,6 +89,9 @@ jobs:
             source venv/bin/activate
             pip install -r requirements.txt
             
+            # Create new migrations for any model changes
+            python manage.py makemigrations
+            
             # Run migrations
             python manage.py migrate
             
