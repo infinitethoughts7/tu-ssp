@@ -156,7 +156,7 @@ export const getStaffProfile = async (): Promise<StaffProfile> => {
     if (isAxiosError(error) && error.response?.status === 401 && refreshToken) {
       try {
         // Attempt to refresh the token
-        const res = await api.post(`/auth/token/refresh/`, {
+        const res = await api.post(`/auth/refresh/`, {
           refresh: refreshToken,
         });
         accessToken = res.data.access || "";
@@ -326,7 +326,7 @@ export const updateHostelDue = async (
     if (isAxiosError(error) && error.response?.status === 401 && refreshToken) {
       try {
         // Attempt to refresh the token
-        const res = await api.post(`/auth/token/refresh/`, {
+        const res = await api.post(`/auth/refresh/`, {
           refresh: refreshToken,
         });
         const newAccessToken = res.data.access;

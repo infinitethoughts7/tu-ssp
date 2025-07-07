@@ -9,7 +9,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        
+
       # Build frontend on GitHub (plenty of memory)
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -17,23 +17,24 @@ jobs:
           node-version: "18"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
-          
+
       - name: Install frontend dependencies
         run: |
           cd frontend
           npm ci
-          
+
       - name: Build frontend
         run: |
           cd frontend
+          echo "VITE_API_BASE_URL=http://${{ secrets.EC2_HOST }}/api" > .env.production
           npm run build:prod
-          
+
       # Debug: Check what was built
       - name: Debug - Check built files
         run: |
           echo "Built files:"
           ls -la frontend/dist/
-          
+
       # Prepare EC2 for deployment
       - name: Prepare EC2 for deployment
         uses: appleboy/ssh-action@v1.0.0
@@ -45,7 +46,7 @@ jobs:
             # Create fresh dist directory
             rm -rf /home/ubuntu/tu-ssp/frontend/dist
             mkdir -p /home/ubuntu/tu-ssp/frontend/dist
-            
+
       # Deploy built frontend to EC2 - Using rsync instead
       - name: Setup SSH key
         run: |
@@ -53,11 +54,11 @@ jobs:
           echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
-          
+
       - name: Deploy frontend build with rsync
         run: |
           rsync -avz --delete frontend/dist/ ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/tu-ssp/frontend/dist/
-          
+
       # Verify deployment
       - name: Verify frontend deployment
         uses: appleboy/ssh-action@v1.0.0
@@ -70,7 +71,7 @@ jobs:
             ls -la /home/ubuntu/tu-ssp/frontend/dist/
             echo "Checking if index.html exists:"
             test -f /home/ubuntu/tu-ssp/frontend/dist/index.html && echo "index.html found" || echo "index.html NOT found"
-            
+
       # Deploy backend and restart services
       - name: Deploy backend to EC2
         uses: appleboy/ssh-action@v1.0.0
@@ -80,28 +81,31 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd /home/ubuntu/tu-ssp
-            
+
             # Pull latest code
             git pull origin main
-            
-            # Backend setup (no npm install here!)
+
+                        # Backend setup (no npm install here!)
             cd backend
             source venv/bin/activate
             pip install -r requirements.txt
-            
+
+            # Set production environment
+            export DJANGO_SETTINGS_MODULE=ssp.settings_production
+
             # Create new migrations for any model changes
             python manage.py makemigrations
-            
+
             # Run migrations
             python manage.py migrate
-            
+
             # Collect static files
             python manage.py collectstatic --noinput
-            
+
             # Restart services
             sudo systemctl restart gunicorn
             sudo systemctl reload nginx
-            
+
       # Health check with better error handling
       - name: Health check
         run: |
