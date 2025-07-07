@@ -93,11 +93,19 @@ jobs:
             # Set production environment
             export DJANGO_SETTINGS_MODULE=ssp.settings_production
 
+                        # Show current migration status
+            echo "Current migration status:"
+            python manage.py showmigrations
+
             # Create new migrations for any model changes
             python manage.py makemigrations
 
-            # Run migrations
-            python manage.py migrate
+            # Run migrations with force
+            python manage.py migrate --run-syncdb
+
+            # Show final migration status
+            echo "Final migration status:"
+            python manage.py showmigrations
 
             # Collect static files
             python manage.py collectstatic --noinput
