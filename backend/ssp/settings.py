@@ -143,6 +143,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'core.User'
 
+# Custom authentication backend
+AUTHENTICATION_BACKENDS = [
+    'core.auth.CustomAuthBackend',
+    'django.contrib.auth.backends.ModelBackend',  # Fallback
+]
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',

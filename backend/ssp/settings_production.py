@@ -65,4 +65,10 @@ LOGGING = {
 }
 
 # Create logs directory if it doesn't exist
-os.makedirs(os.path.join(BASE_DIR, 'logs'), exist_ok=True) 
+os.makedirs(os.path.join(BASE_DIR, 'logs'), exist_ok=True)
+
+# Ensure authentication backend is set for production
+AUTHENTICATION_BACKENDS = [
+    'core.auth.CustomAuthBackend',
+    'django.contrib.auth.backends.ModelBackend',  # Fallback
+] 

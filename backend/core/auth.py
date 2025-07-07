@@ -5,9 +5,9 @@ from .models import User
 class CustomAuthBackend(ModelBackend):
     def authenticate(self, request, username=None, password=None, **kwargs):
         try:
-            # Try to fetch the user by email or roll number
+            # Try to fetch the user by email or username (roll number)
             user = User.objects.get(
-                Q(email=username) | Q(roll_number=username)
+                Q(email=username) | Q(username=username)
             )
             
             # Check if the user exists and password is correct
@@ -18,7 +18,7 @@ class CustomAuthBackend(ModelBackend):
                         return user
                     return None  # Email login attempted but user is not staff
                 
-                # For student login (using roll number)
+                # For student login (using roll number stored in username)
                 else:
                     if user.is_student:
                         return user

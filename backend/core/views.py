@@ -25,27 +25,58 @@ logger = logging.getLogger(__name__)
 class StudentLoginView(APIView):
     permission_classes = [AllowAny]
     def post(self, request):
-        print("StaffLoginView POST method was called")
-        logger.info("StaffLoginView POST method was called")
-        serializer = StudentLoginSerializer(data=request.data)
-        if serializer.is_valid():
-            user = authenticate(
-                request,
-                username=serializer.validated_data['roll_number'],
-                password=serializer.validated_data['password']
-            )
+        try:
+            print("StudentLoginView POST method was called")
+            logger.info("StudentLoginView POST method was called")
             
-            if user and user.is_student:
-                refresh = RefreshToken.for_user(user)
-                return Response({
-                    'refresh': str(refresh),
-                    'access': str(refresh.access_token),
-                })
+            serializer = StudentLoginSerializer(data=request.data)
+            if serializer.is_valid():
+                roll_number = serializer.validated_data['roll_number']
+                password = serializer.validated_data['password']
+                
+                logger.info(f"Attempting student login for roll number: {roll_number}")
+                
+                # Check if user exists
+                try:
+                    user = User.objects.get(username=roll_number)
+                    logger.info(f"User found: {user.username}, is_student: {user.is_student}")
+                except User.DoesNotExist:
+                    logger.warning(f"No user found with roll number: {roll_number}")
+                    return Response(
+                        {'error': 'Invalid roll number or password'},
+                        status=status.HTTP_401_UNAUTHORIZED
+                    )
+                
+                # Authenticate user
+                user = authenticate(
+                    request,
+                    username=roll_number,
+                    password=password
+                )
+                
+                if user and user.is_student:
+                    logger.info(f"Student authentication successful for: {roll_number}")
+                    refresh = RefreshToken.for_user(user)
+                    return Response({
+                        'refresh': str(refresh),
+                        'access': str(refresh.access_token),
+                    })
+                else:
+                    logger.warning(f"Student authentication failed for: {roll_number}")
+                    return Response(
+                        {'error': 'Invalid roll number or password'},
+                        status=status.HTTP_401_UNAUTHORIZED
+                    )
+            else:
+                logger.error(f"Validation errors: {serializer.errors}")
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                
+        except Exception as e:
+            logger.error(f"Unexpected error in StudentLoginView: {str(e)}")
             return Response(
-                {'error': 'Invalid credentials'},
-                status=status.HTTP_401_UNAUTHORIZED
+                {'error': 'An unexpected error occurred. Please try again.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class StaffLoginView(APIView):
     permission_classes = [AllowAny]
