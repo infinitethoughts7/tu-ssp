@@ -388,7 +388,7 @@ export default function StaffDashboard() {
     } else {
       setError("Please log in to view your profile");
     }
-  }, [accessToken, logout]);
+  }, [accessToken]);
 
   const getDepartmentIcon = () => {
     const department = localStorage.getItem("department")?.toLowerCase();

@@ -92,7 +92,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     fetchProfile();
-  }, [accessToken, isStaff, logout]);
+  }, [accessToken, isStaff]); // Removed logout from dependencies
 
   const refreshAccessToken = useCallback(async () => {
     try {
@@ -148,7 +148,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => {
       axios.interceptors.response.eject(interceptor);
     };
-  }, [refreshToken, refreshAccessToken, logout]);
+  }, [refreshToken, refreshAccessToken]); // Removed logout from dependencies
 
   // Auto-refresh access token on mount if only refreshToken is present
   useEffect(() => {

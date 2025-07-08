@@ -167,11 +167,6 @@ const StudentDashboard: React.FC = () => {
     getDues();
   }, [accessToken]);
 
-  // Add console log to check otherDues state
-  useEffect(() => {
-    console.log("Current otherDues state:", otherDues);
-  }, [otherDues]);
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">

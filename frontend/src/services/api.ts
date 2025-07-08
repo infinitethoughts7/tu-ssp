@@ -10,7 +10,7 @@ const api = axios.create({
 
 // Add a request interceptor to add the auth token to requests
 api.interceptors.request.use(
-  (config) => {
+  (config) => { 
     // Always prefer staffAccessToken if it exists
     const staffToken = localStorage.getItem("staffAccessToken");
     const studentToken = localStorage.getItem("studentAccessToken");
@@ -74,7 +74,6 @@ api.interceptors.response.use(
         return Promise.reject(refreshError);
       }
     }
-
     return Promise.reject(error);
   }
 );
