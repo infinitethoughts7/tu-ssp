@@ -300,10 +300,14 @@ export default function HostelDues() {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="messBillAmount"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Amount
                 </label>
                 <Input
+                  id="messBillAmount"
                   type="number"
                   min={0}
                   placeholder="Enter amount"
@@ -313,10 +317,14 @@ export default function HostelDues() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="messBillDate"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Date
                 </label>
                 <Input
+                  id="messBillDate"
                   type="date"
                   value={messBillDate}
                   onChange={(e) => setMessBillDate(e.target.value)}

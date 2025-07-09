@@ -474,11 +474,17 @@ const StudentDuesDashboard = () => {
           <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">
+                <label
+                  htmlFor="academicYear"
+                  className="text-sm font-medium text-slate-700"
+                >
                   Academic Year
                 </label>
                 <Select value={selectedYear} onValueChange={setSelectedYear}>
-                  <SelectTrigger className="border-blue-300 focus:border-blue-500">
+                  <SelectTrigger
+                    id="academicYear"
+                    className="border-blue-300 focus:border-blue-500"
+                  >
                     <SelectValue placeholder="Select Year" />
                   </SelectTrigger>
                   <SelectContent>
@@ -493,14 +499,20 @@ const StudentDuesDashboard = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">
+                <label
+                  htmlFor="department"
+                  className="text-sm font-medium text-slate-700"
+                >
                   Department
                 </label>
                 <Select
                   value={selectedDepartment}
                   onValueChange={setSelectedDepartment}
                 >
-                  <SelectTrigger className="border-blue-300 focus:border-blue-500">
+                  <SelectTrigger
+                    id="department"
+                    className="border-blue-300 focus:border-blue-500"
+                  >
                     <SelectValue placeholder="Select Department" />
                   </SelectTrigger>
                   <SelectContent>
@@ -515,14 +527,20 @@ const StudentDuesDashboard = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">
+                <label
+                  htmlFor="course"
+                  className="text-sm font-medium text-slate-700"
+                >
                   Course
                 </label>
                 <Select
                   value={selectedCourse}
                   onValueChange={setSelectedCourse}
                 >
-                  <SelectTrigger className="border-blue-300 focus:border-blue-500">
+                  <SelectTrigger
+                    id="course"
+                    className="border-blue-300 focus:border-blue-500"
+                  >
                     <SelectValue placeholder="Select Course" />
                   </SelectTrigger>
                   <SelectContent className="max-h-60">

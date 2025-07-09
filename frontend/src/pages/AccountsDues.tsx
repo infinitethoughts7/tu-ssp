@@ -914,7 +914,10 @@ export default function StaffDashboard() {
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label
+                    htmlFor="paidByGovt"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
                     Paid by Govt
                   </label>
                   <div className="relative">
@@ -922,6 +925,7 @@ export default function StaffDashboard() {
                       <IndianRupee className="h-4 w-4" />
                     </span>
                     <Input
+                      id="paidByGovt"
                       type="number"
                       min={0}
                       placeholder="Enter amount"
@@ -943,7 +947,10 @@ export default function StaffDashboard() {
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label
+                    htmlFor="paidByStudent"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
                     Paid by Student
                   </label>
                   <div className="relative">
@@ -951,6 +958,7 @@ export default function StaffDashboard() {
                       <IndianRupee className="h-4 w-4" />
                     </span>
                     <Input
+                      id="paidByStudent"
                       type="number"
                       min={0}
                       placeholder="Enter amount"

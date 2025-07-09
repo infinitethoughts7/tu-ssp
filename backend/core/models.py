@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 
 COURSE_CHOICES = [
-    ("M.A. (Applied Economics - 5 Years)", "M.A. (Applied Economics - 5 Years)"),
+    # 2-Year Programs
     ("M.A. (Economics)", "M.A. (Economics)"),
     ("M.A. (English)", "M.A. (English)"),
     ("M.A. (Hindi)", "M.A. (Hindi)"),
@@ -22,7 +22,6 @@ COURSE_CHOICES = [
     ("M.Sc. (Botany)", "M.Sc. (Botany)"),
     ("M.Sc. (Chemistry - 2 Years Course in specialization with Organic Chemistry)", "M.Sc. (Chemistry - 2 Years Course in specialization with Organic Chemistry)"),
     ("M.Sc. (Chemistry - 2 Years with specialization in Pharmaceutical Chemistry)", "M.Sc. (Chemistry - 2 Years with specialization in Pharmaceutical Chemistry)"),
-    ("M.Sc. (Chemistry - 5 Years Integrated with specialization in Pharmaceutical Chemistry)", "M.Sc. (Chemistry - 5 Years Integrated with specialization in Pharmaceutical Chemistry)"),
     ("M.Sc. (Computer Science)", "M.Sc. (Computer Science)"),
     ("M.Sc. (Food Science & Technology)", "M.Sc. (Food Science & Technology)"),
     ("M.Sc. (Geo Informatics)", "M.Sc. (Geo Informatics)"),
@@ -32,14 +31,22 @@ COURSE_CHOICES = [
     ("M.Sc. (Physics - 2 Years with specialization in Electronics)", "M.Sc. (Physics - 2 Years with specialization in Electronics)"),
     ("M.Sc. (Statistics)", "M.Sc. (Statistics)"),
     ("M.Sc. (Zoology)", "M.Sc. (Zoology)"),
-    ("IMBA (Integrated Master of Business Management) (5 Yrs Integrated)", "IMBA (Integrated Master of Business Management) (5 Yrs Integrated)"),
     ("M.B.A", "M.B.A"),
     ("M.C.A", "M.C.A"),
-    ("LL.B (3 Years)", "LL.B (3 Years)"),
     ("LL.M (2 Years)", "LL.M (2 Years)"),
+    ("M.Ed.", "M.Ed."),
+    
+    # 3-Year Programs
+    ("LL.B (3 Years)", "LL.B (3 Years)"),
+    
+    # 5-Year Programs
+    ("M.A. (Applied Economics - 5 Years)", "M.A. (Applied Economics - 5 Years)"),
+    ("M.Sc. (Chemistry - 5 Years Integrated with specialization in Pharmaceutical Chemistry)", "M.Sc. (Chemistry - 5 Years Integrated with specialization in Pharmaceutical Chemistry)"),
+    ("IMBA (Integrated Master of Business Management) (5 Yrs Integrated)", "IMBA (Integrated Master of Business Management) (5 Yrs Integrated)"),
+    
+    # Other Programs (Duration not specified)
     ("B.Lib.Sc", "B.Lib.Sc"),
     ("B.Ed.", "B.Ed."),
-    ("M.Ed.", "M.Ed."),
     ("B.P.Ed.", "B.P.Ed."),
 ]
 

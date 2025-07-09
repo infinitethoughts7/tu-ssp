@@ -83,7 +83,10 @@ const StaffLoginPage = () => {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="email"
+                  className="text-sm font-medium text-gray-700"
+                >
                   Email Address
                 </label>
                 <div className="relative">
@@ -106,7 +109,10 @@ const StaffLoginPage = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="password"
+                  className="text-sm font-medium text-gray-700"
+                >
                   Password
                 </label>
                 <div className="relative">
