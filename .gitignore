@@ -35,6 +35,18 @@ htmlcov/
 # Debug Toolbar cache
 .debug/
 
+# === Database Populate Scripts (Development Only) ===
+backend/core/management/commands/populate_db.py
+backend/core/management/commands/populate_database.py
+backend/core/management/commands/populate_staff_profiles.py
+backend/dues/management/commands/populate_fee_structure.py
+backend/dues/management/commands/import_hostel_dues.py
+backend/dues/management/commands/fix_academic_fee_structure.py
+backend/dues/management/populate_db.py
+backend/dues/management/commands/*_populate*.py
+backend/dues/management/commands/*_import*.py
+backend/dues/management/commands/*_fix*.py
+
 # === React/Node/Frontend ===
 frontend/node_modules/
 frontend/.next/
