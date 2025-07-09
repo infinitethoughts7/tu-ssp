@@ -11,7 +11,7 @@ export interface DepartmentDue {
       first_name: string;
       last_name: string;
     };
-    roll_number: string;
+    username: string; // Changed from roll_number to username
     course: string;
     course_duration: string;
     caste: string;
@@ -31,4 +31,12 @@ export interface DepartmentDue {
   created_by: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface Student {
+  username: string; // This is the roll number stored in username
+  name: string;
+  course: string;
+  caste: string;
+  phone_number: string;
 }

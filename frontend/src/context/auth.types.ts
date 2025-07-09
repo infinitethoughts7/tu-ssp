@@ -16,7 +16,7 @@ export interface AuthContextType {
   error: string | null;
   login: (credentials: {
     email?: string;
-    roll_number?: string;
+    username?: string; // Changed from roll_number to username
     password: string;
   }) => Promise<void>;
   logout: () => void;

@@ -16,12 +16,12 @@ class Command(BaseCommand):
         }
 
         for _, row in df.iterrows():
-            roll_number = str(row.get('Online \nAdmission No.', '')).strip()
-            if not roll_number:
+            username = str(row.get('Online \nAdmission No.', '')).strip()  # This is the roll number
+            if not username:
                 continue
-            student = StudentProfile.objects.filter(roll_number__iexact=roll_number).first()
+            student = StudentProfile.objects.filter(user__username__iexact=username).first()
             if not student:
-                self.stdout.write(f"❌ Student not found: {roll_number}")
+                self.stdout.write(f"❌ Student not found: {username}")
                 continue
 
             deposit = int(row.get("Deposit", 0) or 0)
@@ -55,6 +55,6 @@ class Command(BaseCommand):
                             "remarks": remarks,
                         }
                     )
-                    self.stdout.write(f"✅ Imported hostel due for {roll_number} - Year {year}")
+                    self.stdout.write(f"✅ Imported hostel due for {username} - Year {year}")
                 except Exception as e:
-                    self.stdout.write(f"❌ Error for {roll_number} Year {year}: {str(e)}") 
+                    self.stdout.write(f"❌ Error for {username} Year {year}: {str(e)}") 

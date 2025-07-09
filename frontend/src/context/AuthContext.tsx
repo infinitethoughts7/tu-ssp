@@ -182,7 +182,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const login = async (credentials: {
     email?: string;
-    roll_number?: string;
+    username?: string; // Changed from roll_number to username
     password: string;
   }) => {
     setIsLoading(true);

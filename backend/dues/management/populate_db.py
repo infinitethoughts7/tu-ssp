@@ -12,11 +12,11 @@ class Command(BaseCommand):
         df = pd.read_csv(path)
 
         for _, row in df.iterrows():
-            roll_number = str(row["Admission No"]).strip()
-            student = StudentProfile.objects.filter(roll_number=roll_number).first()
+            username = str(row["Admission No"]).strip()  # This is the roll number
+            student = StudentProfile.objects.filter(user__username=username).first()
 
             if not student:
-                self.stdout.write(f"❌ Student not found: {roll_number}")
+                self.stdout.write(f"❌ Student not found: {username}")
                 continue
 
             try:
@@ -51,6 +51,6 @@ class Command(BaseCommand):
                             "paid_by_student": paid_by_student,
                         }
                     )
-                    self.stdout.write(f"✅ Imported dues for {student.roll_number} - Year {year}")
+                    self.stdout.write(f"✅ Imported dues for {username} - Year {year}")
             except Exception as e:
-                self.stdout.write(f"❌ Error for {roll_number}: {str(e)}")
+                self.stdout.write(f"❌ Error for {username}: {str(e)}")

@@ -15,11 +15,11 @@ class FeeStructureSerializer(serializers.ModelSerializer):
 
 class StudentProfileSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
-    roll_number = serializers.CharField(source='user.username')
+    username = serializers.CharField(source='user.username')  # This is the roll number
 
     class Meta:
         model = StudentProfile
-        fields = ['roll_number', 'full_name', 'phone_number', 'caste', 'course']
+        fields = ['username', 'full_name', 'phone_number', 'caste', 'course']
 
     def get_full_name(self, obj):
         return f"{obj.user.first_name} {obj.user.last_name}".strip()
@@ -143,25 +143,25 @@ class HostelDuesSerializer(serializers.ModelSerializer):
 class OtherDueSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='student.user.get_full_name', read_only=True)
     created_by_name = serializers.CharField(source='created_by.user.get_full_name', read_only=True)
-    student_roll_number = serializers.CharField(write_only=True, required=True)
+    student_username = serializers.CharField(write_only=True, required=True)  # This is the roll number
     student_course = serializers.CharField(source='student.course', read_only=True)
 
     class Meta:
         model = OtherDue
         fields = [
-            'id', 'student', 'student_roll_number', 'student_name', 'student_course',
+            'id', 'student', 'student_username', 'student_name', 'student_course',
             'department', 'amount', 'remark', 'created_by', 'created_by_name',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at', 'created_by_name', 'student_name', 'student', 'student_course']
 
     def create(self, validated_data):
-        student_roll = validated_data.pop('student_roll_number')
+        student_username = validated_data.pop('student_username')
         try:
-            student = StudentProfile.objects.get(user__username=student_roll)
+            student = StudentProfile.objects.get(user__username=student_username)
             validated_data['student'] = student
         except StudentProfile.DoesNotExist:
             raise serializers.ValidationError({
-                'student_roll_number': f'No student found with roll number: {student_roll}'
+                'student_username': f'No student found with username: {student_username}'
             })
         return super().create(validated_data)

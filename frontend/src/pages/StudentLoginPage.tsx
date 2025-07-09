@@ -27,8 +27,8 @@ const StudentLoginPage = () => {
 
     try {
       await login({
-        roll_number: rollNumber,
-        password,
+        username: rollNumber, // Changed from roll_number to username
+        password: password,
       });
       navigate("/student-dashboard");
     } catch {

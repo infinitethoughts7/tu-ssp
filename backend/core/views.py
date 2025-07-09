@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 class StudentLoginView(APIView):
     permission_classes = [AllowAny]
+    
     def post(self, request):
         try:
             print("StudentLoginView POST method was called")
@@ -31,50 +32,52 @@ class StudentLoginView(APIView):
             
             serializer = StudentLoginSerializer(data=request.data)
             if serializer.is_valid():
-                roll_number = serializer.validated_data['roll_number']
+                username = serializer.validated_data['username']  # This is the roll number
                 password = serializer.validated_data['password']
                 
-                logger.info(f"Attempting student login for roll number: {roll_number}")
+                logger.info(f"Attempting student login for username: {username}")
                 
                 # Check if user exists
                 try:
-                    user = User.objects.get(username=roll_number)
+                    user = User.objects.get(username=username)
                     logger.info(f"User found: {user.username}, is_student: {user.is_student}")
                 except User.DoesNotExist:
-                    logger.warning(f"No user found with roll number: {roll_number}")
+                    logger.warning(f"No user found with username: {username}")
                     return Response(
-                        {'error': 'Invalid roll number or password'},
+                        {'error': 'Invalid username or password'},
                         status=status.HTTP_401_UNAUTHORIZED
                     )
                 
                 # Authenticate user
                 user = authenticate(
                     request,
-                    username=roll_number,
+                    username=username,
                     password=password
                 )
                 
                 if user and user.is_student:
-                    logger.info(f"Student authentication successful for: {roll_number}")
+                    logger.info(f"Student authentication successful for: {username}")
                     refresh = RefreshToken.for_user(user)
                     return Response({
                         'refresh': str(refresh),
                         'access': str(refresh.access_token),
                     })
                 else:
-                    logger.warning(f"Student authentication failed for: {roll_number}")
+                    logger.warning(f"Student authentication failed for: {username}")
                     return Response(
-                        {'error': 'Invalid roll number or password'},
+                        {'error': 'Invalid username or password'},
                         status=status.HTTP_401_UNAUTHORIZED
                     )
             else:
                 logger.error(f"Validation errors: {serializer.errors}")
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-                
+                return Response(
+                    {'error': 'Please provide a valid username and password'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         except Exception as e:
-            logger.error(f"Unexpected error in StudentLoginView: {str(e)}")
+            logger.error(f"Error in StudentLoginView: {str(e)}")
             return Response(
-                {'error': 'An unexpected error occurred. Please try again.'},
+                {'error': 'An error occurred during login'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -197,7 +200,7 @@ def search_students(request):
         return Response({'error': 'Search query is required'}, status=400)
     
     try:
-        # Search by roll number (username) or name
+        # Search by username (roll number) or name
         students = StudentProfile.objects.filter(
             Q(user__username__icontains=query) |
             Q(user__first_name__icontains=query) |
@@ -207,7 +210,7 @@ def search_students(request):
         results = []
         for student in students:
             results.append({
-                'roll_number': student.user.username,
+                'username': student.user.username,  # This is the roll number
                 'name': f"{student.user.first_name} {student.user.last_name}",
                 'course': student.course,
                 'caste': student.caste,

@@ -13,20 +13,19 @@ class Command(BaseCommand):
         df = pd.read_csv(path)
 
         # Update all relevant StudentProfile records to have the correct course
-        roll_numbers = df["Admission No"].astype(str).str.strip().tolist()
-        StudentProfile.objects.filter(roll_number__in=roll_numbers).update(course="M.Com. (e-Commerce)")
+        usernames = df["Admission No"].astype(str).str.strip().tolist()
+        StudentProfile.objects.filter(user__username__in=usernames).update(course="M.Com. (e-Commerce)")
 
         for _, row in df.iterrows():
-            roll_number = str(row["Admission No"]).strip()
+            username = str(row["Admission No"]).strip()  # This is the roll number
             student_name = row["Student Name"].strip()
             category = row["Category"].strip() if not pd.isna(row["Category"]) else "Other"
             phone_number = str(row["Phone Number"]).strip()
 
             # Create or get User
             user, user_created = User.objects.get_or_create(
-                username=roll_number,
+                username=username,
                 defaults={
-                    "roll_number": roll_number,
                     "is_student": True,
                     "first_name": student_name,
                 }
@@ -36,7 +35,6 @@ class Command(BaseCommand):
             student_profile, created = StudentProfile.objects.get_or_create(
                 user=user,
                 defaults={
-                    "roll_number": roll_number,
                     "caste": category,
                     "gender": "Other",
                     "phone_number": phone_number,
@@ -48,9 +46,9 @@ class Command(BaseCommand):
             )
 
             if created:
-                self.stdout.write(f"✅ Created student profile for {student_name} with roll number {roll_number}")
+                self.stdout.write(f"✅ Created student profile for {student_name} with username {username}")
             else:
-                self.stdout.write(f"ℹ️ Student profile already exists for {student_name} with roll number {roll_number}")
+                self.stdout.write(f"ℹ️ Student profile already exists for {student_name} with username {username}")
 
             try:
                 for year in ["1", "2"]:
@@ -87,8 +85,8 @@ class Command(BaseCommand):
                             "paid_by_student": paid_by_student,
                         }
                     )
-                    self.stdout.write(f"✅ Imported dues for {student_profile.roll_number} - Year {year}")
+                    self.stdout.write(f"✅ Created academic record for {username} - Year {year}")
             except Exception as e:
-                self.stdout.write(f"❌ Error for {roll_number}: {str(e)}")
+                self.stdout.write(f"❌ Error for {username}: {str(e)}")
 
         self.stdout.write(self.style.SUCCESS('Successfully populated database with M.Com dues')) 

@@ -357,3 +357,23 @@ export const updateHostelDue = async (
     throw error;
   }
 };
+
+export interface Student {
+  username: string; // This comes from user.username in the backend (roll number)
+  name: string;
+  course: string;
+  caste: string;
+  phone_number: string;
+}
+
+export const findStudentByUsername = async (
+  username: string
+): Promise<Student | undefined> => {
+  try {
+    const response = await api.get(`/students/search/?q=${username}`);
+    return response.data.find((s: any) => s.username === username);
+  } catch (error) {
+    console.error("Error finding student:", error);
+    return undefined;
+  }
+};

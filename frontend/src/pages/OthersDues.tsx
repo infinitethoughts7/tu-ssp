@@ -80,13 +80,27 @@ type StudentSuggestion = {
   course: string;
 };
 
+interface Student {
+  username: string; // Changed from roll_number to username
+  name: string;
+  course: string;
+  caste: string;
+  phone_number: string;
+}
+
+interface NewDue {
+  student_username: string; // Changed from student_roll_number to student_username
+  amount: string;
+  remark: string;
+}
+
 export default function OthersDues() {
   const { logout, accessToken } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddDueModal, setShowAddDueModal] = useState(false);
-  const [newDue, setNewDue] = useState({
-    student_roll_number: "",
+  const [newDue, setNewDue] = useState<NewDue>({
+    student_username: "",
     amount: "",
     remark: "",
   });
@@ -188,7 +202,7 @@ export default function OthersDues() {
 
   // Update the input handler
   const handleStudentSearch = (value: string) => {
-    setNewDue({ ...newDue, student_roll_number: value });
+    setNewDue({ ...newDue, student_username: value });
     setOpen(true);
     if (value.trim()) {
       debouncedSearch(value.trim());
@@ -203,14 +217,14 @@ export default function OthersDues() {
 
     try {
       const requestData = {
-        student_roll_number: selectedStudent.roll_number,
+        student_username: selectedStudent.roll_number,
         department: department,
         amount: parseFloat(newDue.amount),
         remark: newDue.remark || "",
       };
       const response = await api.post("/dues/other-dues/", requestData);
       setShowAddDueModal(false);
-      setNewDue({ student_roll_number: "", amount: "", remark: "" });
+      setNewDue({ student_username: "", amount: "", remark: "" });
       setSelectedStudent(null);
       fetchDues();
     } catch (err) {
@@ -429,7 +443,7 @@ export default function OthersDues() {
                     id="student_roll_number"
                     type="text"
                     placeholder="Enter student roll number..."
-                    value={newDue.student_roll_number}
+                    value={newDue.student_username}
                     onChange={(e) => handleStudentSearch(e.target.value)}
                     className="w-full"
                   />
@@ -443,7 +457,7 @@ export default function OthersDues() {
                             setSelectedStudent(student);
                             setNewDue({
                               ...newDue,
-                              student_roll_number: student.roll_number,
+                              student_username: student.roll_number,
                             });
                             setOpen(false);
                           }}
@@ -458,14 +472,14 @@ export default function OthersDues() {
                     </div>
                   )}
                   {open &&
-                    newDue.student_roll_number.length > 0 &&
-                    newDue.student_roll_number.length < 3 && (
+                    newDue.student_username.length > 0 &&
+                    newDue.student_username.length < 3 && (
                       <div className="absolute z-50 w-full mt-1 bg-white rounded-md shadow-lg border border-gray-200 p-2 text-sm text-gray-500">
                         Please enter at least 3 characters
                       </div>
                     )}
                   {open &&
-                    newDue.student_roll_number.length >= 3 &&
+                    newDue.student_username.length >= 3 &&
                     studentSuggestions.length === 0 && (
                       <div className="absolute z-50 w-full mt-1 bg-white rounded-md shadow-lg border border-gray-200 p-2 text-sm text-gray-500">
                         No student found with this roll number
@@ -511,7 +525,7 @@ export default function OthersDues() {
                     setShowAddDueModal(false);
                     setSelectedStudent(null);
                     setNewDue({
-                      student_roll_number: "",
+                      student_username: "",
                       amount: "",
                       remark: "",
                     });

@@ -68,9 +68,9 @@ CASTE_CHOICES = [
 ]
 
 GENDER_CHOICES = [
-    ('Male', 'Male'),
-    ('Female', 'Female'),
-    ('Other', 'Other'),
+    ('M', 'Male'),
+    ('F', 'Female'),
+    ('O', 'Other'),
 ]
 DEPARTMENT_CHOICES = [
     ('accountant', 'Accountant'),
@@ -87,21 +87,19 @@ DESIGNATION_CHOICES = [
     ('PE & Sports In-charge', 'PE & Sports In-charge'),
 ]
 
-# Custom user manager to handle creating users without username
+# Custom user manager to handle creating users
 class CustomUserManager(BaseUserManager):
-    def create_user(self, email=None, roll_number=None, password=None, **extra_fields):
-        if not (email or roll_number):
-            raise ValueError('Either email or roll number must be set')
+    def create_user(self, username, password=None, **extra_fields):
+        if not username:
+            raise ValueError('Username must be set')
         
-        if email:
-            email = self.normalize_email(email)
-        
-        # Set username as roll_number for students, email for staff
-        if 'username' not in extra_fields:
-            extra_fields['username'] = roll_number if roll_number else email
+        # For staff users, username should be email
+        if extra_fields.get('is_staff', False):
+            email = self.normalize_email(username)
+            extra_fields['email'] = email
         
         user = self.model(
-            email=email,
+            username=username,
             **extra_fields
         )
         user.set_password(password)
@@ -111,14 +109,13 @@ class CustomUserManager(BaseUserManager):
     def create_superuser(self, username, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-        return self.create_user(email=username, password=password, **extra_fields)
+        return self.create_user(username=username, password=password, **extra_fields)
 
-# Custom User model without username
+# Custom User model
 class User(AbstractUser):
-    username = models.CharField(max_length=150, unique=True)  # Keep username field
+    username = models.CharField(max_length=150, unique=True)  # Roll number for students, email for staff
     email = models.EmailField(unique=True, null=True, blank=True)
     is_student = models.BooleanField(default=False)
-    is_staff = models.BooleanField(default=False)
 
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = []
@@ -154,3 +151,4 @@ class StudentProfile(models.Model):
     is_hostel = models.BooleanField(default=False)
     def __str__(self):
         return f"{self.user.username}"
+

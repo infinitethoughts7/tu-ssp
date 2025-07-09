@@ -7,7 +7,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ('id', 'email', 'username', 'is_student', 'is_staff', 'first_name', 'last_name')
 
 class StudentLoginSerializer(serializers.Serializer):
-    roll_number = serializers.CharField()
+    username = serializers.CharField()  # Roll number for students
     password = serializers.CharField(write_only=True)
 
 class StaffLoginSerializer(serializers.Serializer):
