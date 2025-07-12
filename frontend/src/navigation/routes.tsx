@@ -11,6 +11,7 @@ import HostelDues from "../pages/HostelDues";
 import OthersDues from "../pages/OthersDues";
 import TotalDuesDashboard from "../pages/TotalDuesDashboard";
 import LibraryRecords from "../pages/LibraryRecords";
+import SportsRecords from "../pages/SportsRecords";
 
 const router = createBrowserRouter([
   {
@@ -101,6 +102,16 @@ const router = createBrowserRouter([
       <AuthProvider>
         <ProtectedRoute fallbackPath="/staff-login" requiredEmail={undefined}>
           <LibraryRecords />
+        </ProtectedRoute>
+      </AuthProvider>
+    ),
+  },
+  {
+    path: "/sports-records",
+    element: (
+      <AuthProvider>
+        <ProtectedRoute fallbackPath="/staff-login" requiredEmail={undefined}>
+          <SportsRecords />
         </ProtectedRoute>
       </AuthProvider>
     ),

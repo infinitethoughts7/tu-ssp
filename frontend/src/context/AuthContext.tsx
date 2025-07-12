@@ -266,6 +266,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
               navigate("/library-records");
               break;
             case "sports_incharge":
+              navigate("/sports-records");
+              break;
             case "lab_incharge":
               navigate("/others-dues");
               break;

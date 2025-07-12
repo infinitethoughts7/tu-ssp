@@ -252,6 +252,7 @@ def search_students(request):
         results = []
         for student in students:
             results.append({
+                'id': student.id,  # Add student ID
                 'username': student.user.username,  # This is the roll number
                 'name': f"{student.user.first_name} {student.user.last_name}",
                 'course': student.course.name if student.course else None,

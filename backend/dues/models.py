@@ -107,3 +107,31 @@ class LegacyAcademicRecords(models.Model):
         else:
             return f"Unmatched Record - Due: ₹{self.due_amount}"
 
+
+class SportsRecords(models.Model):
+    """
+    Model to store individual sports equipment borrowing records.
+    Each record represents one equipment borrowed by one student.
+    """
+    student = models.ForeignKey(StudentProfile, on_delete=models.CASCADE, related_name='sports_records')
+    equipment_name = models.CharField(max_length=100, help_text="Name of the sports equipment (e.g., Football, Bat, Racket)")
+    borrowing_date = models.DateField(help_text="Date when equipment was borrowed")
+    fine_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Fine amount if not returned/missed submission")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Sports Record"
+        verbose_name_plural = "Sports Records"
+        ordering = ['-borrowing_date', 'student__user__username']
+
+    def __str__(self):
+        status = "Returned" if self.is_returned else "Borrowed"
+        return f"{self.student.user.username} - {self.equipment_name} ({status})"
+
+    @property
+    def is_returned(self):
+        """Placeholder for return status"""
+        return False
+

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import FeeStructure, AcademicRecords, HostelRecords, LibraryRecords, LegacyAcademicRecords
+from .models import FeeStructure, AcademicRecords, HostelRecords, LibraryRecords, LegacyAcademicRecords, SportsRecords
 
 @admin.register(FeeStructure)
 class FeeStructureAdmin(admin.ModelAdmin):
@@ -59,3 +59,10 @@ class LegacyAcademicRecordsAdmin(admin.ModelAdmin):
     def formatted_due_amount(self, obj):
         return f"₹{obj.due_amount:,.2f}"
     formatted_due_amount.short_description = 'Formatted Due Amount'
+
+@admin.register(SportsRecords)
+class SportsRecordsAdmin(admin.ModelAdmin):
+    list_display = ['student', 'equipment_name', 'borrowing_date', 'fine_amount']
+    list_filter = ['borrowing_date']
+    search_fields = ['student__user__username', 'equipment_name']
+    readonly_fields = ['created_at', 'updated_at']

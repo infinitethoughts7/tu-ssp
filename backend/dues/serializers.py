@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import FeeStructure, AcademicRecords, HostelRecords, LibraryRecords, LegacyAcademicRecords
+from .models import FeeStructure, AcademicRecords, HostelRecords, LibraryRecords, LegacyAcademicRecords, SportsRecords
 from core.serializers import StudentProfileSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
 import logging
@@ -51,3 +51,23 @@ class LegacyAcademicRecordsSerializer(serializers.ModelSerializer):
     
     def get_formatted_due_amount(self, obj):
         return f"₹{obj.due_amount:,.2f}"
+
+
+class SportsRecordsSerializer(serializers.ModelSerializer):
+    student = StudentProfileSerializer(read_only=True)
+    
+    class Meta:
+        model = SportsRecords
+        fields = '__all__'
+    
+    def create(self, validated_data):
+        # Handle student field properly during creation
+        student_id = self.context.get('student_id')
+        if student_id:
+            from core.models import StudentProfile
+            try:
+                student = StudentProfile.objects.get(id=student_id)
+                validated_data['student'] = student
+            except StudentProfile.DoesNotExist:
+                raise serializers.ValidationError("Student not found")
+        return super().create(validated_data)
