@@ -153,6 +153,8 @@ class LegacyAcademicRecordsViewSet(viewsets.ModelViewSet):
         if max_amount:
             queryset = queryset.filter(due_amount__lte=float(max_amount))
         
+        # Order by batch descending (latest first), then by roll number ascending within batch
+        queryset = queryset.order_by('-student__batch', 'student__user__username')
         return queryset
     
     @action(detail=False, methods=['get'])

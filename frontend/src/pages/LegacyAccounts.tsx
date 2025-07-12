@@ -94,10 +94,16 @@ const LegacyRecordRow = React.memo(
       0
     );
     const isDue = totalDue > 0;
+    // Get batch: prefer group.batch (if present), else from first due, else N/A
+    let batch = (group as any).batch;
+    if (!batch && group.dues && group.dues.length > 0) {
+      batch = group.dues[0]?.student?.batch || 'N/A';
+    }
+    if (!batch) batch = 'N/A';
     return (
       <TableRow className="hover:bg-blue-50/50 transition-colors">
         <TableCell className="w-12"></TableCell>
-        <TableCell>
+        <TableCell className="align-middle text-left">
           <div className="space-y-1">
             <button
               className="font-semibold text-blue-700 hover:underline cursor-pointer bg-transparent border-0 p-0 m-0"
@@ -111,29 +117,29 @@ const LegacyRecordRow = React.memo(
             </div>
           </div>
         </TableCell>
-        <TableCell>
+        <TableCell className="align-middle text-left">
           <div className="text-sm font-medium text-gray-700">
             {group.course}
           </div>
         </TableCell>
-        <TableCell>
+        <TableCell className="align-middle text-left">
+          <div className="text-sm font-medium text-gray-700">
+            {batch}
+          </div>
+        </TableCell>
+        <TableCell className="align-middle text-right">
           <div
-            className={`flex items-center gap-2 px-5 py-2 rounded-xl transition-colors duration-200 justify-center w-fit mx-auto ${
+            className={`flex items-center gap-1 px-3 py-1 rounded-lg transition-colors duration-200 justify-end w-fit ml-auto text-sm ${
               isDue
-                ? "bg-red-100 border border-red-200 shadow text-red-700 font-extrabold text-xl"
-                : "bg-gray-50 text-gray-400 font-semibold"
+                ? "bg-red-100 border border-red-200 shadow text-red-700 font-bold"
+                : "bg-gray-50 text-gray-400 font-medium"
             }`}
+            style={{ minWidth: 70 }}
           >
             <IndianRupee
-              className={`h-6 w-6 ${isDue ? "text-red-700" : "text-gray-400"}`}
+              className={`h-4 w-4 ${isDue ? "text-red-700" : "text-gray-400"}`}
             />
-            <span
-              className={`$ {
-                isDue
-                  ? "text-red-700 font-extrabold text-xl"
-                  : "text-gray-500 font-semibold"
-              }`}
-            >
+            <span className={isDue ? "text-red-700 font-bold" : "text-gray-500 font-medium"}>
               {totalDue.toLocaleString()}
             </span>
           </div>
@@ -688,17 +694,12 @@ export default function LegacyAccounts() {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-gray-200 bg-gray-50">
-                      <TableHead className="w-12 text-gray-600 font-semibold"></TableHead>
-                      <TableHead className="text-gray-600 font-semibold">
-                        Student Details
-                      </TableHead>
-                      <TableHead className="text-gray-600 font-semibold">
-                        Course
-                      </TableHead>
-                      <TableHead className="text-gray-600 font-semibold">
-                        Due Amount
-                      </TableHead>
-                      <TableHead className="w-12 text-gray-600 font-semibold"></TableHead>
+                      <TableHead className="w-12"></TableHead>
+                      <TableHead className="text-gray-600 font-semibold text-left">Student Details</TableHead>
+                      <TableHead className="text-gray-600 font-semibold text-left">Course</TableHead>
+                      <TableHead className="text-gray-600 font-semibold text-left">Batch</TableHead>
+                      <TableHead className="text-gray-600 font-semibold text-right">Due Amount</TableHead>
+                      <TableHead className="w-12"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -771,38 +772,54 @@ export default function LegacyAccounts() {
                     TC Records
                   </div>
                   <div className="grid gap-3">
-                    {selectedStudent.dues.map((legacyDue: LegacyStudentGroup['dues'][number]) => {
-                      const isDue = Number(legacyDue.due_amount) > 0;
-                      return (
-                        <div
-                          key={legacyDue.id}
-                          className="flex items-center justify-between p-3 bg-white rounded-xl border border-blue-200 shadow-sm hover:shadow-md transition-shadow"
-                        >
-                          <div className="flex flex-col gap-1">
-                            <div className="font-semibold text-gray-900">
-                              TC: {legacyDue.tc_number || "N/A"}
-                            </div>
-                            <div className="text-gray-500 text-sm">
-                              TC Date: {legacyDue.tc_issued_date ? format(new Date(legacyDue.tc_issued_date), "dd MMM yyyy") : "N/A"}
-                            </div>
-                          </div>
+                    {selectedStudent.dues.map(
+                      (legacyDue: LegacyStudentGroup["dues"][number]) => {
+                        const isDue = Number(legacyDue.due_amount) > 0;
+                        return (
                           <div
-                            className={`flex items-center gap-2 px-4 py-1 rounded-xl transition-colors duration-200 ${
-                              isDue
-                                ? "bg-red-100 border border-red-200 shadow text-red-700 font-extrabold text-lg"
-                                : "bg-gray-50 text-gray-400 font-semibold"
-                            }`}
+                            key={legacyDue.id}
+                            className="flex items-center justify-between p-3 bg-white rounded-xl border border-blue-200 shadow-sm hover:shadow-md transition-shadow"
                           >
-                            <IndianRupee
-                              className={`h-5 w-5 ${isDue ? "text-red-700" : "text-gray-400"}`}
-                            />
-                            <span className={isDue ? "text-red-700 font-extrabold text-lg" : "text-gray-500 font-semibold"}>
-                              {legacyDue.due_amount}
-                            </span>
+                            <div className="flex flex-col gap-1">
+                              <div className="font-semibold text-gray-900">
+                                TC: {legacyDue.tc_number || "N/A"}
+                              </div>
+                              <div className="text-gray-500 text-sm">
+                                TC Date:{" "}
+                                {legacyDue.tc_issued_date
+                                  ? format(
+                                      new Date(legacyDue.tc_issued_date),
+                                      "dd MMM yyyy"
+                                    )
+                                  : "N/A"}
+                              </div>
+                            </div>
+                            <div
+                              className={`flex items-center gap-2 px-4 py-1 rounded-xl transition-colors duration-200 ${
+                                isDue
+                                  ? "bg-red-100 border border-red-200 shadow text-red-700 font-extrabold text-lg"
+                                  : "bg-gray-50 text-gray-400 font-semibold"
+                              }`}
+                            >
+                              <IndianRupee
+                                className={`h-5 w-5 ${
+                                  isDue ? "text-red-700" : "text-gray-400"
+                                }`}
+                              />
+                              <span
+                                className={
+                                  isDue
+                                    ? "text-red-700 font-extrabold text-lg"
+                                    : "text-gray-500 font-semibold"
+                                }
+                              >
+                                {legacyDue.due_amount}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      }
+                    )}
                   </div>
                 </div>
               </div>
