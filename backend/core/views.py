@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
@@ -8,7 +8,8 @@ from .serializers import (
     StudentLoginSerializer,
     StaffLoginSerializer,
     StudentProfileSerializer,
-    StaffProfileSerializer
+    StaffProfileSerializer,
+    UserSerializer
 )
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -162,6 +163,45 @@ class UserProfileView(APIView):
             status=status.HTTP_404_NOT_FOUND
         )
 
+# ViewSets for better API coverage
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        queryset = User.objects.all()
+        user_type = self.request.query_params.get('type', None)
+        if user_type == 'student':
+            queryset = queryset.filter(is_student=True)
+        elif user_type == 'staff':
+            queryset = queryset.filter(is_staff=True)
+        return queryset
+
+class StudentProfileViewSet(viewsets.ModelViewSet):
+    queryset = StudentProfile.objects.all()
+    serializer_class = StudentProfileSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        queryset = StudentProfile.objects.all()
+        username = self.request.query_params.get('username', None)
+        if username:
+            queryset = queryset.filter(user__username__icontains=username)
+        return queryset
+
+class StaffProfileViewSet(viewsets.ModelViewSet):
+    queryset = StaffProfile.objects.all()
+    serializer_class = StaffProfileSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        queryset = StaffProfile.objects.all()
+        department = self.request.query_params.get('department', None)
+        if department:
+            queryset = queryset.filter(department=department)
+        return queryset
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def staff_profile(request):
@@ -180,11 +220,13 @@ def staff_profile(request):
         print("Department:", staff_profile.department)
         
         response_data = {
+            'id': request.user.id,
+            'email': request.user.email,
+            'username': request.user.username,
             'name': request.user.get_full_name(),
-            'designation': staff_profile.designation,
+            'user_type': 'staff',
             'department': staff_profile.department,
-            'phone_number': staff_profile.phone_number,
-            'email': request.user.email
+            'phone_number': staff_profile.phone_number
         }
         print("Response data:", response_data)
         return Response(response_data)
@@ -212,9 +254,9 @@ def search_students(request):
             results.append({
                 'username': student.user.username,  # This is the roll number
                 'name': f"{student.user.first_name} {student.user.last_name}",
-                'course': student.course,
+                'course': student.course.name if student.course else None,
                 'caste': student.caste,
-                'phone_number': student.phone_number
+                'phone_number': student.mobile_number
             })
         
         return Response(results)

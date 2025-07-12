@@ -1,9 +1,19 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 from . import views
 
+# Create router for ViewSets
+router = DefaultRouter()
+router.register(r'users', views.UserViewSet)
+router.register(r'student-profiles', views.StudentProfileViewSet)
+router.register(r'staff-profiles', views.StaffProfileViewSet)
+
 # API URL patterns for the core app
 urlpatterns = [
+    # Include router URLs
+    path('', include(router.urls)),
+    
     # Authentication endpoints
     path('auth/student/login/', views.StudentLoginView.as_view(), name='student-login'),
     path('auth/staff/login/', views.StaffLoginView.as_view(), name='staff-login'),

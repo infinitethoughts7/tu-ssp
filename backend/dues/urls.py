@@ -1,12 +1,16 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import FeeStructureViewSet, AcademicViewSet,  HostelDuesViewSet, OtherDueViewSet
+from .views import (
+    FeeStructureViewSet, AcademicRecordsViewSet, HostelRecordsViewSet,
+    LibraryRecordsViewSet, LegacyAcademicRecordsViewSet
+)
 
 router = DefaultRouter()
-router.register(r'fee-structure', FeeStructureViewSet, basename='fee-structure')
-router.register(r'academic-dues', AcademicViewSet, basename='academic-dues')
-router.register(r'hostel-dues', HostelDuesViewSet, basename='hostel-dues')
-router.register(r'other-dues', OtherDueViewSet, basename='other-dues')
+router.register(r'fee-structures', FeeStructureViewSet)
+router.register(r'academic-records', AcademicRecordsViewSet, basename='academic-records')
+router.register(r'hostel-records', HostelRecordsViewSet, basename='hostel-records')
+router.register(r'library-records', LibraryRecordsViewSet, basename='library-records')
+router.register(r'legacy-academic-records', LegacyAcademicRecordsViewSet, basename='legacy-academic-records')
 
 urlpatterns = [
     path('', include(router.urls)),

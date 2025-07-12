@@ -24,15 +24,17 @@ class StaffLoginSerializer(serializers.Serializer):
 
 
 class StudentProfileSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
+    user = UserSerializer(read_only=True)
+    course_name = serializers.CharField(source='course.name', read_only=True)
     
     class Meta:
         model = StudentProfile
-        fields = ('user', 'course', 'course_duration', 'caste', 'gender', 'phone_number')
+        fields = ('id', 'user', 'course', 'course_name', 'caste', 'gender', 'mobile_number', 'batch')
 
 class StaffProfileSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
+    user = UserSerializer(read_only=True)
+    department_display = serializers.CharField(source='get_department_display', read_only=True)
     
     class Meta:
         model = StaffProfile
-        fields = ('user', 'department', 'designation', 'gender', 'phone_number') 
+        fields = ('id', 'user', 'department', 'department_display', 'gender', 'phone_number', 'join_date') 

@@ -185,6 +185,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     username?: string; // Changed from roll_number to username
     password: string;
   }) => {
+    console.log("AuthContext login called with:", credentials);
     setIsLoading(true);
     setError(null);
 
@@ -193,7 +194,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         ? "/auth/staff/login/"
         : "/auth/student/login/";
 
+      console.log("Making API call to:", endpoint);
       const response = await api.post(endpoint, credentials);
+      console.log("Login API response:", response.data);
 
       if (!response.data.access || !response.data.refresh) {
         throw new Error("Invalid response from server");
@@ -243,6 +246,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         ? profileResponse.data
         : profileResponse.data.profile;
 
+      console.log("Setting user data:", userData);
       setUser(userData);
       if (credentials.email) {
         localStorage.setItem("staffUserData", JSON.stringify(userData));
@@ -252,6 +256,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       // Handle navigation based on department and email
       if (credentials.email) {
+        console.log("Navigating for staff user with department:", department);
         // Special case for principal
         if (credentials.email === "principal@tu.in") {
           navigate("/total-dues-dashboard");
@@ -266,9 +271,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
               navigate("/hostel-dues");
               break;
             case "accounts":
-              navigate("/accounts-dues");
+            case "accountant":
+              console.log("Navigating to accounts-dues");
+              console.log(
+                "Current location before navigation:",
+                window.location.pathname
+              );
+              navigate("/accounts-dues", { replace: true });
+              console.log(
+                "Navigation called, checking location after:",
+                window.location.pathname
+              );
               break;
             default:
+              console.log("Unknown department, navigating to staff-login");
               navigate("/staff-login");
           }
         }

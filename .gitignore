@@ -46,6 +46,7 @@ backend/dues/management/populate_db.py
 backend/dues/management/commands/*_populate*.py
 backend/dues/management/commands/*_import*.py
 backend/dues/management/commands/*_fix*.py
+backend/dues/management/commands/*
 
 # === React/Node/Frontend ===
 frontend/node_modules/
@@ -67,3 +68,25 @@ Thumbs.db
 
 # === Git Files ===
 *.orig
+
+# Ignore database dumps and population scripts
+*.sql
+*.xlsx
+*.xls
+*.csv
+backend/*/management/commands/*.pyc
+backend/*/management/commands/*populate*.py
+backend/*/management/commands/*test*.py
+backend/*/management/commands/*truncate*.py
+backend/*/management/commands/*delete*.py
+backend/*/management/commands/*analyz*.py
+backend/*/management/commands/*read*.py
+backend/*/management/commands/*dump*.py
+backend/*/management/commands/*Admissions_WithoutCDetails*.xlsx
+# Ignore test scripts in backend
+backend/test_*.py
+# Ignore any other test or temp files
+*.tmp
+*.bak
+
+

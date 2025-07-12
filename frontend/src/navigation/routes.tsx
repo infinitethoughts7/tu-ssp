@@ -5,7 +5,8 @@ import HomePage from "../pages/HomePage";
 import StudentLoginPage from "../pages/StudentLoginPage";
 import StaffLoginPage from "../pages/StaffLoginPage";
 import StudentDashboard from "../pages/StudentDashboard";
-import AccountsDues from "../pages/AccountsDues";
+
+import LegacyAccounts from "../pages/LegacyAccounts";
 import HostelDues from "../pages/HostelDues";
 import OthersDues from "../pages/OthersDues";
 import TotalDuesDashboard from "../pages/TotalDuesDashboard";
@@ -47,7 +48,29 @@ const router = createBrowserRouter([
     path: "/accounts-dues",
     element: (
       <AuthProvider>
-        <AccountsDues />
+        <ProtectedRoute fallbackPath="/staff-login" requiredEmail={undefined}>
+          <LegacyAccounts />
+        </ProtectedRoute>
+      </AuthProvider>
+    ),
+  },
+  {
+    path: "/dashboard/accounts",
+    element: (
+      <AuthProvider>
+        <ProtectedRoute fallbackPath="/staff-login" requiredEmail={undefined}>
+          <LegacyAccounts />
+        </ProtectedRoute>
+      </AuthProvider>
+    ),
+  },
+  {
+    path: "/legacy-accounts",
+    element: (
+      <AuthProvider>
+        <ProtectedRoute fallbackPath="/staff-login" requiredEmail={undefined}>
+          <LegacyAccounts />
+        </ProtectedRoute>
       </AuthProvider>
     ),
   },
@@ -55,7 +78,9 @@ const router = createBrowserRouter([
     path: "/hostel-dues",
     element: (
       <AuthProvider>
-        <HostelDues />
+        <ProtectedRoute fallbackPath="/staff-login" requiredEmail={undefined}>
+          <HostelDues />
+        </ProtectedRoute>
       </AuthProvider>
     ),
   },
@@ -63,7 +88,9 @@ const router = createBrowserRouter([
     path: "/others-dues",
     element: (
       <AuthProvider>
-        <OthersDues />
+        <ProtectedRoute fallbackPath="/staff-login" requiredEmail={undefined}>
+          <OthersDues />
+        </ProtectedRoute>
       </AuthProvider>
     ),
   },

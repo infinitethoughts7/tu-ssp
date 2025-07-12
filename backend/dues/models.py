@@ -1,53 +1,7 @@
 from django.db import models
 from django.conf import settings
 from core.models import StudentProfile, User, StaffProfile
-
-COURSE_CHOICES = [
-    ("M.A. (Applied Economics - 5 Years)", "M.A. (Applied Economics - 5 Years)"),
-    ("M.A. (Economics)", "M.A. (Economics)"),
-    ("M.A. (English)", "M.A. (English)"),
-    ("M.A. (Hindi)", "M.A. (Hindi)"),
-    ("M.A. (Mass Communication)", "M.A. (Mass Communication)"),
-    ("M.A. (Public Administration)", "M.A. (Public Administration)"),
-    ("M.A. (Telugu Studies)", "M.A. (Telugu Studies)"),
-    ("M.A. (Telugu Studies - Comparative Literature)", "M.A. (Telugu Studies - Comparative Literature)"),
-    ("M.A. (Urdu)", "M.A. (Urdu)"),
-    ("M.A. (History)", "M.A. (History)"),
-    ("M.A. (Political Science)", "M.A. (Political Science)"),
-    ("M.Com. (e-Commerce)", "M.Com. (e-Commerce)"),
-    ("M.Com. (General)", "M.Com. (General)"),
-    ("M.S.W", "M.S.W"),
-    ("M.Sc. (Applied Statistics)", "M.Sc. (Applied Statistics)"),
-    ("M.Sc. (Bio-Technology)", "M.Sc. (Bio-Technology)"),
-    ("M.Sc. (Botany)", "M.Sc. (Botany)"),
-    ("M.Sc. (Chemistry - 2 Years Course in specialization with Organic Chemistry)", "M.Sc. (Chemistry - 2 Years Course in specialization with Organic Chemistry)"),
-    ("M.Sc. (Chemistry - 2 Years with specialization in Pharmaceutical Chemistry)", "M.Sc. (Chemistry - 2 Years with specialization in Pharmaceutical Chemistry)"),
-    ("M.Sc. (Chemistry - 5 Years Integrated with specialization in Pharmaceutical Chemistry)", "M.Sc. (Chemistry - 5 Years Integrated with specialization in Pharmaceutical Chemistry)"),
-    ("M.Sc. (Computer Science)", "M.Sc. (Computer Science)"),
-    ("M.Sc. (Food Science & Technology)", "M.Sc. (Food Science & Technology)"),
-    ("M.Sc. (Geo Informatics)", "M.Sc. (Geo Informatics)"),
-    ("M.Sc. (Mathematics)", "M.Sc. (Mathematics)"),
-    ("M.Sc. (Nutrition & Dietetics)", "M.Sc. (Nutrition & Dietetics)"),
-    ("M.Sc. (Physics)", "M.Sc. (Physics)"),
-    ("M.Sc. (Physics - 2 Years with specialization in Electronics)", "M.Sc. (Physics - 2 Years with specialization in Electronics)"),
-    ("M.Sc. (Statistics)", "M.Sc. (Statistics)"),
-    ("M.Sc. (Zoology)", "M.Sc. (Zoology)"),
-    ("IMBA (Integrated Master of Business Management) (5 Yrs Integrated)", "IMBA (Integrated Master of Business Management) (5 Yrs Integrated)"),
-    ("M.B.A", "M.B.A"),
-    ("M.C.A", "M.C.A"),
-    ("LL.B (3 Years)", "LL.B (3 Years)"),
-    ("LL.M (2 Years)", "LL.M (2 Years)"),
-    ("B.Lib.Sc", "B.Lib.Sc"),
-    ("B.Ed.", "B.Ed."),
-    ("M.Ed.", "M.Ed."),
-    ("B.P.Ed.", "B.P.Ed."),
-]    
-DURATION_CHOICES = [
-    ('1', '1'),
-    ('2', '2'),
-    ('3', '3'),
-    ('5', '5'),
-]
+from utils.constants import COURSE_CHOICES, DURATION_CHOICES
 
 class FeeStructure(models.Model):
     course_name = models.CharField(max_length=100, choices=COURSE_CHOICES)
@@ -61,7 +15,7 @@ class FeeStructure(models.Model):
     def __str__(self):
         return f"{self.course_name} - {self.academic_year}"
 
-class Academic(models.Model):
+class AcademicRecords(models.Model):
     student = models.ForeignKey(StudentProfile, on_delete=models.CASCADE)
     fee_structure = models.ForeignKey(FeeStructure, on_delete=models.CASCADE , null=True, blank=True)
     paid_by_govt = models.IntegerField(default=0)
@@ -76,7 +30,7 @@ class Academic(models.Model):
     def due_amount(self):
         return (self.fee_structure.tuition_fee or 0) + (self.fee_structure.special_fee or 0) + (self.fee_structure.exam_fee or 0) - (self.paid_by_govt + self.paid_by_student)
 
-class HostelDues(models.Model):
+class HostelRecords(models.Model):
     student = models.ForeignKey(StudentProfile, on_delete=models.CASCADE)
     year_of_study = models.CharField(max_length=1, choices=DURATION_CHOICES)
     mess_bill = models.IntegerField(default=0)
@@ -92,34 +46,64 @@ class HostelDues(models.Model):
         return f"{self.student.user.username} - Year {self.year_of_study} Hostel Dues"
 
 
-class OtherDue(models.Model):
-    DEPARTMENT_CHOICES = [
-        ('librarian', 'Librarian'),
-        ('sports_incharge', 'Sports Incharge'),
-        ('lab_incharge', 'Lab Incharge'),
-        # Add more as needed
-    ]
-    student = models.ForeignKey(
-        StudentProfile, on_delete=models.CASCADE, related_name='other_dues', null=True, blank=True
-    )
-    department = models.CharField(max_length=20, choices=DEPARTMENT_CHOICES)
-    amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    remark = models.TextField(blank=True, null=True)
-    created_by = models.ForeignKey(
-        StaffProfile, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_other_dues'
-    )
+class LibraryRecords(models.Model):
+    """
+    Model to store individual library book borrowing records.
+    Each record represents one book borrowed by one student.
+    """
+    student = models.ForeignKey(StudentProfile, on_delete=models.CASCADE, related_name='library_records')
+    book_id = models.CharField(max_length=20, help_text="Book ID (e.g., h171, h1204, t215)")
+    borrowing_date = models.DateField(help_text="Date when book was borrowed")
+    fine_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Fine amount if overdue")
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+    
     class Meta:
-        unique_together = ('student', 'department')
-
+        verbose_name = "Library Record"
+        verbose_name_plural = "Library Records"
+        ordering = ['-borrowing_date', 'student__user__username']
+    
     def __str__(self):
-        return f"{self.student} - {self.department} - {self.amount}"
-
-
+        status = "Returned" if self.is_returned else "Borrowed"
+        return f"{self.student.user.username} - {self.book_id} ({status})"
     
+    @property
+    def is_returned(self):
+        """Placeholder for return status"""
+        return False
 
 
-
+class LegacyAcademicRecords(models.Model):
+    """
+    Model to store legacy academic records from Admissions Excel import.
+    This model stores the original data structure from the Excel file.
+    """
+    # Link to existing student profile (if exists)
+    student = models.ForeignKey(
+        StudentProfile, 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True, 
+        related_name='legacy_records',
+        help_text="Link to existing student profile if found"
+    )
     
+    # Financial information
+    due_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Amount due from student")
+    
+    # Administrative information
+    tc_number = models.CharField(max_length=20, blank=True, null=True, help_text="Transfer Certificate number")
+    tc_issued_date = models.DateField(blank=True, null=True, help_text="Transfer Certificate issued date")
+    
+    class Meta:
+        verbose_name = "Legacy Academic Record"
+        verbose_name_plural = "Legacy Academic Records"
+        ordering = ['student__user__username']
+    
+    def __str__(self):
+        if self.student:
+            return f"{self.student.user.username} - Due: ₹{self.due_amount}"
+        else:
+            return f"Unmatched Record - Due: ₹{self.due_amount}"
+

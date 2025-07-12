@@ -29,16 +29,24 @@ const StaffLoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    console.log("Form submitted with:", { email, password });
     setError("");
 
     if (!email || !password) {
+      console.log("Missing email or password");
       setError("Please enter both email and password");
       return;
     }
 
     try {
+      console.log("Attempting login with credentials:", {
+        email: email.toLowerCase().trim(),
+        password,
+      });
       await login({ email: email.toLowerCase().trim(), password });
-    } catch {
+      console.log("Login successful");
+    } catch (error) {
+      console.error("Login error:", error);
       if (!authError) {
         setError("An error occurred. Please try again.");
       }
@@ -151,6 +159,9 @@ const StaffLoginPage = () => {
                 type="submit"
                 disabled={isLoading}
                 className="w-full bg-[#4f772d] hover:bg-[#3d5c22] text-white"
+                onClick={() =>
+                  console.log("Button clicked, isLoading:", isLoading)
+                }
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center">
