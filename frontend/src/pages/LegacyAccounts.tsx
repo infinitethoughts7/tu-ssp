@@ -25,6 +25,7 @@ import {
   BarChart3,
   Settings,
   MoreHorizontal,
+  X,
 } from "lucide-react";
 import { format } from "date-fns";
 import axios from "axios";
@@ -76,6 +77,7 @@ interface StaffProfile {
   department: string;
   phone_number: string;
   email: string;
+  gender?: string;
 }
 
 // Memoized table row component for better performance
@@ -394,9 +396,21 @@ export default function LegacyAccounts() {
     const newFilters = { ...legacyFilters };
     delete newFilters.min_amount;
     delete newFilters.max_amount;
-    // Keep has_dues as true by default
-    newFilters.has_dues = true;
+    // Remove has_dues filter to show all records
+    delete newFilters.has_dues;
     setLegacyFilters(newFilters);
+    // Reset the hasDuesFilter state to "all"
+    setHasDuesFilter("all");
+  };
+
+  // Function to clear all filters
+  const clearAllFilters = () => {
+    setLegacyFilters({});
+    setHasDuesFilter("all");
+    setSelectedCourse("all");
+    setSelectedYear("all");
+    setSearchTerm("");
+    setCurrentPage(1);
   };
 
   // Handle advanced filters toggle
@@ -450,25 +464,28 @@ export default function LegacyAccounts() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56" align="end" forceMount>
-                    <DropdownMenuLabel className="font-normal">
-                      <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">
+                    <DropdownMenuLabel className="font-normal p-4 border-b border-gray-100 mb-2 bg-gray-50 rounded-t-lg">
+                      <div className="flex flex-col gap-1">
+                        <div className="font-bold text-gray-900 text-base">
                           {staffProfile.name}
-                        </p>
-                        <p className="text-xs leading-none text-muted-foreground">
+                        </div>
+                        <div className="text-xs text-gray-500 break-all whitespace-normal max-w-xs">
                           {staffProfile.email}
-                        </p>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Department:{" "}
+                          <span className="font-medium text-gray-700">
+                            {staffProfile.department}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Phone:{" "}
+                          <span className="font-medium text-gray-700">
+                            {staffProfile.phone_number}
+                          </span>
+                        </div>
                       </div>
                     </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
-                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={logout}>
                       <LogOut className="mr-2 h-4 w-4" />
@@ -668,6 +685,16 @@ export default function LegacyAccounts() {
                 >
                   <Filter className="h-4 w-4" />
                   Advanced Filters
+                </Button>
+              </div>
+              <div className="w-full md:w-44">
+                <Button
+                  variant="outline"
+                  onClick={clearAllFilters}
+                  className="flex items-center gap-2 border-gray-200 hover:bg-red-50 hover:border-red-300 hover:text-red-600 w-full"
+                >
+                  <X className="h-4 w-4" />
+                  Clear All Filters
                 </Button>
               </div>
             </div>
