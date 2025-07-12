@@ -97,8 +97,8 @@ class LegacyAcademicRecords(models.Model):
     tc_issued_date = models.DateField(blank=True, null=True, help_text="Transfer Certificate issued date")
     
     class Meta:
-        verbose_name = "Legacy Academic Record"
-        verbose_name_plural = "Legacy Academic Records"
+        verbose_name = "Academic Record"
+        verbose_name_plural = "Academic Records"
         ordering = ['student__user__username']
     
     def __str__(self):
