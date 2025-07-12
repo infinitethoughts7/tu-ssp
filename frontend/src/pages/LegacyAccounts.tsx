@@ -84,180 +84,62 @@ interface StaffProfile {
 const LegacyRecordRow = React.memo(
   ({
     group,
-    expandedRows,
-    setExpandedRows,
     handleStudentSelect,
   }: {
     group: LegacyStudentGroup;
-    expandedRows: Set<string>;
-    setExpandedRows: React.Dispatch<React.SetStateAction<Set<string>>>;
     handleStudentSelect: (student: any) => void;
   }) => {
-    const isExpanded = expandedRows.has(group.roll_numbers[0]);
-
+    const totalDue = group.dues.reduce(
+      (sum, due) => sum + (Number(due.due_amount) || 0),
+      0
+    );
+    const isDue = totalDue > 0;
     return (
-      <React.Fragment>
-        <TableRow className="hover:bg-blue-50/50 transition-colors">
-          <TableCell className="w-12">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 hover:bg-blue-100"
-              onClick={() => {
-                const newExpandedRows = new Set(expandedRows);
-                if (newExpandedRows.has(group.roll_numbers[0])) {
-                  newExpandedRows.delete(group.roll_numbers[0]);
-                } else {
-                  newExpandedRows.add(group.roll_numbers[0]);
-                }
-                setExpandedRows(newExpandedRows);
-              }}
+      <TableRow className="hover:bg-blue-50/50 transition-colors">
+        <TableCell className="w-12"></TableCell>
+        <TableCell>
+          <div className="space-y-1">
+            <button
+              className="font-semibold text-blue-700 hover:underline cursor-pointer bg-transparent border-0 p-0 m-0"
+              onClick={() => handleStudentSelect(group)}
+              style={{ background: "none" }}
             >
-              {isExpanded ? (
-                <ChevronDown className="h-4 w-4 text-blue-600" />
-              ) : (
-                <ChevronRight className="h-4 w-4 text-blue-600" />
-              )}
-            </Button>
-          </TableCell>
-          <TableCell>
-            <div className="space-y-1">
-              <div className="font-semibold text-gray-900">{group.name}</div>
-              <div className="text-sm text-gray-500 font-mono">
-                {group.roll_numbers[0]}
-              </div>
+              {group.name}
+            </button>
+            <div className="text-sm text-gray-500 font-mono">
+              {group.roll_numbers[0]}
             </div>
-          </TableCell>
-          <TableCell>
-            <div className="text-sm font-medium text-gray-700">
-              {group.course}
-            </div>
-          </TableCell>
-          <TableCell>
-            {(() => {
-              const totalDue = group.dues.reduce(
-                (sum, due) => sum + (Number(due.due_amount) || 0),
-                0
-              );
-              const isDue = totalDue > 0;
-              return (
-                <div
-                  className={`flex items-center gap-2 px-5 py-2 rounded-xl transition-colors duration-200 justify-center w-fit mx-auto ${
-                    isDue
-                      ? "bg-red-100 border border-red-200 shadow text-red-700 font-extrabold text-xl"
-                      : "bg-gray-50 text-gray-400 font-semibold"
-                  }`}
-                >
-                  <IndianRupee
-                    className={`h-6 w-6 ${
-                      isDue ? "text-red-700" : "text-gray-400"
-                    }`}
-                  />
-                  <span
-                    className={`${
-                      isDue
-                        ? "text-red-700 font-extrabold text-xl"
-                        : "text-gray-500 font-semibold"
-                    }`}
-                  >
-                    {totalDue.toLocaleString()}
-                  </span>
-                </div>
-              );
-            })()}
-          </TableCell>
-          <TableCell className="w-12">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 hover:bg-blue-100"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleStudentSelect(group)}>
-                  View Details
-                </DropdownMenuItem>
-                <DropdownMenuItem>Export Data</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </TableCell>
-        </TableRow>
-        {isExpanded && (
-          <TableRow>
-            <TableCell colSpan={5} className="p-0">
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 border-t border-blue-200">
-                <div className="space-y-4">
-                  <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5 text-blue-600" />
-                    Due Records
-                  </h4>
-                  <div className="grid gap-3">
-                    {group.dues.map((legacyDue) => {
-                      const isDue = Number(legacyDue.due_amount) > 0;
-                      return (
-                        <div
-                          key={legacyDue.id}
-                          className="flex items-center justify-between p-4 bg-white rounded-xl border border-blue-200 shadow-sm hover:shadow-md transition-shadow"
-                        >
-                          <div className="flex flex-col gap-1">
-                            <div className="font-semibold text-gray-900">
-                              TC: {legacyDue.tc_number || "N/A"}
-                            </div>
-                            <div className="text-gray-500 text-sm">
-                              TC Date:{" "}
-                              {legacyDue.tc_issued_date
-                                ? format(
-                                    new Date(legacyDue.tc_issued_date),
-                                    "dd MMM yyyy"
-                                  )
-                                : "N/A"}
-                            </div>
-                            <div className="text-gray-500 text-sm">
-                              Caste: {group.caste || "N/A"}
-                            </div>
-                            <div className="text-gray-500 text-sm">
-                              Phone: {group.phone_number || "N/A"}
-                            </div>
-                            <div className="text-gray-500 text-sm">
-                              Batch: {legacyDue.student.batch || "N/A"}
-                            </div>
-                          </div>
-                          <div
-                            className={`flex items-center gap-2 px-5 py-2 rounded-xl transition-colors duration-200 ${
-                              isDue
-                                ? "bg-red-100 border border-red-200 shadow text-red-700 font-extrabold text-xl"
-                                : "bg-gray-50 text-gray-400 font-semibold"
-                            }`}
-                          >
-                            <IndianRupee
-                              className={`h-6 w-6 ${
-                                isDue ? "text-red-700" : "text-gray-400"
-                              }`}
-                            />
-                            <span
-                              className={`${
-                                isDue
-                                  ? "text-red-700 font-extrabold text-xl"
-                                  : "text-gray-500 font-semibold"
-                              }`}
-                            >
-                              {legacyDue.due_amount}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </TableCell>
-          </TableRow>
-        )}
-      </React.Fragment>
+          </div>
+        </TableCell>
+        <TableCell>
+          <div className="text-sm font-medium text-gray-700">
+            {group.course}
+          </div>
+        </TableCell>
+        <TableCell>
+          <div
+            className={`flex items-center gap-2 px-5 py-2 rounded-xl transition-colors duration-200 justify-center w-fit mx-auto ${
+              isDue
+                ? "bg-red-100 border border-red-200 shadow text-red-700 font-extrabold text-xl"
+                : "bg-gray-50 text-gray-400 font-semibold"
+            }`}
+          >
+            <IndianRupee
+              className={`h-6 w-6 ${isDue ? "text-red-700" : "text-gray-400"}`}
+            />
+            <span
+              className={`$ {
+                isDue
+                  ? "text-red-700 font-extrabold text-xl"
+                  : "text-gray-500 font-semibold"
+              }`}
+            >
+              {totalDue.toLocaleString()}
+            </span>
+          </div>
+        </TableCell>
+        <TableCell className="w-12"></TableCell>
+      </TableRow>
     );
   }
 );
@@ -824,8 +706,6 @@ export default function LegacyAccounts() {
                       <LegacyRecordRow
                         key={group.roll_numbers[0]}
                         group={group}
-                        expandedRows={expandedRows}
-                        setExpandedRows={setExpandedRows}
                         handleStudentSelect={handleStudentSelect}
                       />
                     ))}
@@ -838,7 +718,7 @@ export default function LegacyAccounts() {
 
         {/* Student Details Modal */}
         <Dialog open={showStudentDetails} onOpenChange={setShowStudentDetails}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
               <DialogTitle>Student Details</DialogTitle>
               <DialogDescription>
@@ -846,37 +726,83 @@ export default function LegacyAccounts() {
               </DialogDescription>
             </DialogHeader>
             {selectedStudent && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500">Name</p>
-                    <p className="font-medium text-gray-900">
+              <div className="flex flex-col md:flex-row gap-6">
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 text-sm">Name:</span>
+                    <span className="font-medium text-gray-900">
                       {selectedStudent.name}
-                    </p>
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Roll Number</p>
-                    <p className="font-medium text-gray-900 font-mono">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 text-sm">Roll Number:</span>
+                    <span className="font-mono text-gray-900">
                       {selectedStudent.roll_numbers[0]}
-                    </p>
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Course</p>
-                    <p className="font-medium text-gray-900">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 text-sm">Course:</span>
+                    <span className="text-gray-900">
                       {selectedStudent.course}
-                    </p>
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Phone Number</p>
-                    <p className="font-medium text-gray-900">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 text-sm">Phone:</span>
+                    <span className="text-gray-900">
                       {selectedStudent.phone_number}
-                    </p>
+                    </span>
                   </div>
-                  <div className="col-span-2">
-                    <p className="text-sm text-gray-500">Total Records</p>
-                    <p className="font-medium text-red-600">
-                      {selectedStudent.dues.length} records
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 text-sm">Caste:</span>
+                    <span className="text-gray-900">
+                      {selectedStudent.caste}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 text-sm">Batch:</span>
+                    <span className="text-gray-900">
+                      {selectedStudent.batch || "N/A"}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex-1 space-y-2">
+                  <div className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-blue-600" />
+                    TC Records
+                  </div>
+                  <div className="grid gap-3">
+                    {selectedStudent.dues.map((legacyDue: LegacyStudentGroup['dues'][number]) => {
+                      const isDue = Number(legacyDue.due_amount) > 0;
+                      return (
+                        <div
+                          key={legacyDue.id}
+                          className="flex items-center justify-between p-3 bg-white rounded-xl border border-blue-200 shadow-sm hover:shadow-md transition-shadow"
+                        >
+                          <div className="flex flex-col gap-1">
+                            <div className="font-semibold text-gray-900">
+                              TC: {legacyDue.tc_number || "N/A"}
+                            </div>
+                            <div className="text-gray-500 text-sm">
+                              TC Date: {legacyDue.tc_issued_date ? format(new Date(legacyDue.tc_issued_date), "dd MMM yyyy") : "N/A"}
+                            </div>
+                          </div>
+                          <div
+                            className={`flex items-center gap-2 px-4 py-1 rounded-xl transition-colors duration-200 ${
+                              isDue
+                                ? "bg-red-100 border border-red-200 shadow text-red-700 font-extrabold text-lg"
+                                : "bg-gray-50 text-gray-400 font-semibold"
+                            }`}
+                          >
+                            <IndianRupee
+                              className={`h-5 w-5 ${isDue ? "text-red-700" : "text-gray-400"}`}
+                            />
+                            <span className={isDue ? "text-red-700 font-extrabold text-lg" : "text-gray-500 font-semibold"}>
+                              {legacyDue.due_amount}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
