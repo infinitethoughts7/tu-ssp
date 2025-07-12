@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/useAuth";
 import {
-  getLibraryRecords,
+  getGroupedLibraryRecords,
+  updateLibraryFine,
   getStaffProfile,
   StaffProfile,
 } from "../services/departmentService";
@@ -80,11 +81,13 @@ const LibraryRecordRow = React.memo(
     expandedRows,
     setExpandedRows,
     handleStudentSelect,
+    onAssignFine,
   }: {
-    group: LibraryStudentGroup;
+    group: any;
     expandedRows: Set<string>;
     setExpandedRows: React.Dispatch<React.SetStateAction<Set<string>>>;
     handleStudentSelect: (student: any) => void;
+    onAssignFine: (recordId: number, currentFine: number) => void;
   }) => {
     const isExpanded = expandedRows.has(group.roll_numbers[0]);
 
@@ -192,7 +195,7 @@ const LibraryRecordRow = React.memo(
                     Library Records
                   </h4>
                   <div className="grid gap-3">
-                    {group.records.map((record: LibraryRecord) => {
+                    {group.records.map((record: any) => {
                       const hasFine = parseFloat(record.fine_amount) > 0;
                       return (
                         <div
@@ -211,27 +214,44 @@ const LibraryRecordRow = React.memo(
                               )}
                             </div>
                           </div>
-                          <div
-                            className={`flex items-center gap-2 px-4 py-1 rounded-xl transition-colors duration-200 ${
-                              hasFine
-                                ? "bg-red-100 border border-red-200 shadow text-red-700 font-extrabold text-xl"
-                                : "bg-gray-50 text-gray-400 font-semibold"
-                            }`}
-                          >
-                            <IndianRupee
-                              className={`h-5 w-5 ${
-                                hasFine ? "text-red-700" : "text-gray-400"
-                              }`}
-                            />
-                            <span
-                              className={`${
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={`flex items-center gap-2 px-4 py-1 rounded-xl transition-colors duration-200 ${
                                 hasFine
-                                  ? "text-red-700 font-extrabold text-xl"
-                                  : "text-gray-500 font-semibold"
+                                  ? "bg-red-100 border border-red-200 shadow text-red-700 font-extrabold text-xl"
+                                  : "bg-gray-50 text-gray-400 font-semibold"
                               }`}
                             >
-                              {parseFloat(record.fine_amount).toLocaleString()}
-                            </span>
+                              <IndianRupee
+                                className={`h-5 w-5 ${
+                                  hasFine ? "text-red-700" : "text-gray-400"
+                                }`}
+                              />
+                              <span
+                                className={`${
+                                  hasFine
+                                    ? "text-red-700 font-extrabold text-xl"
+                                    : "text-gray-500 font-semibold"
+                                }`}
+                              >
+                                {parseFloat(
+                                  record.fine_amount
+                                ).toLocaleString()}
+                              </span>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="ml-2"
+                              onClick={() =>
+                                onAssignFine(
+                                  record.id,
+                                  parseFloat(record.fine_amount)
+                                )
+                              }
+                            >
+                              Assign Fine
+                            </Button>
                           </div>
                         </div>
                       );
@@ -251,7 +271,7 @@ LibraryRecordRow.displayName = "LibraryRecordRow";
 
 export default function LibraryRecords() {
   const { logout, accessToken } = useAuth();
-  const [libraryRecords, setLibraryRecords] = useState<LibraryRecord[]>([]);
+  const [groupedRecords, setGroupedRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterLoading, setFilterLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -265,6 +285,13 @@ export default function LibraryRecords() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   // Add state for selectedYear
   const [selectedYear, setSelectedYear] = useState<string>("all");
+  const [assignFineDialog, setAssignFineDialog] = useState<{
+    open: boolean;
+    recordId: number | null;
+    currentFine: number;
+  }>({ open: false, recordId: null, currentFine: 0 });
+  const [assignFineValue, setAssignFineValue] = useState<string>("");
+  const [assignFineLoading, setAssignFineLoading] = useState(false);
 
   // Function to group library records by student
   const groupLibraryRecordsByStudent = (
@@ -312,36 +339,39 @@ export default function LibraryRecords() {
 
   // Extract unique batch years from all records, descending order
   const allBatchYears = Array.from(
-    new Set(libraryRecords.map((r) => r.student.batch).filter(Boolean))
-  ).sort().reverse();
+    new Set(
+      groupedRecords.map((r) => r.records[0]?.student.batch).filter(Boolean)
+    )
+  )
+    .sort()
+    .reverse();
 
   // Filter and group records
-  const filteredGroups = groupLibraryRecordsByStudent(
-    libraryRecords.filter((record) => {
-      const search = searchTerm.trim().toLowerCase();
-      const matchesSearch =
-        !search ||
-        (record.student.user.username?.toLowerCase() || "").includes(search) ||
-        (record.student.user.first_name?.toLowerCase() || "").includes(
-          search
-        ) ||
-        (record.student.user.last_name?.toLowerCase() || "").includes(search) ||
-        (record.book_id?.toLowerCase() || "").includes(search);
-      const matchesCourse =
-        selectedCourse === "all" ||
-        record.student.course_name === selectedCourse;
-      const matchesFineFilter = (() => {
-        const fineAmount = parseFloat(record.fine_amount) || 0;
-        if (hasFineFilter === "all") return true;
-        if (hasFineFilter === "true") return fineAmount > 0;
-        if (hasFineFilter === "false") return fineAmount === 0;
-        return true;
-      })();
-      const matchesYear =
-        selectedYear === "all" || record.student.batch === selectedYear;
-      return matchesSearch && matchesCourse && matchesFineFilter && matchesYear;
-    })
-  );
+  const filteredGroups = groupedRecords.filter((group) => {
+    // ...apply search, course, fine, year filters as before, but on group.records[0].student
+    const firstRecord = group.records[0];
+    if (!firstRecord) return false;
+    const search = searchTerm.trim().toLowerCase();
+    const matchesSearch =
+      !search ||
+      (group.roll_numbers[0]?.toLowerCase() || "").includes(search) ||
+      (group.name?.toLowerCase() || "").includes(search) ||
+      group.records.some((r: any) =>
+        (r.book_id?.toLowerCase() || "").includes(search)
+      );
+    const matchesCourse =
+      selectedCourse === "all" ||
+      firstRecord.student.course_name === selectedCourse;
+    const matchesFineFilter = (() => {
+      if (hasFineFilter === "all") return true;
+      if (hasFineFilter === "true") return group.total_fine_amount > 0;
+      if (hasFineFilter === "false") return group.total_fine_amount === 0;
+      return true;
+    })();
+    const matchesYear =
+      selectedYear === "all" || firstRecord.student.batch === selectedYear;
+    return matchesSearch && matchesCourse && matchesFineFilter && matchesYear;
+  });
 
   // Calculate statistics
   const statistics = {
@@ -359,8 +389,10 @@ export default function LibraryRecords() {
     ).length,
   };
 
+  // Fetch grouped records on mount/refresh
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchGrouped = async () => {
+      setLoading(true);
       try {
         if (!accessToken) {
           console.log("No access token found, redirecting to login");
@@ -381,39 +413,19 @@ export default function LibraryRecords() {
           return;
         }
 
-        // Fetch staff profile
         const profile = await getStaffProfile();
         setStaffProfile(profile);
 
-        // Fetch library records
-        console.log("Fetching library records...");
-        const records = await getLibraryRecords();
-
-        if (!Array.isArray(records)) {
-          console.error("Invalid library records data received:", records);
-          setError("Invalid data received from server");
-          return;
-        }
-
-        setLibraryRecords(records);
+        const data = await getGroupedLibraryRecords();
+        setGroupedRecords(data);
         setError(null);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        if (error instanceof Error) {
-          if (error.message.includes("session has expired")) {
-            // Handle session expiry
-          } else {
-            setError(error.message);
-          }
-        } else {
-          setError("Failed to fetch data");
-        }
+      } catch (e: any) {
+        setError(e.message || "Failed to fetch grouped records");
       } finally {
         setLoading(false);
       }
     };
-
-    fetchData();
+    fetchGrouped();
   }, [accessToken]);
 
   // Debounced search effect
@@ -732,6 +744,14 @@ export default function LibraryRecords() {
                         expandedRows={expandedRows}
                         setExpandedRows={setExpandedRows}
                         handleStudentSelect={handleStudentSelect}
+                        onAssignFine={(recordId, currentFine) => {
+                          setAssignFineDialog({
+                            open: true,
+                            recordId,
+                            currentFine,
+                          });
+                          setAssignFineValue(currentFine.toString());
+                        }}
                       />
                     ))}
                   </TableBody>
@@ -843,6 +863,73 @@ export default function LibraryRecords() {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Assign Fine Dialog */}
+        <Dialog
+          open={assignFineDialog.open}
+          onOpenChange={(open) => setAssignFineDialog((d) => ({ ...d, open }))}
+        >
+          <DialogContent className="max-w-xs">
+            <DialogHeader>
+              <DialogTitle>Assign Fine</DialogTitle>
+              <DialogDescription>
+                Enter the fine amount for this book record.
+              </DialogDescription>
+            </DialogHeader>
+            <Input
+              type="number"
+              min="0"
+              value={assignFineValue}
+              onChange={(e) => setAssignFineValue(e.target.value)}
+              className="mb-4"
+              placeholder="Enter fine amount"
+              disabled={assignFineLoading}
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() =>
+                  setAssignFineDialog({
+                    open: false,
+                    recordId: null,
+                    currentFine: 0,
+                  })
+                }
+                disabled={assignFineLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!assignFineDialog.recordId) return;
+                  setAssignFineLoading(true);
+                  try {
+                    await updateLibraryFine(
+                      assignFineDialog.recordId,
+                      parseFloat(assignFineValue)
+                    );
+                    setAssignFineDialog({
+                      open: false,
+                      recordId: null,
+                      currentFine: 0,
+                    });
+                    setAssignFineValue("");
+                    // Refresh grouped records
+                    const data = await getGroupedLibraryRecords();
+                    setGroupedRecords(data);
+                  } catch (e) {
+                    // Optionally show error
+                  } finally {
+                    setAssignFineLoading(false);
+                  }
+                }}
+                disabled={assignFineLoading || assignFineValue === ""}
+              >
+                Save
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

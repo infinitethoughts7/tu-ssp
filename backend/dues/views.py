@@ -53,6 +53,41 @@ class LibraryRecordsViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(student_id=student_id)
         return queryset
 
+    @action(detail=False, methods=['get'])
+    def grouped_by_student(self, request):
+        """Get library records grouped by student for frontend display, including total_fine_amount"""
+        try:
+            queryset = self.get_queryset().select_related('student__user', 'student__course')
+            grouped_data = {}
+            for record in queryset:
+                try:
+                    student_key = record.student.user.username
+                    if student_key not in grouped_data:
+                        grouped_data[student_key] = {
+                            'roll_numbers': [student_key],
+                            'name': f"{record.student.user.first_name or ''} {record.student.user.last_name or ''}".strip() or 'Unknown',
+                            'course': record.student.course.name if record.student.course else 'N/A',
+                            'batch': record.student.batch or 'N/A',
+                            'phone_number': record.student.mobile_number or 'N/A',
+                            'records': [],
+                            'total_fine_amount': 0,
+                            'user': {
+                                'username': record.student.user.username,
+                                'first_name': record.student.user.first_name or '',
+                                'last_name': record.student.user.last_name or '',
+                            }
+                        }
+                    record_data = self.get_serializer(record).data
+                    grouped_data[student_key]['records'].append(record_data)
+                    grouped_data[student_key]['total_fine_amount'] += float(record.fine_amount or 0)
+                except Exception as e:
+                    print(f"Error processing record {record.id}: {str(e)}")
+                    continue
+            return Response(list(grouped_data.values()))
+        except Exception as e:
+            print(f"Error in grouped_by_student: {str(e)}")
+            return Response({'error': 'Failed to group library records'}, status=500)
+
 class LegacyAcademicRecordsViewSet(viewsets.ModelViewSet):
     queryset = LegacyAcademicRecords.objects.all()
     serializer_class = LegacyAcademicRecordsSerializer
