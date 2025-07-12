@@ -263,6 +263,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         } else {
           switch (department) {
             case "librarian":
+              navigate("/library-records");
+              break;
             case "sports_incharge":
             case "lab_incharge":
               navigate("/others-dues");

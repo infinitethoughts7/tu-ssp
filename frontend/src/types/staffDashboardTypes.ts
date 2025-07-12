@@ -176,3 +176,46 @@ export interface DepartmentStudentGroup {
     last_name: string;
   };
 }
+
+// Library Records Types
+export interface LibraryRecord {
+  id: number;
+  student: {
+    id: number;
+    user: {
+      id: number;
+      username: string;
+      first_name: string;
+      last_name: string;
+    };
+    course: {
+      id: number;
+      name: string;
+    } | null;
+    course_name: string;
+    caste: string;
+    gender: string;
+    mobile_number: string;
+    batch: string;
+  };
+  book_id: string;
+  borrowing_date: string;
+  fine_amount: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LibraryStudentGroup {
+  roll_numbers: string[];
+  name: string;
+  course: string;
+  caste: string;
+  phone_number: string;
+  records: LibraryRecord[];
+  total_fine_amount: number;
+  user: {
+    username: string;
+    first_name: string;
+    last_name: string;
+  };
+}

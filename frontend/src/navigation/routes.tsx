@@ -10,6 +10,7 @@ import LegacyAccounts from "../pages/LegacyAccounts";
 import HostelDues from "../pages/HostelDues";
 import OthersDues from "../pages/OthersDues";
 import TotalDuesDashboard from "../pages/TotalDuesDashboard";
+import LibraryRecords from "../pages/LibraryRecords";
 
 const router = createBrowserRouter([
   {
@@ -90,6 +91,16 @@ const router = createBrowserRouter([
       <AuthProvider>
         <ProtectedRoute fallbackPath="/staff-login" requiredEmail={undefined}>
           <OthersDues />
+        </ProtectedRoute>
+      </AuthProvider>
+    ),
+  },
+  {
+    path: "/library-records",
+    element: (
+      <AuthProvider>
+        <ProtectedRoute fallbackPath="/staff-login" requiredEmail={undefined}>
+          <LibraryRecords />
         </ProtectedRoute>
       </AuthProvider>
     ),

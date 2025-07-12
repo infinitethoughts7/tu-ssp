@@ -5,6 +5,7 @@ import {
   AcademicDue,
   LegacyRecord,
   LegacyStudentGroup,
+  LibraryRecord,
 } from "../types/staffDashboardTypes";
 
 export interface HostelDue {
@@ -578,5 +579,35 @@ export const findStudentByUsername = async (
   } catch (error) {
     console.error("Error finding student:", error);
     return undefined;
+  }
+};
+
+export const getLibraryRecords = async (): Promise<LibraryRecord[]> => {
+  try {
+    const accessToken =
+      localStorage.getItem("studentAccessToken") ||
+      localStorage.getItem("staffAccessToken");
+    if (!accessToken) {
+      throw new Error("No access token found. Please log in again.");
+    }
+
+    const response = await api.get("/dues/library-records/", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    if (isAxiosError(error)) {
+      if (error.response?.status === 401) {
+        localStorage.removeItem("studentAccessToken");
+        localStorage.removeItem("staffAccessToken");
+        throw new Error("Your session has expired. Please log in again.");
+      } else if (error.response?.status === 403) {
+        throw new Error("You don't have permission to view library records");
+      }
+    }
+    throw error;
   }
 };
