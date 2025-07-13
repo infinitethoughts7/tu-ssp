@@ -92,7 +92,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     fetchProfile();
-  }, [accessToken, isStaff]); // Removed logout from dependencies
+  }, [accessToken, isStaff, logout]); // Added logout back to dependencies
 
   const refreshAccessToken = useCallback(async () => {
     try {
@@ -313,10 +313,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       let response;
       if (isStaff) {
         response = await api.get("/staff/profile/");
+        setUser(response.data);
       } else {
         response = await api.get("/profile/");
+        // Handle nested profile data structure for students
+        setUser(response.data.profile);
       }
-      setUser(response.data);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 401) {

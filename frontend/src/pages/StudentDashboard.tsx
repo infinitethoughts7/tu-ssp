@@ -44,18 +44,31 @@ export default function StudentDashboard() {
   const [error, setError] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const username = user?.username || "Not Found";
+  const username = profile?.user?.username || "Not Found";
   const name = useMemo(() => {
-    if (!profile) return "";
+    if (!profile?.user) return "";
     return (
-      profile.first_name + (profile.last_name ? ` ${profile.last_name}` : "")
+      profile.user.first_name +
+      (profile.user.last_name ? ` ${profile.user.last_name}` : "")
     );
   }, [profile]);
 
+  // Debug logging
+  useEffect(() => {
+    console.log("Profile state:", profile);
+    console.log("Username:", username);
+    console.log("Name:", name);
+  }, [profile, username, name]);
+
   // Fetch profile
   const fetchProfile = useCallback(async () => {
-    const res = await api.get("/profile/");
-    setProfile(res.data.profile);
+    try {
+      const res = await api.get("/profile/");
+      console.log("Profile API response:", res.data);
+      setProfile(res.data.profile);
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+    }
   }, []);
 
   // Fetch all dues and records
@@ -329,7 +342,7 @@ export default function StudentDashboard() {
           {/* Profile Info */}
           <div className="flex-1 flex flex-col justify-center items-center md:items-start text-center md:text-left">
             <div className="flex w-full justify-between text-xs text-white/80 font-medium mb-2">
-              <span>Roll No: {profile?.username || "-"}</span>
+              <span>Roll No: {profile?.user?.username || "-"}</span>
             </div>
             <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-1 drop-shadow">
               Hello, {name || "Student"}
