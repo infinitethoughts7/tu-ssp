@@ -16,8 +16,16 @@ import {
   GraduationCap,
   Eye,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../components/ui/dialog";
 
 import { buttonColour } from "../types/constants";
+import telanganaLogo from "../assets/Telangana_University_logo.png";
 
 const PRIMARY = buttonColour.primary;
 const ICON_BG = {
@@ -181,6 +189,19 @@ export default function StudentDashboard() {
   // Helper for details rendering
   const renderDetails = (key: string) => {
     if (key === "library") {
+      if (!records.library || records.library.length === 0) {
+        return (
+          <div className="flex flex-col items-center justify-center py-8">
+            <span className="text-2xl font-semibold text-emerald-600 mb-2 font-sans">
+              You have no dues!{" "}
+              <span className="align-middle text-2xl">😄</span>
+            </span>
+            <span className="text-base text-gray-500 font-medium">
+              Enjoy your freedom!
+            </span>
+          </div>
+        );
+      }
       return (
         <div className="mt-2 text-xs md:text-sm">
           <div className="font-semibold mb-1">Library Records</div>
@@ -208,6 +229,19 @@ export default function StudentDashboard() {
       );
     }
     if (key === "sports") {
+      if (!records.sports || records.sports.length === 0) {
+        return (
+          <div className="flex flex-col items-center justify-center py-8">
+            <span className="text-2xl font-semibold text-emerald-600 mb-2 font-sans">
+              You have no dues!{" "}
+              <span className="align-middle text-2xl">😄</span>
+            </span>
+            <span className="text-base text-gray-500 font-medium">
+              Enjoy your freedom!
+            </span>
+          </div>
+        );
+      }
       return (
         <div className="mt-2 text-xs md:text-sm">
           <div className="font-semibold mb-1">Sports Records</div>
@@ -235,6 +269,19 @@ export default function StudentDashboard() {
       );
     }
     if (key === "legacy") {
+      if (!records.legacy || records.legacy.length === 0) {
+        return (
+          <div className="flex flex-col items-center justify-center py-8">
+            <span className="text-2xl font-semibold text-emerald-600 mb-2 font-sans">
+              You have no dues!{" "}
+              <span className="align-middle text-2xl">😄</span>
+            </span>
+            <span className="text-base text-gray-500 font-medium">
+              Enjoy your freedom!
+            </span>
+          </div>
+        );
+      }
       return (
         <div className="mt-2 text-xs md:text-sm">
           <div className="font-semibold mb-1">Department/Lab Records</div>
@@ -265,74 +312,43 @@ export default function StudentDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-white px-1 py-3 flex flex-col items-center">
-      {/* Header: Logo + Welcome */}
-      <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm w-full max-w-3xl">
-        <img
-          src="/src/assets/Telangana_University_logo.png"
-          alt="Telangana University Logo"
-          className="w-14 h-14 md:w-16 md:h-16 drop-shadow-xl"
-        />
-        <div className="flex flex-col items-center md:items-start">
-          <h1 className="text-2xl md:text-3xl font-extrabold mb-1 text-transparent bg-clip-text bg-gradient-to-r from-blue-700 via-indigo-600 to-blue-400">
-            Welcome, {name || "Student"}!
-          </h1>
-          <p className="text-sm md:text-base text-gray-700 font-medium tracking-wide">
-            Student Dashboard
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          className="md:ml-auto mt-4 md:mt-0 shadow-md text-sm px-3 py-1.5"
-          onClick={logout}
-        >
-          <LogOut className="w-4 h-4 mr-2" /> Logout
-        </Button>
-      </div>
-      {/* Profile Card - no title, compact, elegant */}
-      <div className="flex justify-center mb-6 w-full">
-        <Card className="w-full max-w-3xl shadow border-0 bg-white rounded-xl p-2">
-          <CardContent className="py-4 px-3">
-            <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 w-full text-sm md:text-base">
-              {/* Left: Roll No & Course */}
-              <div className="flex-1 min-w-[180px]">
-                <div className="flex items-center gap-2 mb-1">
-                  <BadgeInfo className="w-4 h-4 text-gray-400" />
-                  <span className="font-semibold text-gray-900">Roll No:</span>
-                  <span className="font-bold text-gray-900">
-                    {profile?.user.username}
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <GraduationCap className="w-4 h-4 text-gray-400 mt-0.5" />
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-gray-900">Course:</span>
-                    <span className="text-gray-800 whitespace-pre-line">
-                      {profile?.course_name}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              {/* Right: Batch & Caste */}
-              <div className="flex-1 min-w-[140px] flex flex-col gap-2 md:items-end">
-                <div className="flex items-center gap-2">
-                  <Book className="w-4 h-4 text-gray-400" />
-                  <span className="font-semibold text-gray-900">Batch:</span>
-                  <span className="font-bold text-gray-900">
-                    {profile?.batch}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <BadgeInfo className="w-4 h-4 text-gray-400" />
-                  <span className="font-semibold text-gray-900">Caste:</span>
-                  <span className="font-bold text-gray-900">
-                    {profile?.caste}
-                  </span>
-                </div>
-              </div>
+    <div
+      className="min-h-screen px-1 py-3 flex flex-col items-center"
+      style={{
+        backgroundColor: "#f8fafc",
+        backgroundImage:
+          "linear-gradient(0deg, rgba(0,0,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px)",
+        backgroundSize: "32px 32px",
+      }}
+    >
+      {/* Modern Profile Card */}
+      <div className="w-full max-w-3xl mx-auto flex flex-col items-center gap-4 bg-gradient-to-br from-blue-600 via-indigo-500 to-purple-500 rounded-2xl shadow-lg p-6 mb-8 relative overflow-hidden">
+        <div className="flex flex-col md:flex-row items-center gap-6 w-full">
+          {/* Student Vector Icon */}
+          <div className="flex-shrink-0 flex items-center justify-center w-28 h-28 md:w-32 md:h-32 rounded-full bg-white/20 shadow-md overflow-hidden border-4 border-white/30">
+            <User2 className="w-20 h-20 md:w-24 md:h-24 text-white/90" />
+          </div>
+          {/* Profile Info */}
+          <div className="flex-1 flex flex-col justify-center items-center md:items-start text-center md:text-left">
+            <div className="flex w-full justify-between text-xs text-white/80 font-medium mb-2">
+              <span>Roll No: {profile?.user?.username || "-"}</span>
             </div>
-          </CardContent>
-        </Card>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-1 drop-shadow">
+              Hello, {name || "Student"}
+            </h2>
+            <div className="text-lg md:text-2xl text-white font-semibold mb-2 drop-shadow">
+              {profile?.course_name}
+            </div>
+            <div className="flex flex-wrap gap-x-6 gap-y-1 justify-center md:justify-start text-sm text-white/90">
+              <span>
+                <span className="font-semibold">Batch:</span> {profile?.batch}
+              </span>
+              <span>
+                <span className="font-semibold">Caste:</span> {profile?.caste}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
       {/* Dues Cards - vertical alignment, compact, amount right, expandable details */}
       <div className="max-w-3xl w-full mx-auto flex flex-col gap-4">
@@ -359,7 +375,7 @@ export default function StudentDashboard() {
             icon: Library,
             iconBg: ICON_BG.library,
             total: dues.library,
-            hasDetails: records.library && records.library.length > 0,
+            hasDetails: true, // Always allow dialog for library
           },
           {
             key: "legacy",
@@ -367,7 +383,7 @@ export default function StudentDashboard() {
             icon: FlaskConical,
             iconBg: ICON_BG.legacy,
             total: dues.legacy,
-            hasDetails: records.legacy && records.legacy.length > 0,
+            hasDetails: true, // Always allow dialog for department/lab
           },
           {
             key: "sports",
@@ -375,7 +391,7 @@ export default function StudentDashboard() {
             icon: Dumbbell,
             iconBg: ICON_BG.sports,
             total: dues.sports,
-            hasDetails: records.sports && records.sports.length > 0,
+            hasDetails: true, // Always allow dialog for sports
           },
         ].map((d) => {
           const Icon = d.icon;
@@ -393,30 +409,42 @@ export default function StudentDashboard() {
                 <span className="font-semibold text-gray-900 text-base md:text-lg">
                   {d.label}
                 </span>
+              </div>
+              <div className="flex items-center gap-2 min-w-[100px] justify-end">
                 {d.hasDetails && (
-                  <button
-                    className="ml-2 text-xs text-blue-600 underline flex items-center gap-1"
-                    onClick={() =>
-                      setExpanded(expanded === d.key ? null : d.key)
-                    }
-                  >
-                    <Eye className="w-4 h-4 inline" />{" "}
-                    {expanded === d.key ? "Hide" : "View Details"}
-                  </button>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <button
+                        className="p-1 focus:outline-none"
+                        aria-label={`View ${d.label} details`}
+                      >
+                        <Eye className="w-5 h-5 text-blue-600" />
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent className="w-full max-w-xs sm:max-w-md md:max-w-2xl overflow-x-auto">
+                      <DialogHeader>
+                        <DialogTitle>{d.label} Details</DialogTitle>
+                      </DialogHeader>
+                      {renderDetails(d.key)}
+                    </DialogContent>
+                  </Dialog>
                 )}
+                <span className="text-xl md:text-2xl font-bold text-gray-900 text-right">
+                  ₹{d.total?.toLocaleString() || 0}
+                </span>
               </div>
-              <div className="text-xl md:text-2xl font-bold text-gray-900 min-w-[80px] text-right">
-                ₹{d.total?.toLocaleString() || 0}
-              </div>
-              {/* Details section */}
-              {expanded === d.key && (
-                <div className="absolute left-0 top-full w-full z-10 bg-white border rounded-b-xl shadow-lg mt-2 p-4">
-                  {renderDetails(d.key)}
-                </div>
-              )}
             </Card>
           );
         })}
+      </div>
+      {/* Place logout button at the bottom of the dashboard */}
+      <div className="w-full flex justify-center mt-8 mb-4">
+        <Button
+          className="shadow-md text-base px-6 py-2 w-full max-w-xs bg-red-100 text-red-700 hover:bg-red-600 hover:text-white active:bg-red-700 active:text-white transition-colors duration-150"
+          onClick={logout}
+        >
+          <LogOut className="w-5 h-5 mr-2" /> Logout
+        </Button>
       </div>
     </div>
   );
