@@ -341,16 +341,16 @@ export default function StudentDashboard() {
           </div>
           {/* Profile Info */}
           <div className="flex-1 flex flex-col justify-center items-center md:items-start text-center md:text-left">
-            {/* Centered Roll No */}
-            <div className="w-full flex justify-center mb-1">
-              <span className="text-lg md:text-xl font-extrabold text-white drop-shadow tracking-wide">
+            {/* Vertically stacked Roll No and Name, center on mobile, left on desktop */}
+            <div className="flex flex-col items-center md:items-start w-full mb-1">
+              <span className="text-base md:text-lg font-bold text-white drop-shadow tracking-wide mb-0.5">
                 Roll No: {profile?.user?.username || "-"}
               </span>
+              <span className="text-xl md:text-2xl font-extrabold text-white drop-shadow">
+                Hello, {name || "Student"}
+              </span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-1 drop-shadow">
-              Hello, {name || "Student"}
-            </h2>
-            <div className="text-lg md:text-2xl text-white font-semibold mb-2 drop-shadow">
+            <div className="text-base md:text-lg text-white font-medium mb-2 drop-shadow">
               {profile?.course_name}
             </div>
             <div className="flex flex-wrap gap-x-6 gap-y-1 justify-center md:justify-start text-sm text-white/90">

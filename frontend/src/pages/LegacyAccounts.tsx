@@ -301,6 +301,7 @@ export default function LegacyAccounts() {
     setSelectedYear("all");
     setSearchTerm("");
     setCurrentPage(1);
+    setShowLegacyFilters(false); // Close advanced filters when clearing all
   };
 
   // Handle advanced filters toggle
