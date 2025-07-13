@@ -4,14 +4,13 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import HomePage from "../pages/HomePage";
 import StudentLoginPage from "../pages/StudentLoginPage";
 import StaffLoginPage from "../pages/StaffLoginPage";
-import StudentDashboard from "../pages/StudentDashboard";
 
 import LegacyAccounts from "../pages/LegacyAccounts";
 import HostelDues from "../pages/HostelDues";
-import OthersDues from "../pages/OthersDues";
 import TotalDuesDashboard from "../pages/TotalDuesDashboard";
 import LibraryRecords from "../pages/LibraryRecords";
 import SportsRecords from "../pages/SportsRecords";
+import StudentDashboard from "../pages/StudentDashboard";
 
 const router = createBrowserRouter([
   {
@@ -22,6 +21,7 @@ const router = createBrowserRouter([
       </AuthProvider>
     ),
   },
+
   {
     path: "/student-login",
     element: (
@@ -38,14 +38,7 @@ const router = createBrowserRouter([
       </AuthProvider>
     ),
   },
-  {
-    path: "/student-dashboard",
-    element: (
-      <AuthProvider>
-        <StudentDashboard />
-      </AuthProvider>
-    ),
-  },
+
   {
     path: "/accounts-dues",
     element: (
@@ -86,16 +79,7 @@ const router = createBrowserRouter([
       </AuthProvider>
     ),
   },
-  {
-    path: "/others-dues",
-    element: (
-      <AuthProvider>
-        <ProtectedRoute fallbackPath="/staff-login" requiredEmail={undefined}>
-          <OthersDues />
-        </ProtectedRoute>
-      </AuthProvider>
-    ),
-  },
+
   {
     path: "/library-records",
     element: (
@@ -123,6 +107,14 @@ const router = createBrowserRouter([
         <ProtectedRoute requiredEmail="principal@tu.in">
           <TotalDuesDashboard />
         </ProtectedRoute>
+      </AuthProvider>
+    ),
+  },
+  {
+    path: "/student-dashboard",
+    element: (
+      <AuthProvider>
+        <StudentDashboard />
       </AuthProvider>
     ),
   },

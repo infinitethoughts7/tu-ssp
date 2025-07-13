@@ -1,777 +1,423 @@
-import React, { useEffect, useState } from "react";
-import { getAcademicDues, getHostelDues } from "../services/departmentService";
-import api from "../services/api";
-import { useAuth } from "../context/useAuth";
-import {
-  School,
-  Home,
-  IndianRupee,
-  AlertCircle,
-  LogOut,
-  User,
-  ChevronDown,
-  ChevronRight,
-  CreditCard,
-  Building2,
-  BookOpen,
-  Beaker,
-  Trophy,
-} from "lucide-react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
+import { Alert } from "../components/ui/alert";
+import { useAuth } from "../context/useAuth";
+import api from "../services/api";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../components/ui/table";
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "../components/ui/popover";
-import axios from "axios";
-import { Avatar, AvatarFallback } from "../components/ui/avatar";
+  LogOut,
+  Book,
+  Home,
+  Library,
+  FlaskConical,
+  Dumbbell,
+  User2,
+  BadgeInfo,
+  GraduationCap,
+  Eye,
+} from "lucide-react";
 
-interface UserProfile {
-  user: {
-    first_name: string;
-    last_name: string;
-    username: string; // This contains the roll number
-  };
-  course: string;
-}
+import { buttonColour } from "../types/constants";
 
-const StudentDashboard: React.FC = () => {
-  const { logout, accessToken, user } = useAuth();
-  const userProfile = user as unknown as UserProfile;
+const PRIMARY = buttonColour.primary;
+const ICON_BG = {
+  academic: "bg-blue-100 text-blue-700",
+  hostel: "bg-yellow-100 text-yellow-700",
+  library: "bg-green-100 text-green-700",
+  legacy: "bg-purple-100 text-purple-700",
+  sports: "bg-pink-100 text-pink-700",
+};
+
+export default function StudentDashboard() {
+  const { user, logout, isLoading: authLoading } = useAuth();
+  const [profile, setProfile] = useState<any>(null);
+  const [dues, setDues] = useState<Record<string, number>>({});
+  const [records, setRecords] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [academicDues, setAcademicDues] = useState<any[]>([]);
-  const [hostelDues, setHostelDues] = useState<any[]>([]);
-  const [otherDues, setOtherDues] = useState<any[]>([]);
-  const [showAcademic, setShowAcademic] = useState(false);
-  const [showHostel, setShowHostel] = useState(false);
-  const [showLibrary, setShowLibrary] = useState(false);
-  const [showLab, setShowLab] = useState(false);
-  const [showSports, setShowSports] = useState(false);
-  const [totalDues, setTotalDues] = useState({
-    academic_total: 0,
-    hostel_total: 0,
-    library_total: 0,
-    lab_total: 0,
-    sports_total: 0,
-    grand_total: 0,
-  });
+  const [error, setError] = useState("");
+  const [expanded, setExpanded] = useState<string | null>(null);
 
-  // Add logging for user profile
-  useEffect(() => {}, [user, accessToken]);
-
-  // Filter academic dues to only show one entry per year (remove duplicates)
-  const uniqueAcademicDues = React.useMemo(() => {
-    const seenYears = new Set();
-    return academicDues.filter((due: any) => {
-      if (seenYears.has(due.academic_year_label)) return false;
-      seenYears.add(due.academic_year_label);
-      return true;
-    });
-  }, [academicDues]);
-
-  // Calculate total academic due by summing unpaid_amounts
-  const totalAcademicDue = React.useMemo(() => {
-    return uniqueAcademicDues.reduce(
-      (sum, due) => sum + (due.unpaid_amount || 0),
-      0
+  const username = user?.username || user?.user?.username;
+  const name = useMemo(() => {
+    if (!profile) return "";
+    return (
+      profile.user.first_name +
+      (profile.user.last_name ? ` ${profile.user.last_name}` : "")
     );
-  }, [uniqueAcademicDues]);
+  }, [profile]);
 
-  // Calculate total hostel due by summing due_amounts for the current student
-  const totalHostelDue = React.useMemo(() => {
-    return hostelDues
-      .filter(
-        (due: any) => due.student?.roll_number === userProfile.user.username
-      )
-      .reduce((sum, due) => sum + (due.due_amount || 0), 0);
-  }, [hostelDues, userProfile.user.username]);
+  // Fetch profile
+  const fetchProfile = useCallback(async () => {
+    const res = await api.get("/profile/");
+    setProfile(res.data.profile);
+  }, []);
 
-  // Sum both for total outstanding
-  const totalOutstanding = totalAcademicDue + totalHostelDue;
-
-  const fetchOtherDues = async () => {
+  // Fetch all dues and records
+  const fetchAllDues = useCallback(async () => {
+    if (!username) return;
+    setLoading(true);
+    setError("");
     try {
-      const response = await api.get("/dues/other-dues/");
+      // Academic
+      const academicRes = await api.get(
+        `/dues/academic-records/?student_id=${username}`
+      );
+      const academicRecords = academicRes.data;
+      const academicTotal = academicRecords.reduce(
+        (sum: number, rec: any) => sum + (rec.due_amount || 0),
+        0
+      );
 
-      if (
-        response.data &&
-        response.data.dues &&
-        Array.isArray(response.data.dues)
-      ) {
-        setOtherDues(response.data.dues);
-        setTotalDues(response.data.total_dues);
-      }
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error("Error details:", {
-          status: error.response?.status,
-          data: error.response?.data,
-          headers: error.response?.headers,
-          message: error.message,
-          config: {
-            url: error.config?.url,
-            method: error.config?.method,
-            headers: error.config?.headers,
-          },
+      // Hostel
+      const hostelRes = await api.get(
+        `/dues/hostel-records/?student_id=${username}`
+      );
+      const hostelRecords = hostelRes.data;
+      const hostelTotal = hostelRecords.reduce(
+        (sum: number, rec: any) => sum + (rec.mess_bill || 0),
+        0
+      );
+
+      // Library
+      const libraryRes = await api.get(
+        `/dues/library-records/grouped_by_student/?student_id=${username}`
+      );
+      const libraryRecords =
+        libraryRes.data.length > 0 ? libraryRes.data[0].records || [] : [];
+      const libraryTotal =
+        libraryRes.data.length > 0
+          ? libraryRes.data[0].total_fine_amount || 0
+          : 0;
+
+      // Legacy Records - split between Academic and Department/Lab
+      const legacyRes = await api.get(
+        `/dues/legacy-academic-records/grouped_by_student/?student_username=${username}`
+      );
+      let legacyRecords: any[] = [];
+      let academicLegacyTotal = 0;
+      let departmentLabTotal = 0;
+
+      if (legacyRes.data.length > 0) {
+        const allLegacyRecords = legacyRes.data[0].dues || [];
+
+        // Split legacy records between Academic and Department/Lab
+        allLegacyRecords.forEach((d: any) => {
+          const label = (
+            d.label ||
+            d.type ||
+            d.description ||
+            ""
+          ).toLowerCase();
+
+          if (label.includes("lab") || label.includes("department")) {
+            legacyRecords.push(d);
+            departmentLabTotal += d.due_amount || 0;
+          } else {
+            // All other legacy records go to Academic Dues
+            academicLegacyTotal += d.due_amount || 0;
+          }
         });
       }
+
+      // Sports
+      const sportsRes = await api.get(
+        `/dues/sports-records/grouped_by_student/?student_id=${username}`
+      );
+      const sportsRecords =
+        sportsRes.data.length > 0 ? sportsRes.data[0].records || [] : [];
+      const sportsTotal =
+        sportsRes.data.length > 0
+          ? sportsRes.data[0].total_fine_amount || 0
+          : 0;
+
+      setDues({
+        academic: academicTotal + academicLegacyTotal, // Include legacy academic dues
+        hostel: hostelTotal,
+        library: libraryTotal,
+        legacy: departmentLabTotal, // Only department/lab legacy dues
+        sports: sportsTotal,
+      });
+      setRecords({
+        academic: academicRecords,
+        hostel: hostelRecords,
+        library: libraryRecords,
+        legacy: legacyRecords,
+        sports: sportsRecords,
+      });
+    } catch (e) {
+      setError("Failed to fetch dues. Please try again later.");
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [username]);
 
   useEffect(() => {
-    const getDues = async () => {
-      if (!accessToken) {
-        setError("No authentication token found. Please login again.");
-        setLoading(false);
-        return;
-      }
-      try {
-        console.log("Starting to fetch all dues...");
-        const academicData = await getAcademicDues();
-        if (
-          academicData &&
-          typeof academicData === "object" &&
-          "results" in academicData &&
-          Array.isArray(academicData.results)
-        ) {
-          setAcademicDues(academicData.results);
-        } else if (Array.isArray(academicData)) {
-          setAcademicDues(academicData);
-        }
-        const hostelData = await getHostelDues();
-        setHostelDues(hostelData);
-        await fetchOtherDues();
-        setError(null);
-      } catch (error) {
-        console.error("Error in getDues:", error);
-        setError("Failed to fetch dues. Please try again later.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    getDues();
-  }, [accessToken]);
+    fetchProfile();
+  }, [fetchProfile]);
 
-  if (loading) {
+  useEffect(() => {
+    if (profile) fetchAllDues();
+  }, [profile, fetchAllDues]);
+
+  if (authLoading || loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
-        <div className="text-center p-8 bg-white rounded-lg shadow">
-          <div className="w-16 h-16 border-4 border-t-gray-800 border-b-gray-300 border-l-gray-300 border-r-gray-300 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-800 text-xl font-medium">
-            Loading dashboard...
-          </p>
-        </div>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-white">
+        <span className="animate-spin h-10 w-10 border-4 border-blue-500 rounded-full border-t-transparent"></span>
+        <p className="mt-4 text-base font-medium text-gray-800">
+          Loading dashboard...
+        </p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
-        <div className="text-center p-8 bg-white rounded-lg shadow max-w-md w-full">
-          <div className="text-red-600 text-xl mb-4 font-medium">{error}</div>
-          <button
-            onClick={logout}
-            className="bg-gray-800 text-white px-6 py-2 rounded-md hover:bg-gray-700 transition shadow w-full"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
+      <Alert variant="destructive" className="max-w-md mx-auto mt-10">
+        {error}
+      </Alert>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-white">
-      <header className="bg-white border-b shadow-sm">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <div className="bg-white p-2 rounded-lg shadow-md">
-              <img
-                src="/assets/Telangana_University_logo.png"
-                alt="Telangana University Logo"
-                className="h-16 w-auto object-contain"
-              />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-blue-600">
-                Telangana University
-              </h1>
-              <p className="text-sm text-gray-900 font-medium mt-1">
-                Student Service Portal
-              </p>
-            </div>
-          </div>
-          {/* Profile Popover and Logout */}
-          <div className="flex items-center gap-3">
-            <Popover>
-              <PopoverTrigger asChild>
-                <button className="flex items-center gap-2 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full p-2 px-5 focus:outline-none focus:ring-2 focus:ring-blue-400">
-                  <User className="h-7 w-7 text-white" />
-                  <span className="text-base font-semibold text-white hidden sm:block">
-                    {userProfile?.user?.first_name}{" "}
-                    {userProfile?.user?.last_name}
-                  </span>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-auto p-6">
-                <div className="flex flex-col gap-4 min-w-[220px]">
-                  {/* Name */}
-                  <div className="flex items-center gap-3">
-                    <div className="bg-gradient-to-br from-blue-500 to-purple-500 rounded-full p-2 flex items-center justify-center">
-                      <User className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <div className="text-gray-500 text-xs font-medium">
-                        Name
-                      </div>
-                      <div className="text-base font-semibold text-gray-900">
-                        {userProfile?.user?.first_name}{" "}
-                        {userProfile?.user?.last_name}
-                      </div>
-                    </div>
-                  </div>
-                  {/* Roll Number */}
-                  <div className="flex items-center gap-3">
-                    <div className="bg-green-500 rounded-full p-2 flex items-center justify-center">
-                      <span className="text-white font-bold text-base">#</span>
-                    </div>
-                    <div>
-                      <div className="text-gray-500 text-xs font-medium">
-                        Roll Number
-                      </div>
-                      <div className="text-base font-semibold text-gray-900">
-                        {userProfile?.user?.username}
-                      </div>
-                    </div>
-                  </div>
-                  {/* Department */}
-                  <div className="flex items-center gap-3">
-                    <div className="bg-orange-400 rounded-full p-2 flex items-center justify-center">
-                      <Building2 className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <div className="text-gray-500 text-xs font-medium">
-                        Department
-                      </div>
-                      <div className="text-base font-semibold text-gray-900">
-                        {userProfile?.course}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-            <button
-              onClick={logout}
-              className="flex items-center gap-1 bg-red-100 hover:bg-red-200 text-red-700 font-semibold px-4 py-2 rounded-full transition shadow-sm border border-red-200 focus:outline-none focus:ring-2 focus:ring-red-400"
-              title="Logout"
-            >
-              <LogOut className="h-5 w-5" />
-              <span className="hidden sm:inline">Logout</span>
-            </button>
+  // Helper for details rendering
+  const renderDetails = (key: string) => {
+    if (key === "library") {
+      return (
+        <div className="mt-2 text-xs md:text-sm">
+          <div className="font-semibold mb-1">Library Records</div>
+          <div className="overflow-x-auto">
+            <table className="w-full border text-left">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="p-2">Book ID</th>
+                  <th className="p-2">Borrowing Date</th>
+                  <th className="p-2">Fine Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {records.library.map((rec, i) => (
+                  <tr key={i} className="border-t">
+                    <td className="p-2">{rec.book_id}</td>
+                    <td className="p-2">{rec.borrowing_date}</td>
+                    <td className="p-2">₹{rec.fine_amount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-      </header>
-      <main className="container mx-auto px-6 py-8">
-        {/* Profile Card */}
-        <Card className="border-none shadow-lg bg-white mb-8">
-          <CardContent className="p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16">
-                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white text-xl">
-                    {userProfile?.user?.first_name?.[0]}
-                    {userProfile?.user?.last_name?.[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    {userProfile?.user?.first_name}{" "}
-                    {userProfile?.user?.last_name}
-                  </h2>
-                  <p className="text-gray-600">
-                    Roll No: {userProfile?.user?.username}
-                  </p>
-                  <p className="text-gray-600">{userProfile?.course}</p>
+      );
+    }
+    if (key === "sports") {
+      return (
+        <div className="mt-2 text-xs md:text-sm">
+          <div className="font-semibold mb-1">Sports Records</div>
+          <div className="overflow-x-auto">
+            <table className="w-full border text-left">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="p-2">Equipment</th>
+                  <th className="p-2">Borrowing Date</th>
+                  <th className="p-2">Fine Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {records.sports.map((rec, i) => (
+                  <tr key={i} className="border-t">
+                    <td className="p-2">{rec.equipment_name}</td>
+                    <td className="p-2">{rec.borrowing_date}</td>
+                    <td className="p-2">₹{rec.fine_amount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+    if (key === "legacy") {
+      return (
+        <div className="mt-2 text-xs md:text-sm">
+          <div className="font-semibold mb-1">Department/Lab Records</div>
+          <div className="overflow-x-auto">
+            <table className="w-full border text-left">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="p-2">Description</th>
+                  <th className="p-2">Due Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {records.legacy.map((rec, i) => (
+                  <tr key={i} className="border-t">
+                    <td className="p-2">
+                      {rec.label || rec.type || rec.description || "-"}
+                    </td>
+                    <td className="p-2">₹{rec.due_amount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <div className="min-h-screen bg-white px-1 py-3 flex flex-col items-center">
+      {/* Header: Logo + Welcome */}
+      <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm w-full max-w-3xl">
+        <img
+          src="/src/assets/Telangana_University_logo.png"
+          alt="Telangana University Logo"
+          className="w-14 h-14 md:w-16 md:h-16 drop-shadow-xl"
+        />
+        <div className="flex flex-col items-center md:items-start">
+          <h1 className="text-2xl md:text-3xl font-extrabold mb-1 text-transparent bg-clip-text bg-gradient-to-r from-blue-700 via-indigo-600 to-blue-400">
+            Welcome, {name || "Student"}!
+          </h1>
+          <p className="text-sm md:text-base text-gray-700 font-medium tracking-wide">
+            Student Dashboard
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          className="md:ml-auto mt-4 md:mt-0 shadow-md text-sm px-3 py-1.5"
+          onClick={logout}
+        >
+          <LogOut className="w-4 h-4 mr-2" /> Logout
+        </Button>
+      </div>
+      {/* Profile Card - no title, compact, elegant */}
+      <div className="flex justify-center mb-6 w-full">
+        <Card className="w-full max-w-3xl shadow border-0 bg-white rounded-xl p-2">
+          <CardContent className="py-4 px-3">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 w-full text-sm md:text-base">
+              {/* Left: Roll No & Course */}
+              <div className="flex-1 min-w-[180px]">
+                <div className="flex items-center gap-2 mb-1">
+                  <BadgeInfo className="w-4 h-4 text-gray-400" />
+                  <span className="font-semibold text-gray-900">Roll No:</span>
+                  <span className="font-bold text-gray-900">
+                    {profile?.user.username}
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <GraduationCap className="w-4 h-4 text-gray-400 mt-0.5" />
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-gray-900">Course:</span>
+                    <span className="text-gray-800 whitespace-pre-line">
+                      {profile?.course_name}
+                    </span>
+                  </div>
                 </div>
               </div>
-              <div className="text-right sm:text-right">
-                <p className="text-sm text-gray-500">Total Outstanding</p>
-                <p className="text-3xl font-bold text-red-600">
-                  ₹{totalOutstanding.toLocaleString()}
-                </p>
+              {/* Right: Batch & Caste */}
+              <div className="flex-1 min-w-[140px] flex flex-col gap-2 md:items-end">
+                <div className="flex items-center gap-2">
+                  <Book className="w-4 h-4 text-gray-400" />
+                  <span className="font-semibold text-gray-900">Batch:</span>
+                  <span className="font-bold text-gray-900">
+                    {profile?.batch}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <BadgeInfo className="w-4 h-4 text-gray-400" />
+                  <span className="font-semibold text-gray-900">Caste:</span>
+                  <span className="font-bold text-gray-900">
+                    {profile?.caste}
+                  </span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
-
-        {/* Academic Dues Section */}
-        <Card className="border-none shadow-lg bg-white mb-8">
-          <CardHeader
-            onClick={() => setShowAcademic((prev) => !prev)}
-            className="cursor-pointer select-none"
-          >
-            <div className="flex items-center justify-between">
+      </div>
+      {/* Dues Cards - vertical alignment, compact, amount right, expandable details */}
+      <div className="max-w-3xl w-full mx-auto flex flex-col gap-4">
+        {[
+          {
+            key: "academic",
+            label: "Academic Dues",
+            icon: GraduationCap,
+            iconBg: ICON_BG.academic,
+            total: dues.academic,
+            hasDetails: false,
+          },
+          {
+            key: "hostel",
+            label: "Hostel Dues",
+            icon: Home,
+            iconBg: ICON_BG.hostel,
+            total: dues.hostel,
+            hasDetails: false,
+          },
+          {
+            key: "library",
+            label: "Library Dues",
+            icon: Library,
+            iconBg: ICON_BG.library,
+            total: dues.library,
+            hasDetails: records.library && records.library.length > 0,
+          },
+          {
+            key: "legacy",
+            label: "Department/Lab Dues",
+            icon: FlaskConical,
+            iconBg: ICON_BG.legacy,
+            total: dues.legacy,
+            hasDetails: records.legacy && records.legacy.length > 0,
+          },
+          {
+            key: "sports",
+            label: "Sports Dues",
+            icon: Dumbbell,
+            iconBg: ICON_BG.sports,
+            total: dues.sports,
+            hasDetails: records.sports && records.sports.length > 0,
+          },
+        ].map((d) => {
+          const Icon = d.icon;
+          return (
+            <Card
+              key={d.key}
+              className="shadow border-0 bg-white rounded-xl flex flex-row items-center justify-between px-4 py-3"
+            >
               <div className="flex items-center gap-3">
-                <div className="bg-blue-700 p-2 rounded-lg shadow-md">
-                  <School className="h-5 w-5 text-white" />
-                </div>
-                <CardTitle className="text-gray-800 flex items-center gap-2">
-                  Academic Dues
-                  {showAcademic ? (
-                    <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-200" />
-                  ) : (
-                    <ChevronRight className="h-5 w-5 text-gray-500 transition-transform duration-200" />
-                  )}
-                </CardTitle>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-500">Total Due</p>
-                <p className="text-xl font-bold text-red-600">
-                  ₹{totalAcademicDue.toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </CardHeader>
-          {showAcademic && (
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50/50">
-                    <TableHead>Year</TableHead>
-                    <TableHead>Tuition Fee</TableHead>
-                    <TableHead>Special Fee</TableHead>
-                    <TableHead>Exam Fee</TableHead>
-                    <TableHead>Paid by Govt</TableHead>
-                    <TableHead>Paid by Student</TableHead>
-                    <TableHead>Due Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {uniqueAcademicDues.map((due: any) => (
-                    <TableRow key={due.id}>
-                      <TableCell>{due.academic_year_label}</TableCell>
-                      <TableCell>
-                        ₹
-                        {due.fee_structure?.tuition_fee?.toLocaleString() ||
-                          "0"}
-                      </TableCell>
-                      <TableCell>
-                        ₹
-                        {due.fee_structure?.special_fee?.toLocaleString() ||
-                          "0"}
-                      </TableCell>
-                      <TableCell>
-                        ₹{due.fee_structure?.exam_fee?.toLocaleString() || "0"}
-                      </TableCell>
-                      <TableCell>
-                        ₹{due.paid_by_govt?.toLocaleString() || "0"}
-                      </TableCell>
-                      <TableCell>
-                        ₹{due.paid_by_student?.toLocaleString() || "0"}
-                      </TableCell>
-                      <TableCell>
-                        ₹{due.due_amount?.toLocaleString() || "0"}
-                      </TableCell>
-                      <TableCell>
-                        {due.payment_status === "Unpaid" ? (
-                          <span className="text-red-600 font-semibold">
-                            Unpaid
-                          </span>
-                        ) : (
-                          <span className="text-green-600 font-semibold">
-                            Paid
-                          </span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 mt-4 w-full">
-                <Button className="bg-blue-600 text-white flex items-center gap-2 w-full sm:w-auto px-4 py-2 sm:px-6 sm:py-2 text-base sm:text-sm">
-                  <CreditCard className="h-4 w-4" />
-                  Pay Now
-                </Button>
-              </div>
-            </CardContent>
-          )}
-        </Card>
-        {/* Hostel Dues Section */}
-        <Card className="border-none shadow-lg bg-white mb-8">
-          <CardHeader
-            onClick={() => setShowHostel((prev) => !prev)}
-            className="cursor-pointer select-none"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="bg-purple-700 p-2 rounded-lg shadow-md">
-                  <Home className="h-5 w-5 text-white" />
-                </div>
-                <CardTitle className="text-gray-800 flex items-center gap-2">
-                  Hostel Dues
-                  {showHostel ? (
-                    <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-200" />
-                  ) : (
-                    <ChevronRight className="h-5 w-5 text-gray-500 transition-transform duration-200" />
-                  )}
-                </CardTitle>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-500">Total Due</p>
-                <p className="text-xl font-bold text-red-600">
-                  {(() => {
-                    const myHostelDue = hostelDues.find(
-                      (due: any) =>
-                        due.student?.roll_number === userProfile.user.username
-                    );
-                    if (
-                      myHostelDue &&
-                      typeof myHostelDue.total_hostel_due === "number"
-                    ) {
-                      return `₹${myHostelDue.total_hostel_due.toLocaleString()}`;
+                <span
+                  className={`inline-flex items-center justify-center rounded-full w-9 h-9 ${d.iconBg}`}
+                >
+                  <Icon className="w-5 h-5" />
+                </span>
+                <span className="font-semibold text-gray-900 text-base md:text-lg">
+                  {d.label}
+                </span>
+                {d.hasDetails && (
+                  <button
+                    className="ml-2 text-xs text-blue-600 underline flex items-center gap-1"
+                    onClick={() =>
+                      setExpanded(expanded === d.key ? null : d.key)
                     }
-                    return `₹${totalDues.hostel_total}`;
-                  })()}
-                </p>
+                  >
+                    <Eye className="w-4 h-4 inline" />{" "}
+                    {expanded === d.key ? "Hide" : "View Details"}
+                  </button>
+                )}
               </div>
-            </div>
-          </CardHeader>
-          {showHostel && (
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50/50">
-                    <TableHead>Year</TableHead>
-                    <TableHead>Mess Bill</TableHead>
-                    <TableHead>Scholarship</TableHead>
-                    <TableHead>Deposit</TableHead>
-                    <TableHead>Remarks</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {hostelDues
-                    .filter(
-                      (due: any) =>
-                        due.student?.roll_number
-                          ? due.student.roll_number ===
-                            userProfile.user.username
-                          : true // fallback: show if no student info
-                    )
-                    .map((due: any) => (
-                      <TableRow key={due.id}>
-                        <TableCell>{due.year_of_study}</TableCell>
-                        <TableCell>
-                          ₹{due.mess_bill?.toLocaleString() || "0"}
-                        </TableCell>
-                        <TableCell>
-                          ₹{due.scholarship?.toLocaleString() || "0"}
-                        </TableCell>
-                        <TableCell>
-                          ₹{due.deposit?.toLocaleString() || "0"}
-                        </TableCell>
-                        <TableCell>{due.remarks || "No remarks"}</TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-              <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 mt-4 w-full">
-                <Button className="bg-blue-600 text-white flex items-center gap-2 w-full sm:w-auto px-4 py-2 sm:px-6 sm:py-2 text-base sm:text-sm">
-                  <CreditCard className="h-4 w-4" />
-                  Pay Now
-                </Button>
+              <div className="text-xl md:text-2xl font-bold text-gray-900 min-w-[80px] text-right">
+                ₹{d.total?.toLocaleString() || 0}
               </div>
-            </CardContent>
-          )}
-        </Card>
-
-        {/* Library Dues Section */}
-        <Card className="border-none shadow-lg bg-white mb-8">
-          <CardHeader
-            onClick={() => setShowLibrary((prev) => !prev)}
-            className="cursor-pointer select-none"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="bg-blue-600 p-2 rounded-lg shadow-md">
-                  <BookOpen className="h-5 w-5 text-white" />
+              {/* Details section */}
+              {expanded === d.key && (
+                <div className="absolute left-0 top-full w-full z-10 bg-white border rounded-b-xl shadow-lg mt-2 p-4">
+                  {renderDetails(d.key)}
                 </div>
-                <CardTitle className="text-gray-800 flex items-center gap-2">
-                  Library Dues
-                  {showLibrary ? (
-                    <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-200" />
-                  ) : (
-                    <ChevronRight className="h-5 w-5 text-gray-500 transition-transform duration-200" />
-                  )}
-                </CardTitle>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-500">Total Due</p>
-                <p className="text-xl font-bold text-red-600">₹0</p>
-              </div>
-            </div>
-          </CardHeader>
-          {showLibrary && (
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50/50">
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Remark</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {otherDues
-                    .filter((due) => due.department === "librarian")
-                    .map((due, index) => (
-                      <TableRow key={index}>
-                        <TableCell>
-                          ₹{due.amount?.toLocaleString() || "0"}
-                        </TableCell>
-                        <TableCell>{due.remark || "No library dues"}</TableCell>
-                        <TableCell>
-                          {due.created_at
-                            ? new Date(due.created_at).toLocaleDateString()
-                            : "-"}
-                        </TableCell>
-                        <TableCell>
-                          {due.amount && due.amount > 0 ? (
-                            <span className="text-red-600 font-semibold">
-                              Unpaid
-                            </span>
-                          ) : (
-                            <span className="text-green-600 font-semibold">
-                              No Dues
-                            </span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  {otherDues.filter((due) => due.department === "librarian")
-                    .length === 0 && (
-                    <TableRow>
-                      <TableCell>₹0</TableCell>
-                      <TableCell>No library dues</TableCell>
-                      <TableCell>-</TableCell>
-                      <TableCell>
-                        <span className="text-green-600 font-semibold">
-                          No Dues
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-              <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 mt-4 w-full">
-                <Button className="bg-blue-600 text-white flex items-center gap-2 w-full sm:w-auto px-4 py-2 sm:px-6 sm:py-2 text-base sm:text-sm">
-                  <CreditCard className="h-4 w-4" />
-                  Pay Now
-                </Button>
-              </div>
-            </CardContent>
-          )}
-        </Card>
-
-        {/* Lab Dues Section */}
-        <Card className="border-none shadow-lg bg-white mb-8">
-          <CardHeader
-            onClick={() => setShowLab((prev) => !prev)}
-            className="cursor-pointer select-none"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="bg-purple-600 p-2 rounded-lg shadow-md">
-                  <Beaker className="h-5 w-5 text-white" />
-                </div>
-                <CardTitle className="text-gray-800 flex items-center gap-2">
-                  Lab Dues
-                  {showLab ? (
-                    <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-200" />
-                  ) : (
-                    <ChevronRight className="h-5 w-5 text-gray-500 transition-transform duration-200" />
-                  )}
-                </CardTitle>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-500">Total Due</p>
-                <p className="text-xl font-bold text-red-600">₹0</p>
-              </div>
-            </div>
-          </CardHeader>
-          {showLab && (
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50/50">
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Remark</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {otherDues
-                    .filter((due) => due.department === "lab_incharge")
-                    .map((due, index) => (
-                      <TableRow key={index}>
-                        <TableCell>
-                          ₹{due.amount?.toLocaleString() || "0"}
-                        </TableCell>
-                        <TableCell>{due.remark || "No lab dues"}</TableCell>
-                        <TableCell>
-                          {due.created_at
-                            ? new Date(due.created_at).toLocaleDateString()
-                            : "-"}
-                        </TableCell>
-                        <TableCell>
-                          {due.amount && due.amount > 0 ? (
-                            <span className="text-red-600 font-semibold">
-                              Unpaid
-                            </span>
-                          ) : (
-                            <span className="text-green-600 font-semibold">
-                              No Dues
-                            </span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  {otherDues.filter((due) => due.department === "lab_incharge")
-                    .length === 0 && (
-                    <TableRow>
-                      <TableCell>₹0</TableCell>
-                      <TableCell>No lab dues</TableCell>
-                      <TableCell>-</TableCell>
-                      <TableCell>
-                        <span className="text-green-600 font-semibold">
-                          No Dues
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-              <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 mt-4 w-full">
-                <Button className="bg-blue-600 text-white flex items-center gap-2 w-full sm:w-auto px-4 py-2 sm:px-6 sm:py-2 text-base sm:text-sm">
-                  <CreditCard className="h-4 w-4" />
-                  Pay Now
-                </Button>
-              </div>
-            </CardContent>
-          )}
-        </Card>
-
-        {/* Sports Dues Section */}
-        <Card className="border-none shadow-lg bg-white mb-8">
-          <CardHeader
-            onClick={() => setShowSports((prev) => !prev)}
-            className="cursor-pointer select-none"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="bg-yellow-600 p-2 rounded-lg shadow-md">
-                  <Trophy className="h-5 w-5 text-white" />
-                </div>
-                <CardTitle className="text-gray-800 flex items-center gap-2">
-                  Sports Dues
-                  {showSports ? (
-                    <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-200" />
-                  ) : (
-                    <ChevronRight className="h-5 w-5 text-gray-500 transition-transform duration-200" />
-                  )}
-                </CardTitle>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-500">Total Due</p>
-                <p className="text-xl font-bold text-red-600">₹0</p>
-              </div>
-            </div>
-          </CardHeader>
-          {showSports && (
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50/50">
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Remark</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {otherDues
-                    .filter((due) => due.department === "sports_incharge")
-                    .map((due, index) => (
-                      <TableRow key={index}>
-                        <TableCell>
-                          ₹{due.amount?.toLocaleString() || "0"}
-                        </TableCell>
-                        <TableCell>{due.remark || "No sports dues"}</TableCell>
-                        <TableCell>
-                          {due.created_at
-                            ? new Date(due.created_at).toLocaleDateString()
-                            : "-"}
-                        </TableCell>
-                        <TableCell>
-                          {due.amount && due.amount > 0 ? (
-                            <span className="text-red-600 font-semibold">
-                              Unpaid
-                            </span>
-                          ) : (
-                            <span className="text-green-600 font-semibold">
-                              No Dues
-                            </span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  {otherDues.filter(
-                    (due) => due.department === "sports_incharge"
-                  ).length === 0 && (
-                    <TableRow>
-                      <TableCell>₹0</TableCell>
-                      <TableCell>No sports dues</TableCell>
-                      <TableCell>-</TableCell>
-                      <TableCell>
-                        <span className="text-green-600 font-semibold">
-                          No Dues
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-              <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 mt-4 w-full">
-                <Button className="bg-blue-600 text-white flex items-center gap-2 w-full sm:w-auto px-4 py-2 sm:px-6 sm:py-2 text-base sm:text-sm">
-                  <CreditCard className="h-4 w-4" />
-                  Pay Now
-                </Button>
-              </div>
-            </CardContent>
-          )}
-        </Card>
-      </main>
+              )}
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
-};
-
-export default StudentDashboard;
+}

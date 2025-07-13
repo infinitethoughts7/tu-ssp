@@ -97,9 +97,9 @@ const LegacyRecordRow = React.memo(
     // Get batch: prefer group.batch (if present), else from first due, else N/A
     let batch = (group as any).batch;
     if (!batch && group.dues && group.dues.length > 0) {
-      batch = group.dues[0]?.student?.batch || 'N/A';
+      batch = group.dues[0]?.student?.batch || "N/A";
     }
-    if (!batch) batch = 'N/A';
+    if (!batch) batch = "N/A";
     return (
       <TableRow className="hover:bg-blue-50/50 transition-colors">
         <TableCell className="w-12"></TableCell>
@@ -123,9 +123,7 @@ const LegacyRecordRow = React.memo(
           </div>
         </TableCell>
         <TableCell className="align-middle text-left">
-          <div className="text-sm font-medium text-gray-700">
-            {batch}
-          </div>
+          <div className="text-sm font-medium text-gray-700">{batch}</div>
         </TableCell>
         <TableCell className="align-middle text-right">
           <div
@@ -139,7 +137,11 @@ const LegacyRecordRow = React.memo(
             <IndianRupee
               className={`h-4 w-4 ${isDue ? "text-red-700" : "text-gray-400"}`}
             />
-            <span className={isDue ? "text-red-700 font-bold" : "text-gray-500 font-medium"}>
+            <span
+              className={
+                isDue ? "text-red-700 font-bold" : "text-gray-500 font-medium"
+              }
+            >
               {totalDue.toLocaleString()}
             </span>
           </div>
@@ -322,7 +324,7 @@ export default function LegacyAccounts() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
               <img
-                src="/assets/Telangana_University_logo.png"
+                src="/src/assets/Telangana_University_logo.png"
                 alt="Telangana University Logo"
                 className="h-10 w-10 object-contain"
               />
@@ -677,9 +679,7 @@ export default function LegacyAccounts() {
         {/* Records Table */}
         <Card className="border-0 shadow-lg bg-white">
           <CardHeader>
-            <CardTitle className="text-gray-900">
-              Legacy Academic Records
-            </CardTitle>
+            <CardTitle className="text-gray-900">Academic Records</CardTitle>
           </CardHeader>
           <CardContent>
             {loading || filterLoading ? (
@@ -695,10 +695,18 @@ export default function LegacyAccounts() {
                   <TableHeader>
                     <TableRow className="border-gray-200 bg-gray-50">
                       <TableHead className="w-12"></TableHead>
-                      <TableHead className="text-gray-600 font-semibold text-left">Student Details</TableHead>
-                      <TableHead className="text-gray-600 font-semibold text-left">Course</TableHead>
-                      <TableHead className="text-gray-600 font-semibold text-left">Batch</TableHead>
-                      <TableHead className="text-gray-600 font-semibold text-right">Due Amount</TableHead>
+                      <TableHead className="text-gray-600 font-semibold text-left">
+                        Student Details
+                      </TableHead>
+                      <TableHead className="text-gray-600 font-semibold text-left">
+                        Course
+                      </TableHead>
+                      <TableHead className="text-gray-600 font-semibold text-left">
+                        Batch
+                      </TableHead>
+                      <TableHead className="text-gray-600 font-semibold text-right">
+                        Due Amount
+                      </TableHead>
                       <TableHead className="w-12"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -728,42 +736,56 @@ export default function LegacyAccounts() {
             </DialogHeader>
             {selectedStudent && (
               <div className="flex flex-col md:flex-row gap-6">
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-500 text-sm">Name:</span>
-                    <span className="font-medium text-gray-900">
-                      {selectedStudent.name}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-500 text-sm">Roll Number:</span>
-                    <span className="font-mono text-gray-900">
-                      {selectedStudent.roll_numbers[0]}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-500 text-sm">Course:</span>
-                    <span className="text-gray-900">
-                      {selectedStudent.course}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-500 text-sm">Phone:</span>
-                    <span className="text-gray-900">
-                      {selectedStudent.phone_number}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-500 text-sm">Caste:</span>
-                    <span className="text-gray-900">
-                      {selectedStudent.caste}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-500 text-sm">Batch:</span>
-                    <span className="text-gray-900">
-                      {selectedStudent.batch || "N/A"}
-                    </span>
+                <div className="flex-1">
+                  <div className="flex flex-wrap gap-6">
+                    <div className="flex items-center gap-2 min-w-[200px]">
+                      <span className="text-gray-500 text-sm font-medium">
+                        Name:
+                      </span>
+                      <span className="font-medium text-gray-900">
+                        {selectedStudent.name}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 min-w-[200px]">
+                      <span className="text-gray-500 text-sm font-medium">
+                        Roll Number:
+                      </span>
+                      <span className="font-mono text-gray-900">
+                        {selectedStudent.roll_numbers[0]}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 min-w-[200px]">
+                      <span className="text-gray-500 text-sm font-medium">
+                        Course:
+                      </span>
+                      <span className="text-gray-900">
+                        {selectedStudent.course}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 min-w-[200px]">
+                      <span className="text-gray-500 text-sm font-medium">
+                        Phone:
+                      </span>
+                      <span className="text-gray-900">
+                        {selectedStudent.phone_number}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 min-w-[200px]">
+                      <span className="text-gray-500 text-sm font-medium">
+                        Caste:
+                      </span>
+                      <span className="text-gray-900">
+                        {selectedStudent.caste}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 min-w-[200px]">
+                      <span className="text-gray-500 text-sm font-medium">
+                        Batch:
+                      </span>
+                      <span className="text-gray-900">
+                        {selectedStudent.batch || "N/A"}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 <div className="flex-1 space-y-2">

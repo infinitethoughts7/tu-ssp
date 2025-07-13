@@ -24,9 +24,9 @@ class AcademicRecordsViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = AcademicRecords.objects.all()
-        student_id = self.request.query_params.get('student_id', None)
-        if student_id:
-            queryset = queryset.filter(student_id=student_id)
+        student_username = self.request.query_params.get('student_id', None)
+        if student_username:
+            queryset = queryset.filter(student__user__username=student_username)
         return queryset
 
 class HostelRecordsViewSet(viewsets.ModelViewSet):
@@ -36,9 +36,9 @@ class HostelRecordsViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = HostelRecords.objects.all()
-        student_id = self.request.query_params.get('student_id', None)
-        if student_id:
-            queryset = queryset.filter(student_id=student_id)
+        student_username = self.request.query_params.get('student_id', None)
+        if student_username:
+            queryset = queryset.filter(student__user__username=student_username)
         return queryset
 
 class LibraryRecordsViewSet(viewsets.ModelViewSet):
@@ -48,9 +48,9 @@ class LibraryRecordsViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = LibraryRecords.objects.all()
-        student_id = self.request.query_params.get('student_id', None)
-        if student_id:
-            queryset = queryset.filter(student_id=student_id)
+        student_username = self.request.query_params.get('student_id', None)
+        if student_username:
+            queryset = queryset.filter(student__user__username=student_username)
         return queryset
 
     @action(detail=False, methods=['get'])
@@ -416,9 +416,9 @@ class SportsRecordsViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = SportsRecords.objects.all()
-        student_id = self.request.query_params.get('student_id', None)
-        if student_id:
-            queryset = queryset.filter(student_id=student_id)
+        student_username = self.request.query_params.get('student_id', None)
+        if student_username:
+            queryset = queryset.filter(student__user__username=student_username)
         return queryset
 
     def get_serializer_context(self):
