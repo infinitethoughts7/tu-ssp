@@ -25,7 +25,6 @@ import {
 } from "../components/ui/dialog";
 
 import { buttonColour } from "../types/constants";
-import telanganaLogo from "../assets/Telangana_University_logo.png";
 
 const PRIMARY = buttonColour.primary;
 const ICON_BG = {
@@ -45,12 +44,11 @@ export default function StudentDashboard() {
   const [error, setError] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const username = user?.username || user?.user?.username;
+  const username = user?.username || "Not Found";
   const name = useMemo(() => {
     if (!profile) return "";
     return (
-      profile.user.first_name +
-      (profile.user.last_name ? ` ${profile.user.last_name}` : "")
+      profile.first_name + (profile.last_name ? ` ${profile.last_name}` : "")
     );
   }, [profile]);
 
@@ -331,7 +329,7 @@ export default function StudentDashboard() {
           {/* Profile Info */}
           <div className="flex-1 flex flex-col justify-center items-center md:items-start text-center md:text-left">
             <div className="flex w-full justify-between text-xs text-white/80 font-medium mb-2">
-              <span>Roll No: {profile?.user?.username || "-"}</span>
+              <span>Roll No: {profile?.username || "-"}</span>
             </div>
             <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-1 drop-shadow">
               Hello, {name || "Student"}
