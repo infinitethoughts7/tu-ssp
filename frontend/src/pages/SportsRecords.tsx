@@ -485,7 +485,7 @@ export default function SportsRecords() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
               <img
-                src="/src/assets/Telangana_University_logo.png"
+                src="/assets/Telangana_University_logo.png"
                 alt="Telangana University Logo"
                 className="h-10 w-10 object-contain"
               />

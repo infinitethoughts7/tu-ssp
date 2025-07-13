@@ -445,7 +445,7 @@ const StudentDuesDashboard = () => {
           <div className="flex flex-col items-center">
             <div className="flex flex-row items-center gap-4 mb-1">
               <img
-                src="/src/assets/Telangana_University_logo.png"
+                src="/assets/Telangana_University_logo.png"
                 alt="Telangana University Logo"
                 className="h-16 w-auto drop-shadow-lg"
                 style={{
