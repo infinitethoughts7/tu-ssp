@@ -17,22 +17,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Check if user is authenticated
   if (!accessToken || !user) {
-    console.log(
-      "ProtectedRoute: No access token or user, redirecting to",
-      fallbackPath
-    );
     return <Navigate to={fallbackPath} replace />;
   }
 
-  // Check if user has the required email (for principal access)
-  // Only check if requiredEmail is provided and not undefined
+  // Check if user has the required email (for staff routes)
   if (requiredEmail && user.email !== requiredEmail) {
-    console.log("ProtectedRoute: Email mismatch, redirecting to", fallbackPath);
-    console.log("Required email:", requiredEmail, "User email:", user.email);
     return <Navigate to={fallbackPath} replace />;
   }
 
-  console.log("ProtectedRoute: Access granted for user:", user);
   return <>{children}</>;
 };
 

@@ -53,18 +53,10 @@ export default function StudentDashboard() {
     );
   }, [profile]);
 
-  // Debug logging
-  useEffect(() => {
-    console.log("Profile state:", profile);
-    console.log("Username:", username);
-    console.log("Name:", name);
-  }, [profile, username, name]);
-
   // Fetch profile
   const fetchProfile = useCallback(async () => {
     try {
       const res = await api.get("/profile/");
-      console.log("Profile API response:", res.data);
       setProfile(res.data.profile);
     } catch (error) {
       console.error("Error fetching profile:", error);
