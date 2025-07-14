@@ -133,9 +133,9 @@ jobs:
             echo "Creating static directories..."
             mkdir -p static
             mkdir -p staticfiles
-            
+
             echo "Running database migrations..."
-            DJANGO_SETTINGS_MODULE=ssp.settings_production python managee.py makemigrations
+            DJANGO_SETTINGS_MODULE=ssp.settings_production python manage.py makemigrations
             DJANGO_SETTINGS_MODULE=ssp.settings_production python manage.py migrate
             
             echo "Collecting static files..."
