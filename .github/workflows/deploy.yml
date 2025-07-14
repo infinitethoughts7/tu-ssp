@@ -131,12 +131,11 @@ jobs:
             pip install -r requirements.txt
             
             echo "Running database migrations..."
-            python manage.py makemigrations
-            python manage.py migrate
+            DJANGO_SETTINGS_MODULE=ssp.settings_production python managee.py makemigrations
+            DJANGO_SETTINGS_MODULE=ssp.settings_production python manage.py migrate
             
             echo "Collecting static files..."
-            python manage.py collectstatic --noinput
-            
+            DJANGO_SETTINGS_MODULE=ssp.settings_production python manage.py collectstatic --noinput
             echo "Restarting services..."
             sudo systemctl restart gunicorn
             sudo systemctl reload nginx
