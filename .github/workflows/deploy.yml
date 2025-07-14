@@ -129,6 +129,10 @@ jobs:
             
             echo "Installing Python dependencies..."
             pip install -r requirements.txt
+
+            echo "Creating static directories..."
+            mkdir -p static
+            mkdir -p staticfiles
             
             echo "Running database migrations..."
             DJANGO_SETTINGS_MODULE=ssp.settings_production python managee.py makemigrations
