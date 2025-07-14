@@ -71,7 +71,7 @@ jobs:
             echo "Checking if index.html exists:"
             test -f /home/ubuntu/tu-ssp/frontend/dist/index.html && echo "index.html found" || echo "index.html NOT found"
             
-      # Deploy backend and restart services
+       # Deploy backend and restart services
       - name: Deploy backend to EC2
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -81,28 +81,67 @@ jobs:
           script: |
             cd /home/ubuntu/tu-ssp
             
-            # Force pull latest code (overwrite any local changes)
-            git fetch origin main
+            echo "Starting Git synchronization..."
+            
+            # Check current status
+            echo "Current branch and status:"
+            git branch
+            git status --porcelain
+            
+            # Backup any local changes (safety net)
+            timestamp=$(date +"%Y%m%d_%H%M%S")
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Backing up local changes..."
+              git stash push -m "backup_before_deploy_$timestamp" || echo "Nothing to stash"
+            fi
+            
+            # Backup current state as a tag (safety net)
+            git tag "backup_$timestamp" 2>/dev/null || echo "Tag creation skipped"
+            
+            # Force clean everything
+            echo "Cleaning working directory..."
+            git clean -fd
+            git reset --hard HEAD
+            
+            # Update remote references
+            echo "Fetching latest from GitHub..."
+            git fetch --all --prune
+            
+            # Force switch to main and sync with origin
+            echo "Switching to main branch..."
+            git checkout main 2>/dev/null || git checkout -b main
+            
+            # Force reset to match GitHub exactly
+            echo "Force syncing with GitHub main..."
             git reset --hard origin/main
             
-            # Backend setup (no npm install here!)
+            # Clean any remaining untracked files
+            git clean -fd
+            
+            echo "Git synchronization complete"
+            echo "Current HEAD: $(git rev-parse HEAD)"
+            echo "Origin HEAD: $(git rev-parse origin/main)"
+            
+            # Backend setup
+            echo "Setting up backend..."
             cd backend
             source venv/bin/activate
+            
+            echo "Installing Python dependencies..."
             pip install -r requirements.txt
             
-            # Create new migrations for any model changes
+            echo "Running database migrations..."
             python manage.py makemigrations
-            
-            # Run migrations
             python manage.py migrate
             
-            # Collect static files
+            echo "Collecting static files..."
             python manage.py collectstatic --noinput
             
-            # Restart services
+            echo "Restarting services..."
             sudo systemctl restart gunicorn
             sudo systemctl reload nginx
             
+            echo "Backend deployment complete"            
       # Health check with better error handling
       - name: Health check
         run: |
