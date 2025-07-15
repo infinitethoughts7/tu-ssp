@@ -490,7 +490,7 @@ export default function SportsRecords() {
                 className="h-10 w-10 object-contain"
               />
               <h1 className="text-xl font-bold text-gray-900 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                Sports Equipment Records Dashboard
+                Sports Records 
               </h1>
             </div>
 
@@ -507,7 +507,7 @@ export default function SportsRecords() {
                         <div className="h-7 w-7 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center">
                           <User className="h-4 w-4 text-white" />
                         </div>
-                        <span className="text-sm font-medium text-gray-700">
+                        <span className="hidden sm:inline text-sm font-medium text-gray-700">
                           {staffProfile.name}
                         </span>
                         <ChevronDown className="h-4 w-4 text-gray-400" />

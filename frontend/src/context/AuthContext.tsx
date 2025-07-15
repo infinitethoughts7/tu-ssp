@@ -283,7 +283,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 401) {
-          logout();
+          setError("Login failed. Please check your credentials.");
+          return; // Do not call logout or navigate away
         }
       }
       setError("Login failed. Please check your credentials.");

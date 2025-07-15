@@ -347,7 +347,7 @@ export default function LegacyAccounts() {
                         <div className="h-7 w-7 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center">
                           <User className="h-4 w-4 text-white" />
                         </div>
-                        <span className="text-sm font-medium text-gray-700">
+                        <span className="hidden sm:inline text-sm font-medium text-gray-700">
                           {staffProfile.name}
                         </span>
                         <ChevronDown className="h-4 w-4 text-gray-400" />
