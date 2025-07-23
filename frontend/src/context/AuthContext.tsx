@@ -62,30 +62,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Add useEffect to fetch user profile on mount
   useEffect(() => {
+    // Add a guard: only fetch if accessToken and userType are present
+    if (!accessToken || !localStorage.getItem("userType")) {
+      return;
+    }
     const fetchProfile = async () => {
-      if (accessToken) {
-        try {
-          const profileEndpoint = isStaff ? "/staff/profile/" : "/profile/";
+      try {
+        const profileEndpoint = isStaff ? "/staff/profile/" : "/profile/";
+        const response = await api.get(profileEndpoint);
 
-          const response = await api.get(profileEndpoint);
+        // Handle nested profile data structure
+        const profileData = isStaff ? response.data : response.data.profile;
 
-          // Handle nested profile data structure
-          const profileData = isStaff ? response.data : response.data.profile;
-
-          setUser(profileData);
-          if (isStaff) {
-            localStorage.setItem("staffUserData", JSON.stringify(profileData));
-          } else {
-            localStorage.setItem(
-              "studentUserData",
-              JSON.stringify(profileData)
-            );
-          }
-        } catch (error) {
-          if (axios.isAxiosError(error)) {
-            if (error.response?.status === 401) {
-              logout();
-            }
+        setUser(profileData);
+        if (isStaff) {
+          localStorage.setItem("staffUserData", JSON.stringify(profileData));
+        } else {
+          localStorage.setItem("studentUserData", JSON.stringify(profileData));
+        }
+      } catch (error) {
+        if (axios.isAxiosError(error)) {
+          if (error.response?.status === 401) {
+            logout();
           }
         }
       }
@@ -282,12 +280,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     } catch (error) {
       if (axios.isAxiosError(error)) {
+        if (error.response) {
+        }
         if (error.response?.status === 401) {
           setError("Login failed. Please check your credentials.");
-          return; // Do not call logout or navigate away
+          sessionStorage.setItem(
+            "loginError",
+            "Login failed. Please check your credentials."
+          );
+          throw error; // Always throw so the catch in the login page works
         }
       }
       setError("Login failed. Please check your credentials.");
+      sessionStorage.setItem(
+        "loginError",
+        "Login failed. Please check your credentials."
+      );
       throw error;
     } finally {
       setIsLoading(false);
@@ -325,6 +333,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         login,
         logout,
         refreshAccessToken,
+        setError,
       }}
     >
       {children}

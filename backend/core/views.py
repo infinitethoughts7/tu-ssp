@@ -28,22 +28,15 @@ class StudentLoginView(APIView):
     
     def post(self, request):
         try:
-            print("StudentLoginView POST method was called")
-            logger.info("StudentLoginView POST method was called")
-            
             serializer = StudentLoginSerializer(data=request.data)
             if serializer.is_valid():
                 username = serializer.validated_data['username']  # This is the roll number
                 password = serializer.validated_data['password']
                 
-                logger.info(f"Attempting student login for username: {username}")
-                
                 # Check if user exists
                 try:
                     user = User.objects.get(username=username)
-                    logger.info(f"User found: {user.username}, is_student: {user.is_student}")
                 except User.DoesNotExist:
-                    logger.warning(f"No user found with username: {username}")
                     return Response(
                         {'error': 'Invalid username or password'},
                         status=status.HTTP_401_UNAUTHORIZED
@@ -57,26 +50,22 @@ class StudentLoginView(APIView):
                 )
                 
                 if user and user.is_student:
-                    logger.info(f"Student authentication successful for: {username}")
                     refresh = RefreshToken.for_user(user)
                     return Response({
                         'refresh': str(refresh),
                         'access': str(refresh.access_token),
                     })
                 else:
-                    logger.warning(f"Student authentication failed for: {username}")
                     return Response(
                         {'error': 'Invalid username or password'},
                         status=status.HTTP_401_UNAUTHORIZED
                     )
             else:
-                logger.error(f"Validation errors: {serializer.errors}")
                 return Response(
                     {'error': 'Please provide a valid username and password'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
         except Exception as e:
-            logger.error(f"Error in StudentLoginView: {str(e)}")
             return Response(
                 {'error': 'An error occurred during login'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -90,27 +79,12 @@ class StaffLoginView(APIView):
             email = serializer.validated_data['email']
             password = serializer.validated_data['password']
             
-            # Debug: Check if user exists
-            try:
-                user = User.objects.filter(email=email).first()
-                if user:
-                    logger.info(f"Found user with email {email}, is_staff={user.is_staff}")
-                else:
-                    logger.info(f"No user found with email {email}")
-            except Exception as e:
-                logger.error(f"Error checking user existence: {e}")
-
             # Use email as username for staff authentication
             user = authenticate(
                 request,
                 username=email,  # Use email as username
                 password=password
             )
-            
-            # Debug: Log authentication result
-            logger.info(f"Authentication result for {email}: {'Success' if user else 'Failed'}")
-            if user:
-                logger.info(f"User is_staff: {user.is_staff}")
             
             if user and user.is_staff:
                 refresh = RefreshToken.for_user(user)
@@ -122,24 +96,17 @@ class StaffLoginView(APIView):
                     'refresh': str(refresh),
                     'access': str(refresh.access_token),
                     'department': department,
-                    'redirect_to': f'/dashboard/{department}/'
                 })
-            
-            error_message = 'Invalid email or password for staff login'
-            if user and not user.is_staff:
-                error_message = 'This account is not a staff account'
-            
+            else:
+                return Response(
+                    {'error': 'Invalid email or password for staff login'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+        else:
             return Response(
-                {'error': error_message},
-                status=status.HTTP_401_UNAUTHORIZED
+                {'error': 'Please provide a valid email and password'},
+                status=status.HTTP_400_BAD_REQUEST
             )
-        
-        # Log validation errors
-        logger.error(f"Validation errors: {serializer.errors}")
-        return Response(
-            {'error': 'Please provide a valid email and password'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
 
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]

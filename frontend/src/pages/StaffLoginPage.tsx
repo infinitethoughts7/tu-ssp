@@ -15,34 +15,62 @@ import { Alert, AlertDescription } from "../components/ui/alert";
 
 const StaffLoginPage = () => {
   const navigate = useNavigate();
-  const { login, error: authError, isLoading } = useAuth();
+  const { login, error: authError, isLoading, setError } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [error, setLocalError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  // Remember last attempted login type
+  React.useEffect(() => {
+    localStorage.setItem("lastLoginType", "staff");
+  }, []);
+
+  // On mount, check sessionStorage for loginError
+  React.useEffect(() => {
+    const persistedError = sessionStorage.getItem("loginError");
+    if (persistedError) {
+      setLocalError(persistedError);
+      sessionStorage.removeItem("loginError");
+    }
+  }, []);
+
+  // Persist error from context in local state
   useEffect(() => {
     if (authError) {
-      setError(authError);
+      setLocalError(authError);
     }
   }, [authError]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
+    setLocalError("");
+    sessionStorage.removeItem("loginError");
 
     if (!email || !password) {
-      setError("Please enter both email and password");
+      setLocalError("Please enter both email and password");
       return;
     }
 
     try {
       await login({ email: email.toLowerCase().trim(), password });
     } catch (error) {
-      if (!authError) {
-        setError("An error occurred. Please try again.");
-      }
+      // Do nothing here; error is handled by context
     }
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value);
+    if (authError) setError("");
+    if (error) setLocalError("");
+    sessionStorage.removeItem("loginError");
+  };
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+    if (authError) setError("");
+    if (error) setLocalError("");
+    sessionStorage.removeItem("loginError");
   };
 
   return (
@@ -98,7 +126,7 @@ const StaffLoginPage = () => {
                     type="email"
                     name="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={handleEmailChange}
                     placeholder="Enter your email"
                     autoComplete="username email"
                     required
@@ -124,7 +152,7 @@ const StaffLoginPage = () => {
                     type={showPassword ? "text" : "password"}
                     name="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={handlePasswordChange}
                     placeholder="Enter your password"
                     autoComplete="current-password"
                     required

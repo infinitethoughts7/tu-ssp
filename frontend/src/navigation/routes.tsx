@@ -114,7 +114,9 @@ const router = createBrowserRouter([
     path: "/student-dashboard",
     element: (
       <AuthProvider>
-        <StudentDashboard />
+        <ProtectedRoute fallbackPath="/student-login">
+          <StudentDashboard />
+        </ProtectedRoute>
       </AuthProvider>
     ),
   },

@@ -10,7 +10,7 @@ const api = axios.create({
 
 // Add a request interceptor to add the auth token to requests
 api.interceptors.request.use(
-  (config) => { 
+  (config) => {
     // Always prefer staffAccessToken if it exists
     const staffToken = localStorage.getItem("staffAccessToken");
     const studentToken = localStorage.getItem("studentAccessToken");
@@ -70,7 +70,12 @@ api.interceptors.response.use(
         localStorage.removeItem("studentAccessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("userType");
-        window.location.href = "/staff-login";
+        const lastLoginType = localStorage.getItem("lastLoginType");
+        if (lastLoginType === "student") {
+          window.location.href = "/student-login";
+        } else {
+          window.location.href = "/staff-login";
+        }
         return Promise.reject(refreshError);
       }
     }

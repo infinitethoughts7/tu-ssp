@@ -21,6 +21,7 @@ export interface AuthContextType {
   }) => Promise<void>;
   logout: () => void;
   refreshAccessToken: () => Promise<void>;
+  setError: (error: string | null) => void;
 }
 
 export interface AuthProviderProps {

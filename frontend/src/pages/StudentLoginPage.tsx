@@ -15,33 +15,69 @@ import { Alert, AlertDescription } from "../components/ui/alert";
 
 const StudentLoginPage = () => {
   const navigate = useNavigate();
-  const { login, error: authError, isLoading } = useAuth();
+  const { login, error: authError, isLoading, setError } = useAuth();
   const [rollNumber, setRollNumber] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [formError, setFormError] = useState(""); // Only for empty fields
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setLocalError] = useState("");
+
+  // On mount, check sessionStorage for loginError
+  useEffect(() => {
+    const persistedError = sessionStorage.getItem("loginError");
+    if (persistedError) {
+      setLocalError(persistedError);
+      sessionStorage.removeItem("loginError");
+    }
+  }, []);
+
+  // Remember last attempted login type
+  React.useEffect(() => {
+    localStorage.setItem("lastLoginType", "student");
+  }, []);
+
+  // Persist error from context in local state
+  useEffect(() => {
+    if (authError) {
+      setLocalError(authError);
+    }
+  }, [authError]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setFormError("");
     setError("");
+    setLocalError("");
+    sessionStorage.removeItem("loginError");
+    console.log("Submitting login form");
 
     try {
       await login({
         username: rollNumber, // Changed from roll_number to username
         password: password,
       });
-      navigate("/student-dashboard");
+      // Do not navigate here; let AuthContext handle navigation after successful login
     } catch {
-      setError("An error occurred. Please try again.");
+      // Do nothing here; error is handled by context
     }
   };
 
-  // Sync with authError from context
-  useEffect(() => {
-    if (authError) {
-      setError(authError);
-    }
-  }, [authError]);
+  // Only clear error when user starts typing again
+  const handleRollNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setRollNumber(e.target.value);
+    if (authError) setError("");
+    if (error) setLocalError("");
+    sessionStorage.removeItem("loginError");
+  };
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+    if (authError) setError("");
+    if (error) setLocalError("");
+    sessionStorage.removeItem("loginError");
+  };
+
+  // Add debug log for error
+  console.log("authError in StudentLoginPage:", authError);
 
   return (
     <div className="min-h-screen w-full relative">
@@ -94,7 +130,7 @@ const StudentLoginPage = () => {
                   pattern="[0-9]*"
                   inputMode="numeric"
                   value={rollNumber}
-                  onChange={(e) => setRollNumber(e.target.value)}
+                  onChange={handleRollNumberChange}
                   placeholder="Enter your roll number"
                   autoComplete="roll-number"
                   required
@@ -115,7 +151,7 @@ const StudentLoginPage = () => {
                     name="password"
                     type={showPassword ? "text" : "password"}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={handlePasswordChange}
                     placeholder="Enter your password"
                     autoComplete="current-password"
                     required
