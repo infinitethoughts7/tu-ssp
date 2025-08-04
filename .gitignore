@@ -48,6 +48,27 @@ backend/dues/management/commands/*_import*.py
 backend/dues/management/commands/*_fix*.py
 backend/dues/management/commands/*
 
+# === Additional Development Scripts ===
+backend/core/management/commands/insert_sample_data.py
+backend/core/management/commands/sync_production_data.py
+backend/core/management/commands/export_production_data.py
+backend/core/management/commands/populate_legacy_data.py
+backend/core/management/commands/populate_legacy_sql.py
+backend/core/management/commands/delete_user.py
+backend/core/management/commands/*.xlsx
+
+# === Data Export/Import Scripts (Development Only) ===
+backend/export_*.py
+backend/import_*.py
+backend/check_db.py
+backend/sync_*.py
+backend/*_records_*.json
+backend/production_sync_*.json
+backend/new_records_*.json
+
+# === Development Scripts ===
+scripts/sync_database.sh
+
 # === React/Node/Frontend ===
 frontend/node_modules/
 frontend/.next/
