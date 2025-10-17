@@ -1,4 +1,6 @@
 # === Python/Django ===
+
+create_hostel_staff.py
 *.pyc
 *.pyo
 __pycache__/

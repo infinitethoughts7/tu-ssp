@@ -8,7 +8,7 @@ from datetime import datetime
 from .models import FeeStructure, AcademicRecords, HostelRecords, LibraryRecords, LegacyAcademicRecords, SportsRecords
 from .serializers import (
     FeeStructureSerializer, AcademicRecordsSerializer, HostelRecordsSerializer,
-    LibraryRecordsSerializer, LegacyAcademicRecordsSerializer, SportsRecordsSerializer
+    HostelDuesSerializer, LibraryRecordsSerializer, LegacyAcademicRecordsSerializer, SportsRecordsSerializer
 )
 from core.models import StudentProfile
 
@@ -40,6 +40,73 @@ class HostelRecordsViewSet(viewsets.ModelViewSet):
         if student_username:
             queryset = queryset.filter(student__user__username=student_username)
         return queryset
+
+    @action(detail=False, methods=['get'])
+    def get_hostel_dues(self, request):
+        """Get hostel dues grouped by student with year-wise breakdown"""
+        try:
+            queryset = self.get_queryset().select_related(
+                'student__user', 
+                'student__course'
+            )
+            
+            # Apply filters
+            student_name = request.query_params.get('student_name', None)
+            if student_name:
+                queryset = queryset.filter(
+                    Q(student__user__first_name__icontains=student_name) |
+                    Q(student__user__last_name__icontains=student_name)
+                )
+            
+            course = request.query_params.get('course', None)
+            if course and course != 'all':
+                queryset = queryset.filter(student__course__name=course)
+            
+            print(f"Total records in queryset: {queryset.count()}")
+            
+            # Group by student and transform data
+            grouped_data = {}
+            processed_count = 0
+            error_count = 0
+            
+            for record in queryset:
+                try:
+                    student_key = record.student.user.username
+                    if student_key not in grouped_data:
+                        grouped_data[student_key] = {
+                            'roll_numbers': [student_key],
+                            'name': f"{record.student.user.first_name or ''} {record.student.user.last_name or ''}".strip() or 'Unknown',
+                            'course': record.student.course.name if record.student.course else 'N/A',
+                            'caste': record.student.caste or 'N/A',
+                            'phone_number': record.student.mobile_number or 'N/A',
+                            'dues': [],
+                            'total_amount': 0,
+                            'due_amount': 0,
+                        }
+                    
+                    # Use the new serializer to get dues
+                    dues_serializer = HostelDuesSerializer(record)
+                    dues_data = dues_serializer.data
+                    
+                    # Add dues to the group
+                    grouped_data[student_key]['dues'].extend(dues_data['dues'])
+                    grouped_data[student_key]['total_amount'] += dues_data['total_amount']
+                    grouped_data[student_key]['due_amount'] += dues_data['due_amount']
+                    
+                    processed_count += 1
+                    
+                except Exception as e:
+                    print(f"Error processing hostel record {record.id}: {str(e)}")
+                    error_count += 1
+                    continue
+            
+            print(f"Processed: {processed_count}, Errors: {error_count}, Final groups: {len(grouped_data)}")
+            
+            return Response(list(grouped_data.values()))
+            
+        except Exception as e:
+            print(f"Error in get_hostel_dues: {str(e)}")
+            return Response({'error': 'Failed to get hostel dues'}, status=500)
 
 class LibraryRecordsViewSet(viewsets.ModelViewSet):
     queryset = LibraryRecords.objects.all()

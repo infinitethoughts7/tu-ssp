@@ -170,8 +170,8 @@ REST_FRAMEWORK = {
 
 # Add SimpleJWT settings for token lifetimes
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),  # Increased from 5 minutes to 1 hour
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),  # Increased from 1 day to 7 days
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=12),  # Increased from 5 minutes to 1 hour
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=60),  # Increased from 1 day to 7 days
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': False,
     'AUTH_HEADER_TYPES': ('Bearer',),

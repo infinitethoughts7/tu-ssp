@@ -507,7 +507,7 @@ export const updateAcademicDue = async (
   }
 };
 
-export const getHostelDues = async (): Promise<any[]> => {
+export const getHostelDues = async (filters?: { student_name?: string; course?: string }): Promise<any[]> => {
   try {
     const accessToken =
       localStorage.getItem("staffAccessToken") ||
@@ -516,7 +516,15 @@ export const getHostelDues = async (): Promise<any[]> => {
       throw new Error("No access token found. Please log in again.");
     }
 
-    const response = await api.get("/dues/hostel-records/", {
+    const params = new URLSearchParams();
+    if (filters?.student_name) {
+      params.append('student_name', filters.student_name);
+    }
+    if (filters?.course && filters.course !== 'all') {
+      params.append('course', filters.course);
+    }
+
+    const response = await api.get(`/dues/hostel-records/get_hostel_dues/?${params.toString()}`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },

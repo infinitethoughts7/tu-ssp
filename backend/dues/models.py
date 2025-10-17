@@ -31,19 +31,69 @@ class AcademicRecords(models.Model):
         return (self.fee_structure.tuition_fee or 0) + (self.fee_structure.special_fee or 0) + (self.fee_structure.exam_fee or 0) - (self.paid_by_govt + self.paid_by_student)
 
 class HostelRecords(models.Model):
-    student = models.ForeignKey(StudentProfile, on_delete=models.CASCADE)
-    year_of_study = models.CharField(max_length=1, choices=DURATION_CHOICES)
-    mess_bill = models.IntegerField(default=0)
-    scholarship = models.IntegerField(default=0)
-    deposit = models.IntegerField(default=0)
-    # renewal_amount = models.IntegerField(default=0, null=True, blank=True)
-    remarks = models.TextField(blank=True, null=True)
-
-    class Meta:
-        unique_together = ('student', 'year_of_study')  # Ensure one entry per year per student
-
+    """
+    Hostel records for passed-out students - one record per student with year-wise columns.
+    Maps directly to CSV columns: 1st_yearmessbill, 1st_years/ship, etc.
+    """
+    student = models.OneToOneField(StudentProfile, on_delete=models.CASCADE, related_name='hostel_records')
+    
+    # 1st Year Data
+    first_year_mess_bill = models.IntegerField(default=0, help_text="1st year mess bill")
+    first_year_scholarship = models.IntegerField(default=0, help_text="1st year scholarship")
+    
+    # 2nd Year Data
+    second_year_mess_bill = models.IntegerField(default=0, help_text="2nd year mess bill")
+    second_year_scholarship = models.IntegerField(default=0, help_text="2nd year scholarship")
+    
+    # 3rd Year Data
+    third_year_mess_bill = models.IntegerField(default=0, help_text="3rd year mess bill")
+    third_year_scholarship = models.IntegerField(default=0, help_text="3rd year scholarship")
+    
+    # 4th Year Data
+    fourth_year_mess_bill = models.IntegerField(default=0, help_text="4th year mess bill")
+    fourth_year_scholarship = models.IntegerField(default=0, help_text="4th year scholarship")
+    
+    # 5th Year Data
+    fifth_year_mess_bill = models.IntegerField(default=0, help_text="5th year mess bill")
+    fifth_year_scholarship = models.IntegerField(default=0, help_text="5th year scholarship")
+    
+    # Payment Information (one-time per student)
+    deposit = models.IntegerField(default=0, help_text="Initial deposit amount")
+    renewal_amount = models.IntegerField(default=0, blank=True, null=True, help_text="Renewal amount")
+    f_challan1 = models.IntegerField(default=0, blank=True, null=True, help_text="First installment (f_cha1)")
+    f_challan2 = models.IntegerField(default=0, blank=True, null=True, help_text="Second installment (f_cha_2)")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
     def __str__(self):
-        return f"{self.student.user.username} - Year {self.year_of_study} Hostel Dues"
+        return f"{self.student.user.username} - Hostel Records"
+    
+    @property
+    def total_challan_paid(self):
+        """Total challan paid"""
+        return (self.f_challan1 or 0) + (self.f_challan2 or 0)
+    
+    @property
+    def total_mess_bill(self):
+        """Total mess bill across all years"""
+        return (self.first_year_mess_bill + self.second_year_mess_bill + 
+                self.third_year_mess_bill + self.fourth_year_mess_bill + 
+                self.fifth_year_mess_bill)
+    
+    @property
+    def total_scholarship(self):
+        """Total scholarship across all years"""
+        return (self.first_year_scholarship + self.second_year_scholarship + 
+                self.third_year_scholarship + self.fourth_year_scholarship + 
+                self.fifth_year_scholarship)
+    
+    @property
+    def total_due(self):
+        """Calculate total due using the equation: deposit + total_challan + total_scholarship - total_mess_bill"""
+        return self.deposit + self.total_challan_paid + self.total_scholarship - self.total_mess_bill
+    
+   
 
 
 class LibraryRecords(models.Model):

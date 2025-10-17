@@ -11,10 +11,38 @@ class FeeStructureAdmin(admin.ModelAdmin):
 
 @admin.register(HostelRecords)
 class HostelRecordsAdmin(admin.ModelAdmin):
-    list_display = ['student_name', 'roll_number', 'year_of_study', 'mess_bill', 'scholarship', 'deposit']
-    list_filter = ['year_of_study', 'student__course__name']
+    list_display = ['student_name', 'roll_number', 'total_mess_bill', 'total_scholarship', 'total_due', 'deposit']
+    list_filter = ['student__course__name', 'student__batch']
     search_fields = ['student__user__username', 'student__user__first_name', 'student__user__last_name']
-    readonly_fields = ['student_name', 'roll_number']
+    readonly_fields = ['student_name', 'roll_number', 'total_mess_bill', 'total_scholarship', 'total_challan_paid', 'total_due']
+    
+    fieldsets = (
+        ('Student Information', {
+            'fields': ('student', 'student_name', 'roll_number')
+        }),
+        ('1st Year', {
+            'fields': ('first_year_mess_bill', 'first_year_scholarship')
+        }),
+        ('2nd Year', {
+            'fields': ('second_year_mess_bill', 'second_year_scholarship')
+        }),
+        ('3rd Year', {
+            'fields': ('third_year_mess_bill', 'third_year_scholarship')
+        }),
+        ('4th Year', {
+            'fields': ('fourth_year_mess_bill', 'fourth_year_scholarship')
+        }),
+        ('5th Year', {
+            'fields': ('fifth_year_mess_bill', 'fifth_year_scholarship')
+        }),
+        ('Payments', {
+            'fields': ('deposit', 'renewal_amount', 'f_challan1', 'f_challan2')
+        }),
+        ('Calculated Totals', {
+            'fields': ('total_mess_bill', 'total_scholarship', 'total_challan_paid', 'total_due'),
+            'classes': ('collapse',)
+        }),
+    )
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('student__user', 'student__course')
