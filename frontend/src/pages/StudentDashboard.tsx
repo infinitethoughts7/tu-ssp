@@ -84,8 +84,9 @@ export default function StudentDashboard() {
         `/dues/hostel-records/?student_id=${username}`
       );
       const hostelRecords = hostelRes.data;
+      // Use total_due property from the model (calculated as: total_mess_bill - deposit - total_challan_paid - total_scholarship)
       const hostelTotal = hostelRecords.reduce(
-        (sum: number, rec: any) => sum + (rec.mess_bill || 0),
+        (sum: number, rec: any) => sum + (rec.total_due || 0),
         0
       );
 

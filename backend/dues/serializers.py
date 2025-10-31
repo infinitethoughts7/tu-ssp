@@ -28,6 +28,10 @@ class UserSerializer(serializers.ModelSerializer):
 
 class HostelRecordsSerializer(serializers.ModelSerializer):
     student = StudentProfileSerializer(read_only=True)
+    total_due = serializers.ReadOnlyField()
+    total_mess_bill = serializers.ReadOnlyField()
+    total_scholarship = serializers.ReadOnlyField()
+    total_challan_paid = serializers.ReadOnlyField()
     
     class Meta:
         model = HostelRecords
