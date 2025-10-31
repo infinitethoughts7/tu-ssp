@@ -43,7 +43,7 @@ class HostelRecordsViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def get_hostel_dues(self, request):
-        """Get hostel dues grouped by student with year-wise breakdown"""
+        """Get hostel dues grouped by student with year-wise breakdown, pagination, and sorting"""
         try:
             queryset = self.get_queryset().select_related(
                 'student__user', 
@@ -55,54 +55,102 @@ class HostelRecordsViewSet(viewsets.ModelViewSet):
             if student_name:
                 queryset = queryset.filter(
                     Q(student__user__first_name__icontains=student_name) |
-                    Q(student__user__last_name__icontains=student_name)
+                    Q(student__user__last_name__icontains=student_name) |
+                    Q(student__user__username__icontains=student_name)  # Add roll number search
                 )
             
             course = request.query_params.get('course', None)
             if course and course != 'all':
                 queryset = queryset.filter(student__course__name=course)
             
-            print(f"Total records in queryset: {queryset.count()}")
+            # Filter by has_dues (if provided)
+            # Note: This is applied after grouping, so we'll handle it in Python
+            has_dues_param = request.query_params.get('has_dues', None)
+            
+            # Sort by batch descending (latest batch first)
+            queryset = queryset.order_by('-student__batch', 'student__user__username')
             
             # Group by student and transform data
             grouped_data = {}
-            processed_count = 0
-            error_count = 0
             
             for record in queryset:
                 try:
                     student_key = record.student.user.username
                     if student_key not in grouped_data:
+                        # Use the serializer to get formatted data
+                        dues_serializer = HostelDuesSerializer(record)
+                        dues_data = dues_serializer.data
+                        
                         grouped_data[student_key] = {
                             'roll_numbers': [student_key],
                             'name': f"{record.student.user.first_name or ''} {record.student.user.last_name or ''}".strip() or 'Unknown',
                             'course': record.student.course.name if record.student.course else 'N/A',
                             'caste': record.student.caste or 'N/A',
+                            'batch': record.student.batch or 'N/A',
                             'phone_number': record.student.mobile_number or 'N/A',
-                            'dues': [],
-                            'total_amount': 0,
-                            'due_amount': 0,
+                            'deposit': record.deposit,
+                            'renewal_amount': record.renewal_amount or 0,
+                            'dues': dues_data['dues'],
+                            'total_amount': dues_data['total_amount'],
+                            'due_amount': dues_data['due_amount'],  # This is the ONLY overall due amount
+                            # Add raw year-wise data for detailed modal display
+                            'first_year_mess_bill': record.first_year_mess_bill,
+                            'second_year_mess_bill': record.second_year_mess_bill,
+                            'first_year_scholarship': record.first_year_scholarship,
+                            'second_year_scholarship': record.second_year_scholarship,
+                            'third_year_scholarship': record.third_year_scholarship,
+                            'fourth_year_scholarship': record.fourth_year_scholarship,
+                            'fifth_year_scholarship': record.fifth_year_scholarship,
                         }
-                    
-                    # Use the new serializer to get dues
-                    dues_serializer = HostelDuesSerializer(record)
-                    dues_data = dues_serializer.data
-                    
-                    # Add dues to the group
-                    grouped_data[student_key]['dues'].extend(dues_data['dues'])
-                    grouped_data[student_key]['total_amount'] += dues_data['total_amount']
-                    grouped_data[student_key]['due_amount'] += dues_data['due_amount']
-                    
-                    processed_count += 1
                     
                 except Exception as e:
                     print(f"Error processing hostel record {record.id}: {str(e)}")
-                    error_count += 1
                     continue
             
-            print(f"Processed: {processed_count}, Errors: {error_count}, Final groups: {len(grouped_data)}")
+            # Convert to list and maintain batch order
+            grouped_list = list(grouped_data.values())
             
-            return Response(list(grouped_data.values()))
+            # Apply has_dues filter if provided (after grouping)
+            if has_dues_param is not None:
+                if has_dues_param.lower() == 'true':
+                    grouped_list = [item for item in grouped_list if item['due_amount'] > 0]
+                elif has_dues_param.lower() == 'false':
+                    grouped_list = [item for item in grouped_list if item['due_amount'] == 0]
+            
+            # Calculate statistics
+            total_count = len(grouped_list)
+            records_with_dues = sum(1 for item in grouped_list if item['due_amount'] > 0)
+            records_without_dues = total_count - records_with_dues
+            total_due_amount = sum(item['due_amount'] for item in grouped_list)
+            
+            # Apply pagination
+            page = int(request.query_params.get('page', 1))
+            page_size = int(request.query_params.get('page_size', 50))
+            
+            start_index = (page - 1) * page_size
+            end_index = start_index + page_size
+            paginated_data = grouped_list[start_index:end_index]
+            
+            total_pages = (total_count + page_size - 1) // page_size
+            
+            return Response({
+                'results': paginated_data,
+                'count': total_count,
+                'total_pages': total_pages,
+                'current_page': page,
+                'page_size': page_size,
+                'has_next': end_index < total_count,
+                'has_previous': page > 1,
+                'next': page + 1 if end_index < total_count else None,
+                'previous': page - 1 if page > 1 else None,
+                'statistics': {
+                    'total_records': total_count,
+                    'records_with_dues': records_with_dues,
+                    'records_without_dues': records_without_dues,
+                    'total_due_amount': float(total_due_amount),
+                    'average_due': float(total_due_amount / records_with_dues) if records_with_dues > 0 else 0
+                }
+            })
             
         except Exception as e:
             print(f"Error in get_hostel_dues: {str(e)}")

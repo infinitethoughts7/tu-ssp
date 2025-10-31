@@ -507,7 +507,30 @@ export const updateAcademicDue = async (
   }
 };
 
-export const getHostelDues = async (filters?: { student_name?: string; course?: string }): Promise<any[]> => {
+export const getHostelDues = async (filters?: {
+  student_name?: string;
+  course?: string;
+  has_dues?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<{
+  results: any[];
+  count: number;
+  total_pages: number;
+  current_page: number;
+  page_size: number;
+  has_next: boolean;
+  has_previous: boolean;
+  next?: number;
+  previous?: number;
+  statistics?: {
+    total_records: number;
+    records_with_dues: number;
+    records_without_dues: number;
+    total_due_amount: number;
+    average_due: number;
+  };
+}> => {
   try {
     const accessToken =
       localStorage.getItem("staffAccessToken") ||
@@ -518,17 +541,66 @@ export const getHostelDues = async (filters?: { student_name?: string; course?: 
 
     const params = new URLSearchParams();
     if (filters?.student_name) {
-      params.append('student_name', filters.student_name);
+      params.append("student_name", filters.student_name);
     }
-    if (filters?.course && filters.course !== 'all') {
-      params.append('course', filters.course);
+    if (filters?.course && filters.course !== "all") {
+      params.append("course", filters.course);
+    }
+    if (filters?.has_dues && filters.has_dues !== "all") {
+      params.append("has_dues", filters.has_dues);
+    }
+    if (filters?.page) {
+      params.append("page", filters.page.toString());
+    }
+    if (filters?.page_size) {
+      params.append("page_size", filters.page_size.toString());
     }
 
-    const response = await api.get(`/dues/hostel-records/get_hostel_dues/?${params.toString()}`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+    const response = await api.get(
+      `/dues/hostel-records/get_hostel_dues/?${params.toString()}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    // Handle both paginated and non-paginated responses (backward compatibility)
+    if (response.data.results !== undefined) {
+      return response.data; // Paginated response
+    }
+
+    // Legacy: if array, wrap in paginated format
+    if (Array.isArray(response.data)) {
+      const total_records = response.data.length;
+      const records_with_dues = response.data.filter(
+        (d: any) => d.due_amount > 0
+      ).length;
+      const records_without_dues = total_records - records_with_dues;
+      const total_due_amount = response.data.reduce(
+        (sum: number, d: any) => sum + d.due_amount,
+        0
+      );
+      const average_due =
+        records_with_dues > 0 ? total_due_amount / records_with_dues : 0;
+
+      return {
+        results: response.data,
+        count: total_records,
+        total_pages: 1,
+        current_page: 1,
+        page_size: response.data.length,
+        has_next: false,
+        has_previous: false,
+        statistics: {
+          total_records,
+          records_with_dues,
+          records_without_dues,
+          total_due_amount: Math.round(total_due_amount * 100) / 100,
+          average_due: Math.round(average_due * 100) / 100,
+        },
+      };
+    }
 
     return response.data;
   } catch (error) {
@@ -548,6 +620,7 @@ export const getHostelDues = async (filters?: { student_name?: string; course?: 
 
 export const updateHostelDue = async (
   dueId: number,
+  year: number,
   data: {
     mess_bill: number;
     scholarship: number;
@@ -559,7 +632,10 @@ export const updateHostelDue = async (
     const accessToken =
       localStorage.getItem("staffAccessToken") ||
       localStorage.getItem("studentAccessToken");
-    const response = await api.patch(`/dues/hostel-records/${dueId}/`, data, {
+    const response = await api.patch(`/dues/hostel-records/${dueId}/`, {
+      ...data,
+      year: year,
+    }, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },

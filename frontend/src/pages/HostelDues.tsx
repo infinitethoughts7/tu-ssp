@@ -11,23 +11,17 @@ import {
   AlertCircle,
   Search,
   User,
-  Phone,
-  Mail,
-  Briefcase,
   ChevronDown,
-  ChevronRight,
   LogOut,
   IndianRupee,
   Calendar,
   Filter,
   BarChart3,
-  Settings,
-  MoreHorizontal,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
-import { format } from "date-fns";
 import axios from "axios";
-import { cn } from "../lib/utils";
 import { Button } from "../components/ui/button";
 import {
   Card,
@@ -74,9 +68,8 @@ interface HostelDue {
   mess_bill: number;
   scholarship: number;
   deposit: number;
+  renewal_amount: number;
   remarks: string;
-  total_amount: number;
-  due_amount: number;
   student: {
     roll_number: string;
     full_name: string;
@@ -91,10 +84,21 @@ interface HostelStudentGroup {
   name: string;
   course: string;
   caste: string;
+  batch: string;
   phone_number: string;
+  deposit: number;
+  renewal_amount: number;
   dues: HostelDue[];
   total_amount: number;
-  due_amount: number;
+  due_amount: number; // This is the ONLY overall due amount
+  // Year-wise data for detailed modal
+  first_year_mess_bill?: number;
+  second_year_mess_bill?: number;
+  first_year_scholarship?: number;
+  second_year_scholarship?: number;
+  third_year_scholarship?: number;
+  fourth_year_scholarship?: number;
+  fifth_year_scholarship?: number;
 }
 
 interface HostelStatistics {
@@ -105,7 +109,7 @@ interface HostelStatistics {
   available_years: number[];
 }
 
-// Memoized table row component for better performance
+// Memoized table row component
 const HostelRecordRow = React.memo(
   ({
     group,
@@ -140,7 +144,7 @@ const HostelRecordRow = React.memo(
           </div>
         </TableCell>
         <TableCell className="align-middle text-left">
-          <div className="text-sm font-medium text-gray-700">{group.caste}</div>
+          <div className="text-sm font-medium text-gray-700">{group.batch}</div>
         </TableCell>
         <TableCell className="align-middle text-right">
           <div
@@ -184,38 +188,61 @@ export default function HostelDues() {
   const [selectedCourse, setSelectedCourse] = useState<string>("all");
   const [hasDuesFilter, setHasDuesFilter] = useState<string>("all");
   const [showHostelFilters, setShowHostelFilters] = useState(false);
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [showStudentDetails, setShowStudentDetails] = useState(false);
-  const [editingDue, setEditingDue] = useState<HostelDue | null>(null);
-  const [updateLoading, setUpdateLoading] = useState(false);
-  const [updateError, setUpdateError] = useState<string | null>(null);
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
-  // Function to fetch data with current filters
-  const fetchData = async () => {
+  const fetchData = async (page: number = currentPage) => {
     try {
       setFilterLoading(true);
-      const dues = await getHostelDues({
+      const response = await getHostelDues({
         student_name: debouncedSearchTerm,
         course: selectedCourse !== "all" ? selectedCourse : undefined,
+        has_dues: hasDuesFilter !== "all" ? hasDuesFilter : undefined,
+        page: page,
+        page_size: pageSize,
       });
 
-      if (Array.isArray(dues)) {
-        setHostelDues(dues);
+      const results = Array.isArray(response as any)
+        ? (response as any)
+        : (response as any).results || [];
 
-        // Calculate statistics
+      setHostelDues(results);
+
+      // Update pagination info
+      if ((response as any).total_pages !== undefined) {
+        setTotalPages((response as any).total_pages);
+        setTotalCount((response as any).count);
+        setCurrentPage((response as any).current_page);
+      }
+
+      const providedStats = (response as any).statistics;
+      if (providedStats) {
+        setHostelStatistics({
+          total_records: providedStats.total_records,
+          records_with_dues: providedStats.records_with_dues,
+          records_without_dues: providedStats.records_without_dues,
+          total_due_amount: providedStats.total_due_amount,
+          available_years: [1, 2, 3, 4, 5],
+        });
+      } else {
         const stats: HostelStatistics = {
-          total_records: dues.length,
-          records_with_dues: dues.filter((d) => d.due_amount > 0).length,
-          records_without_dues: dues.filter((d) => d.due_amount === 0).length,
-          total_due_amount: dues.reduce((sum, d) => sum + d.due_amount, 0),
-          available_years: [1, 2, 3, 4, 5], // Default years
+          total_records: results.length,
+          records_with_dues: results.filter((d: any) => d.due_amount > 0)
+            .length,
+          records_without_dues: results.filter((d: any) => d.due_amount === 0)
+            .length,
+          total_due_amount: results.reduce(
+            (sum: number, d: any) => sum + d.due_amount,
+            0
+          ),
+          available_years: [1, 2, 3, 4, 5],
         };
         setHostelStatistics(stats);
-      } else {
-        setHostelDues([]);
-        setHostelStatistics(null);
       }
       setError(null);
     } catch (error) {
@@ -229,25 +256,30 @@ export default function HostelDues() {
   useEffect(() => {
     if (accessToken) {
       setLoading(true);
-      fetchData().finally(() => setLoading(false));
+      setCurrentPage(1);
+      fetchData(1).finally(() => setLoading(false));
     }
   }, [accessToken]);
 
-  // Debounced search effect
   React.useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
     }, 300);
-
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Effect to refetch data when filters change
   useEffect(() => {
     if (accessToken) {
-      fetchData();
+      setCurrentPage(1);
+      fetchData(1);
     }
-  }, [debouncedSearchTerm, selectedCourse, accessToken]);
+  }, [debouncedSearchTerm, selectedCourse, hasDuesFilter, accessToken]);
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    fetchData(newPage);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   useEffect(() => {
     const fetchStaffProfile = async () => {
@@ -287,12 +319,10 @@ export default function HostelDues() {
     setShowStudentDetails(true);
   };
 
-  // Function to clear advanced filters
   const clearAdvancedFilters = () => {
     setHasDuesFilter("all");
   };
 
-  // Function to clear all filters
   const clearAllFilters = () => {
     setSelectedCourse("all");
     setHasDuesFilter("all");
@@ -300,7 +330,6 @@ export default function HostelDues() {
     setShowHostelFilters(false);
   };
 
-  // Handle advanced filters toggle
   const toggleAdvancedFilters = () => {
     if (showHostelFilters) {
       clearAdvancedFilters();
@@ -308,75 +337,8 @@ export default function HostelDues() {
     setShowHostelFilters(!showHostelFilters);
   };
 
-  // Function to handle due update
-  const handleUpdateDue = async (due: HostelDue) => {
-    try {
-      setUpdateLoading(true);
-      setUpdateError(null);
-
-      // Extract the numeric ID from the string ID
-      const numericId = parseInt(due.id.split("_")[0]);
-
-      const updatedDue = await updateHostelDue(numericId, {
-        mess_bill: due.mess_bill,
-        scholarship: due.scholarship,
-        deposit: due.deposit,
-        remarks: due.remarks,
-      });
-
-      // Refresh the data after update
-      await fetchData();
-
-      // Close the editing state
-      setEditingDue(null);
-    } catch (error) {
-      console.error("Error updating hostel due:", error);
-      if (error instanceof Error) {
-        if (
-          error.message.includes("session has expired") ||
-          error.message.includes("Please log in again")
-        ) {
-          localStorage.removeItem("staffAccessToken");
-          localStorage.removeItem("refreshToken");
-          logout();
-        } else {
-          setUpdateError(error.message);
-        }
-      } else {
-        setUpdateError("Failed to update due");
-      }
-    } finally {
-      setUpdateLoading(false);
-    }
-  };
-
-  // Filter groups based on search and course
-  const filteredGroups = hostelDues.filter((group) => {
-    const search = searchTerm.trim().toLowerCase();
-    const matchesSearch =
-      !search ||
-      (group.roll_numbers[0]?.toLowerCase() || "").includes(search) ||
-      (group.name?.toLowerCase() || "").includes(search);
-    const matchesCourse =
-      selectedCourse === "all" || group.course === selectedCourse;
-    const matchesDuesFilter =
-      hasDuesFilter === "all" ||
-      (hasDuesFilter === "true" && group.due_amount > 0) ||
-      (hasDuesFilter === "false" && group.due_amount === 0);
-
-    return matchesSearch && matchesCourse && matchesDuesFilter;
-  });
-
-  // Debug logging
-  console.log('HostelDues Debug:', {
-    totalRecords: hostelDues.length,
-    filteredRecords: filteredGroups.length,
-    hasDuesFilter,
-    searchTerm,
-    selectedCourse,
-    recordsWithDues: hostelDues.filter(d => d.due_amount > 0).length,
-    recordsWithoutDues: hostelDues.filter(d => d.due_amount === 0).length
-  });
+  // No client-side filtering needed - all filtering is server-side
+  const filteredGroups = hostelDues;
 
   if (!accessToken) {
     return null;
@@ -400,7 +362,6 @@ export default function HostelDues() {
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* User Profile Dropdown */}
               {staffProfile && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -548,6 +509,7 @@ export default function HostelDues() {
                   value={hasDuesFilter}
                   onValueChange={(value) => {
                     setHasDuesFilter(value);
+                    setCurrentPage(1); // Reset to first page on filter change
                   }}
                 >
                   <SelectTrigger className="border-gray-200 focus:border-blue-400 focus:ring-blue-400">
@@ -566,7 +528,10 @@ export default function HostelDues() {
                   type="text"
                   placeholder="Search by roll number or name..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1); // Reset to first page on search
+                  }}
                   className="pl-10 border-gray-200 focus:border-blue-400 focus:ring-blue-400"
                 />
                 {searchTerm !== debouncedSearchTerm && (
@@ -580,6 +545,7 @@ export default function HostelDues() {
                   value={selectedCourse}
                   onValueChange={(value) => {
                     setSelectedCourse(value);
+                    setCurrentPage(1); // Reset to first page on filter change
                   }}
                 >
                   <SelectTrigger className="border-gray-200 focus:border-blue-400 focus:ring-blue-400">
@@ -598,16 +564,6 @@ export default function HostelDues() {
               <div className="w-full md:w-44">
                 <Button
                   variant="outline"
-                  onClick={toggleAdvancedFilters}
-                  className="flex items-center gap-2 border-gray-200 hover:bg-blue-50 hover:border-blue-300 w-full"
-                >
-                  <Filter className="h-4 w-4" />
-                  Advanced Filters
-                </Button>
-              </div>
-              <div className="w-full md:w-44">
-                <Button
-                  variant="outline"
                   onClick={clearAllFilters}
                   className="flex items-center gap-2 border-gray-200 hover:bg-red-50 hover:border-red-300 hover:text-red-600 w-full"
                 >
@@ -616,34 +572,6 @@ export default function HostelDues() {
                 </Button>
               </div>
             </div>
-
-            {/* Advanced Filters */}
-            {showHostelFilters && (
-              <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Min Amount
-                    </label>
-                    <Input
-                      type="number"
-                      placeholder="Min amount"
-                      className="border-gray-200"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Max Amount
-                    </label>
-                    <Input
-                      type="number"
-                      placeholder="Max amount"
-                      className="border-gray-200"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -673,7 +601,7 @@ export default function HostelDues() {
                         Course
                       </TableHead>
                       <TableHead className="text-gray-600 font-semibold text-left">
-                        Caste
+                        Batch
                       </TableHead>
                       <TableHead className="text-gray-600 font-semibold text-right">
                         Due Amount
@@ -683,166 +611,73 @@ export default function HostelDues() {
                   </TableHeader>
                   <TableBody>
                     {filteredGroups.map((group) => (
-                      <React.Fragment key={group.roll_numbers[0]}>
-                        <HostelRecordRow
-                          group={group}
-                          handleStudentSelect={handleStudentSelect}
-                        />
-                        {expandedRows.has(group.roll_numbers[0]) && (
-                          <TableRow>
-                            <TableCell colSpan={6} className="p-0">
-                              <div className="bg-gray-50 p-4">
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow className="bg-gray-100">
-                                      <TableHead>Year</TableHead>
-                                      <TableHead>Mess Bill</TableHead>
-                                      <TableHead>Scholarship</TableHead>
-                                      <TableHead>Deposit</TableHead>
-                                      <TableHead>Remarks</TableHead>
-                                      <TableHead>Actions</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {group.dues.map((due) => (
-                                      <TableRow
-                                        key={due.id}
-                                        className="hover:bg-gray-50"
-                                      >
-                                        <TableCell>
-                                          {due.year_of_study}
-                                        </TableCell>
-                                        <TableCell>
-                                          {editingDue?.id === due.id ? (
-                                            <Input
-                                              type="number"
-                                              value={editingDue.mess_bill}
-                                              onChange={(e) =>
-                                                setEditingDue({
-                                                  ...editingDue,
-                                                  mess_bill:
-                                                    parseInt(e.target.value) ||
-                                                    0,
-                                                })
-                                              }
-                                              className="w-24"
-                                            />
-                                          ) : (
-                                            `₹${due.mess_bill}`
-                                          )}
-                                        </TableCell>
-                                        <TableCell>
-                                          {editingDue?.id === due.id ? (
-                                            <Input
-                                              type="number"
-                                              value={editingDue.scholarship}
-                                              onChange={(e) =>
-                                                setEditingDue({
-                                                  ...editingDue,
-                                                  scholarship:
-                                                    parseInt(e.target.value) ||
-                                                    0,
-                                                })
-                                              }
-                                              className="w-24"
-                                            />
-                                          ) : (
-                                            `₹${due.scholarship}`
-                                          )}
-                                        </TableCell>
-                                        <TableCell>
-                                          {editingDue?.id === due.id ? (
-                                            <Input
-                                              type="number"
-                                              value={editingDue.deposit}
-                                              onChange={(e) =>
-                                                setEditingDue({
-                                                  ...editingDue,
-                                                  deposit:
-                                                    parseInt(e.target.value) ||
-                                                    0,
-                                                })
-                                              }
-                                              className="w-24"
-                                            />
-                                          ) : (
-                                            `₹${due.deposit}`
-                                          )}
-                                        </TableCell>
-                                        <TableCell>
-                                          {editingDue?.id === due.id ? (
-                                            <Input
-                                              value={editingDue.remarks}
-                                              onChange={(e) =>
-                                                setEditingDue({
-                                                  ...editingDue,
-                                                  remarks: e.target.value,
-                                                })
-                                              }
-                                              className="w-32"
-                                            />
-                                          ) : (
-                                            due.remarks
-                                          )}
-                                        </TableCell>
-                                        <TableCell>
-                                          {editingDue?.id === due.id ? (
-                                            <div className="flex space-x-2">
-                                              <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() =>
-                                                  handleUpdateDue(editingDue)
-                                                }
-                                                disabled={updateLoading}
-                                                className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200 hover:border-green-300"
-                                              >
-                                                {updateLoading ? (
-                                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                                ) : (
-                                                  "Save"
-                                                )}
-                                              </Button>
-                                              <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() =>
-                                                  setEditingDue(null)
-                                                }
-                                                disabled={updateLoading}
-                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                              >
-                                                Cancel
-                                              </Button>
-                                            </div>
-                                          ) : (
-                                            <Button
-                                              variant="outline"
-                                              size="sm"
-                                              onClick={() => setEditingDue(due)}
-                                              className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300"
-                                            >
-                                              Edit
-                                            </Button>
-                                          )}
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                                {updateError && (
-                                  <div className="mt-2 text-sm text-red-600">
-                                    {updateError}
-                                  </div>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </React.Fragment>
+                      <HostelRecordRow
+                        key={group.roll_numbers[0]}
+                        group={group}
+                        handleStudentSelect={handleStudentSelect}
+                      />
                     ))}
                   </TableBody>
                 </Table>
+              </div>
+            )}
+
+            {/* Pagination Controls */}
+            {!loading && !filterLoading && totalPages > 1 && (
+              <div className="flex items-center justify-between mt-6 px-2">
+                <div className="text-sm text-gray-600">
+                  Showing {(currentPage - 1) * pageSize + 1} to{" "}
+                  {Math.min(currentPage * pageSize, totalCount)} of {totalCount}{" "}
+                  records
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1 || filterLoading}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={
+                            currentPage === pageNum ? "default" : "outline"
+                          }
+                          size="sm"
+                          onClick={() => handlePageChange(pageNum)}
+                          disabled={filterLoading}
+                          className="w-10"
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages || filterLoading}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
@@ -850,7 +685,7 @@ export default function HostelDues() {
 
         {/* Student Details Modal */}
         <Dialog open={showStudentDetails} onOpenChange={setShowStudentDetails}>
-          <DialogContent className="sm:max-w-2xl">
+          <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden">
             <DialogHeader>
               <DialogTitle>Student Details</DialogTitle>
               <DialogDescription>
@@ -858,98 +693,235 @@ export default function HostelDues() {
               </DialogDescription>
             </DialogHeader>
             {selectedStudent && (
-              <div className="flex flex-col md:flex-row gap-6">
-                <div className="flex-1">
-                  <div className="flex flex-wrap gap-6">
-                    <div className="flex items-center gap-2 min-w-[200px]">
-                      <span className="text-gray-500 text-sm font-medium">
-                        Name:
-                      </span>
-                      <span className="font-medium text-gray-900">
-                        {selectedStudent.name}
-                      </span>
+              <div className="space-y-6 max-h-[70vh] overflow-y-auto">
+                {/* Student Info */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-sm text-gray-500">Name:</span>
+                    <div className="font-semibold text-gray-900">
+                      {selectedStudent.name}
                     </div>
-                    <div className="flex items-center gap-2 min-w-[200px]">
-                      <span className="text-gray-500 text-sm font-medium">
-                        Roll Number:
-                      </span>
-                      <span className="font-mono text-gray-900">
-                        {selectedStudent.roll_numbers[0]}
-                      </span>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-500">Roll Number:</span>
+                    <div className="font-mono text-gray-900">
+                      {selectedStudent.roll_numbers[0]}
                     </div>
-                    <div className="flex items-center gap-2 min-w-[200px]">
-                      <span className="text-gray-500 text-sm font-medium">
-                        Course:
-                      </span>
-                      <span className="text-gray-900">
-                        {selectedStudent.course}
-                      </span>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-500">Course:</span>
+                    <div className="text-gray-900">
+                      {selectedStudent.course}
                     </div>
-                    <div className="flex items-center gap-2 min-w-[200px]">
-                      <span className="text-gray-500 text-sm font-medium">
-                        Phone:
-                      </span>
-                      <span className="text-gray-900">
-                        {selectedStudent.phone_number}
-                      </span>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-500">Batch:</span>
+                    <div className="text-gray-900">{selectedStudent.batch}</div>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-500">Phone:</span>
+                    <div className="text-gray-900">
+                      {selectedStudent.phone_number}
                     </div>
-                    <div className="flex items-center gap-2 min-w-[200px]">
-                      <span className="text-gray-500 text-sm font-medium">
-                        Caste:
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-500">Caste:</span>
+                    <div className="text-gray-900">{selectedStudent.caste}</div>
+                  </div>
+                </div>
+
+                {/* Payment Summary */}
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Payment Summary
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-sm text-gray-600">Deposit:</span>
+                      <div className="text-lg font-bold text-blue-700">
+                        ₹{selectedStudent.deposit?.toLocaleString() || 0}
+                      </div>
+                    </div>
+                    {selectedStudent.renewal_amount > 0 && (
+                      <div>
+                        <span className="text-sm text-gray-600">
+                          Renewal Amount:
+                        </span>
+                        <div className="text-lg font-bold text-blue-700">
+                          ₹
+                          {selectedStudent.renewal_amount?.toLocaleString() ||
+                            0}
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-sm text-gray-600">
+                        Total Due Amount:
                       </span>
-                      <span className="text-gray-900">
-                        {selectedStudent.caste}
+                      <div className="text-lg font-bold text-red-700">
+                        ₹{selectedStudent.due_amount?.toLocaleString() || 0}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-sm text-gray-600">
+                        Total Mess Bill:
                       </span>
+                      <div className="text-lg font-bold text-gray-700">
+                        ₹{selectedStudent.total_amount?.toLocaleString() || 0}
+                      </div>
                     </div>
                   </div>
                 </div>
-                <div className="flex-1 space-y-2">
-                  <div className="font-bold text-gray-900 mb-2 flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5 text-blue-600" />
-                    Hostel Dues
-                  </div>
-                  <div className="grid gap-3">
-                    {selectedStudent.dues.map((due: HostelDue) => {
-                      const isDue = due.due_amount > 0;
-                      return (
-                        <div
-                          key={due.id}
-                          className="flex items-center justify-between p-3 bg-white rounded-xl border border-blue-200 shadow-sm hover:shadow-md transition-shadow"
-                        >
-                          <div className="flex flex-col gap-1">
-                            <div className="font-semibold text-gray-900">
-                              {due.year_of_study}
-                            </div>
-                            <div className="text-gray-500 text-sm">
-                              Mess Bill: ₹{due.mess_bill} | Scholarship: ₹
-                              {due.scholarship}
-                            </div>
-                          </div>
-                          <div
-                            className={`flex items-center gap-2 px-4 py-1 rounded-xl transition-colors duration-200 ${
-                              isDue
-                                ? "bg-red-100 border border-red-200 shadow text-red-700 font-extrabold text-lg"
-                                : "bg-gray-50 text-gray-400 font-semibold"
-                            }`}
-                          >
-                            <IndianRupee
-                              className={`h-5 w-5 ${
-                                isDue ? "text-red-700" : "text-gray-400"
-                              }`}
-                            />
-                            <span
-                              className={
-                                isDue
-                                  ? "text-red-700 font-extrabold text-lg"
-                                  : "text-gray-500 font-semibold"
-                              }
-                            >
-                              {due.due_amount}
-                            </span>
+
+                {/* Year-wise Details */}
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Year-wise Details
+                  </h3>
+                  <div className="space-y-4">
+                    {/* First Year */}
+                    <div className="bg-white p-4 rounded border border-gray-200">
+                      <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        First Year
+                      </h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <span className="text-sm text-gray-600">
+                            Mess Bill:
+                          </span>
+                          <div className="font-semibold text-gray-900">
+                            ₹
+                            {(
+                              (selectedStudent.first_year_mess_bill as number) ||
+                              0
+                            ).toLocaleString()}
                           </div>
                         </div>
-                      );
-                    })}
+                        <div>
+                          <span className="text-sm text-gray-600">
+                            Scholarship:
+                          </span>
+                          <div className="font-semibold text-green-700">
+                            ₹
+                            {(
+                              (selectedStudent.first_year_scholarship as number) ||
+                              0
+                            ).toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Second Year */}
+                    {(selectedStudent.second_year_mess_bill > 0 ||
+                      selectedStudent.second_year_scholarship > 0) && (
+                      <div className="bg-white p-4 rounded border border-gray-200">
+                        <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          Second Year
+                        </h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <span className="text-sm text-gray-600">
+                              Mess Bill:
+                            </span>
+                            <div className="font-semibold text-gray-900">
+                              ₹
+                              {(
+                                (selectedStudent.second_year_mess_bill as number) ||
+                                0
+                              ).toLocaleString()}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-sm text-gray-600">
+                              Scholarship:
+                            </span>
+                            <div className="font-semibold text-green-700">
+                              ₹
+                              {(
+                                (selectedStudent.second_year_scholarship as number) ||
+                                0
+                              ).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Third Year */}
+                    {(selectedStudent.third_year_scholarship as number) > 0 && (
+                      <div className="bg-white p-4 rounded border border-gray-200">
+                        <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          Third Year
+                        </h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <span className="text-sm text-gray-600">
+                              Scholarship:
+                            </span>
+                            <div className="font-semibold text-green-700">
+                              ₹
+                              {(
+                                (selectedStudent.third_year_scholarship as number) ||
+                                0
+                              ).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Fourth Year */}
+                    {(selectedStudent.fourth_year_scholarship as number) >
+                      0 && (
+                      <div className="bg-white p-4 rounded border border-gray-200">
+                        <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          Fourth Year
+                        </h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <span className="text-sm text-gray-600">
+                              Scholarship:
+                            </span>
+                            <div className="font-semibold text-green-700">
+                              ₹
+                              {(
+                                (selectedStudent.fourth_year_scholarship as number) ||
+                                0
+                              ).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Fifth Year */}
+                    {(selectedStudent.fifth_year_scholarship as number) > 0 && (
+                      <div className="bg-white p-4 rounded border border-gray-200">
+                        <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          Fifth Year
+                        </h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <span className="text-sm text-gray-600">
+                              Scholarship:
+                            </span>
+                            <div className="font-semibold text-green-700">
+                              ₹
+                              {(
+                                (selectedStudent.fifth_year_scholarship as number) ||
+                                0
+                              ).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

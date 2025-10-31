@@ -35,19 +35,26 @@ class HostelRecordsSerializer(serializers.ModelSerializer):
 
 class HostelDuesSerializer(serializers.ModelSerializer):
     """
-    Serializer for hostel dues with year-wise breakdown
+    Serializer for hostel dues with year-wise breakdown (NO per-year due calculations)
     """
     student = StudentProfileSerializer(read_only=True)
     dues = serializers.SerializerMethodField()
     total_amount = serializers.SerializerMethodField()
     due_amount = serializers.SerializerMethodField()
+    deposit = serializers.IntegerField(read_only=True)
+    renewal_amount = serializers.IntegerField(read_only=True)
+    batch = serializers.SerializerMethodField()
     
     class Meta:
         model = HostelRecords
-        fields = ['id', 'student', 'dues', 'total_amount', 'due_amount']
+        fields = ['id', 'student', 'dues', 'total_amount', 'due_amount', 'deposit', 'renewal_amount', 'batch']
+    
+    def get_batch(self, obj):
+        """Get student batch"""
+        return obj.student.batch if hasattr(obj.student, 'batch') else 'N/A'
     
     def get_dues(self, obj):
-        """Transform hostel records into year-wise dues format"""
+        """Transform hostel records into year-wise dues format (for display only, NO per-year due calculations)"""
         dues = []
         course_name = obj.student.course.name if obj.student.course else "N/A"
         
@@ -56,7 +63,7 @@ class HostelDuesSerializer(serializers.ModelSerializer):
             from utils.course_utils import get_relevant_years_for_course
             relevant_years = get_relevant_years_for_course(course_name)
             
-            # Create dues for each relevant year
+            # Create dues for each relevant year (DISPLAY ONLY - no per-year due calculations)
             for year in relevant_years:
                 if year == 1:
                     mess_bill = obj.first_year_mess_bill
@@ -76,19 +83,14 @@ class HostelDuesSerializer(serializers.ModelSerializer):
                 else:
                     continue
                 
-                # Calculate total and due amounts for this year
-                total_amount = mess_bill
-                due_amount = mess_bill - scholarship
-                
                 dues.append({
                     'id': f"{obj.id}_year_{year}",
                     'year_of_study': f"{year}st Year" if year == 1 else f"{year}nd Year" if year == 2 else f"{year}rd Year" if year == 3 else f"{year}th Year",
                     'mess_bill': mess_bill,
                     'scholarship': scholarship,
                     'deposit': obj.deposit if year == 1 else 0,  # Only show deposit for first year
+                    'renewal_amount': obj.renewal_amount if year == 1 else 0,  # Show renewal for first year only
                     'remarks': f"Year {year} hostel dues",
-                    'total_amount': total_amount,
-                    'due_amount': due_amount,
                     'student': {
                         'roll_number': obj.student.user.username,
                         'full_name': f"{obj.student.user.first_name or ''} {obj.student.user.last_name or ''}".strip() or 'Unknown',
@@ -99,19 +101,15 @@ class HostelDuesSerializer(serializers.ModelSerializer):
                 })
         except Exception as e:
             print(f"Error in get_dues for record {obj.id}: {str(e)}")
-            # Return empty dues list if there's an error
-            pass
         
         return dues
     
     def get_total_amount(self, obj):
         """Calculate total mess bill amount"""
-        return (obj.first_year_mess_bill + obj.second_year_mess_bill + 
-                obj.third_year_mess_bill + obj.fourth_year_mess_bill + 
-                obj.fifth_year_mess_bill)
+        return obj.total_mess_bill
     
     def get_due_amount(self, obj):
-        """Calculate total due amount"""
+        """Calculate total due amount (uses model's total_due property)"""
         return obj.total_due
 
 

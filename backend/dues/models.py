@@ -91,7 +91,7 @@ class HostelRecords(models.Model):
     @property
     def total_due(self):
         """Calculate total due using the equation: deposit + total_challan + total_scholarship - total_mess_bill"""
-        return self.deposit + self.total_challan_paid + self.total_scholarship - self.total_mess_bill
+        return self.total_mess_bill - self.deposit - self.total_challan_paid - self.total_scholarship
     
    
 
